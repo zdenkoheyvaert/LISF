@@ -271,7 +271,6 @@ contains
        enddo 
        CLOSE (19)
    enddo
-
 !----------------------------------------------------------------------------
 !-----READ IN B PARAMETER TABLE for VH pol 
    do n=1, LIS_rc%nnest
