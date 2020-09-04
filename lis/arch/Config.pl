@@ -8,7 +8,7 @@
 # All Rights Reserved.
 #-------------------------END NOTICE -- DO NOT EDIT-----------------------
 # 6 Jan 2012: Sujay Kumar, Initial Specification
-
+# 4 Sep 2020: Sara Modanesi, modified to avoid undefined WCM
 #
 # Process environment and configure options
 #
@@ -972,12 +972,15 @@ else{
    printf misc_file "%s\n","#undef USE_MINPACK ";
 }
 
-if($use_crtm == 1 || $use_cmem == 1) {
-   printf misc_file "%s\n","#define RTMS ";
-}
-else{
-   printf misc_file "%s\n","#undef RTMS ";
-}
+#if($use_crtm == 1 || $use_cmem == 1) {
+#   printf misc_file "%s\n","#define RTMS ";
+#}
+#else{
+#   printf misc_file "%s\n","#undef RTMS ";
+#}
+
+printf misc_file "%s\n","#define RTMS ";
+#modified to avoid undefining WCM
 
 if($use_lapack == 1) {
    printf misc_file "%s\n","#define LAPACK ";
