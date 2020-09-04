@@ -10,8 +10,13 @@
 # All Rights Reserved.
 #-------------------------END NOTICE -- DO NOT EDIT-----------------------
 # 6 Jan 2012: Sujay Kumar, Initial Specification
+<<<<<<< HEAD
 # 15 Sep 2020: Sara Modanesi, added specification for USE_WCM (Water Cloud Model)
 # 11 Nov 2020: Alexander Gruber/Sara Modanesi, use lis-crtm-profile-utility also for other RTMs
+=======
+# 4 Sep 2020: Sara Modanesi, modified to avoid undefined WCM
+#
+>>>>>>> Config.pl: modified to avoid undefined RTM (i.e.,WCM)
 # Process environment and configure options
 #
 
@@ -1015,7 +1020,6 @@ if($use_crtm == 1 || $use_cmem == 1 || $use_wcm == 1) {
 else{
    printf misc_file "%s\n","#undef RTMS ";
 }
-
 
 if($use_lapack == 1) {
    printf misc_file "%s\n","#define LAPACK ";
