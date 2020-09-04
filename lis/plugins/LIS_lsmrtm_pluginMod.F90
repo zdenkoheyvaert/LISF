@@ -93,6 +93,15 @@ subroutine LIS_lsmrtm_plugin
 #endif
 #endif
 
+#if ( defined SM_NOAHMP_3_6 )
+#if ( defined RM_RTM_FORWARD )
+   external NoahMP36_f2t
+#endif
+#if ( defined RTMS_WCM )
+   external noahmp36_sfc2wcm
+#endif
+#endif
+
 #if ( defined SM_MOSAIC )
 #if ( defined RM_RTM_FORWARD )
    external mos_f2t
