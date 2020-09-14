@@ -88,12 +88,6 @@ subroutine LIS_lsmrtm_plugin
 #if ( defined RTMS_CMEM )
    external noahmp36_sfc2cmem3
 #endif
-#endif
-
-#if ( defined SM_NOAHMP_3_6 )
-#if ( defined RM_RTM_FORWARD )
-   external NoahMP36_f2t
-#endif
 #if ( defined RTMS_WCM )
    external noahmp36_sfc2wcm
 #endif
