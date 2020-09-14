@@ -70,9 +70,9 @@ module WCMRTM_Mod
      real, allocatable :: DD_VV(:)
 
      real, allocatable :: AA_VH(:)
-     real, allocatable :: AA_VH(:)
-     real, allocatable :: AA_VH(:)
-     real, allocatable :: AA_VH(:)
+     real, allocatable :: BB_VH(:)
+     real, allocatable :: CC_VH(:)
+     real, allocatable :: DD_VH(:)
 
      real, allocatable :: lone(:)
      real, allocatable :: late(:)
@@ -271,7 +271,7 @@ contains
        enddo 
        CLOSE (19)
    enddo
--
+
 !----------------------------------------------------------------------------
 !-----READ IN B PARAMETER TABLE for VH pol 
    do n=1, LIS_rc%nnest
@@ -377,7 +377,7 @@ contains
    integer             :: status
    integer             :: col,row
    real                :: A_VV_cal,B_VV_cal,C_VV_cal,D_VV_cal,A_VH_cal,&
-                          B_VH_cal, C_VH_cal; D_VH_cal,lon,lat,lon1,lat1
+                          B_VH_cal, C_VH_cal, D_VH_cal,lon,lat,lon1,lat1
    real, pointer       :: sm(:), lai(:)
    real                :: sigmabare_VV,sigmabare_VH,s0VV_s_db, s0VH_s_dB, &
                         sigmacan_VV, sigmacan_VH,sigmasoil_VV,sigmasoil_VH,&
