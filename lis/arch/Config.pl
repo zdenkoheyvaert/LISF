@@ -8,7 +8,7 @@
 # All Rights Reserved.
 #-------------------------END NOTICE -- DO NOT EDIT-----------------------
 # 6 Jan 2012: Sujay Kumar, Initial Specification
-# 4 Sep 2020: Sara Modanesi, modified to avoid undefined WCM
+# 15 Sep 2020: Sara Modanesi, added specification for USE_WCM (Water Cloud Model)
 #
 # Process environment and configure options
 #
@@ -619,6 +619,14 @@ if($use_minpack == 1) {
 }
 
 
+print "Use LIS-WCM? (1-yes, 0-no, default=0): ";
+$use_wcm=<stdin>;
+chomp($use_wcm);
+if($use_wcm eq ""){
+   $use_wcm=0;
+}
+
+
 print "Use LIS-CRTM? (1-yes, 0-no, default=0): ";
 $use_crtm=<stdin>;
 chomp($use_crtm);
@@ -972,15 +980,13 @@ else{
    printf misc_file "%s\n","#undef USE_MINPACK ";
 }
 
-#if($use_crtm == 1 || $use_cmem == 1) {
-#   printf misc_file "%s\n","#define RTMS ";
-#}
-#else{
-#   printf misc_file "%s\n","#undef RTMS ";
-#}
+if($use_crtm == 1 || $use_cmem == 1 || $use_wcm == 1) {
+   printf misc_file "%s\n","#define RTMS ";
+}
+else{
+   printf misc_file "%s\n","#undef RTMS ";
+}
 
-printf misc_file "%s\n","#define RTMS ";
-#modified to avoid undefining WCM
 
 if($use_lapack == 1) {
    printf misc_file "%s\n","#define LAPACK ";
