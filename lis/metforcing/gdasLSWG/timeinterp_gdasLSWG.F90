@@ -23,10 +23,10 @@ subroutine timeinterp_gdasLSWG(n, findex)
   use LIS_FORC_AttributesMod
   use LIS_metforcingMod, only : LIS_FORC_Base_State
   use gdasLSWG_forcingMod,  only : gdasLSWG_struc
-!#if (defined RTMS)
-!  USE units_conversion
-!  USE Type_Kinds, ONLY: fp
-!#endif
+#if (defined RTMS)
+  USE units_conversion
+  USE Type_Kinds, ONLY: fp
+#endif
   
   implicit none
 ! !ARGUMENTS: 
@@ -174,10 +174,10 @@ subroutine timeinterp_gdasLSWG(n, findex)
            ! and then MR(g/kg) to SH(g/kg) and then mult by (1kg/1000g) to get to LIS unit
            !conversion assumes hPa and not Pa; hence prs division by 100
            q2(t) = max(q2(t),qsmall)
-!#if(defined RTMS)
-!           q2(t) = RH_to_MR( prs(t)/100.0_fp,tmp(t)*1.0_fp,q2(t)*1.0_fp)
-!           q2(t) = MR_to_SA( q2(t)*1.0_fp)/1000.0
-!#endif
+#if(defined RTMS)
+           q2(t) = RH_to_MR( prs(t)/100.0_fp,tmp(t)*1.0_fp,q2(t)*1.0_fp)
+           q2(t) = MR_to_SA( q2(t)*1.0_fp)/1000.0
+#endif
         endif
      enddo
   enddo
