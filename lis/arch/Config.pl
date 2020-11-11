@@ -9,7 +9,7 @@
 #-------------------------END NOTICE -- DO NOT EDIT-----------------------
 # 6 Jan 2012: Sujay Kumar, Initial Specification
 # 15 Sep 2020: Sara Modanesi, added specification for USE_WCM (Water Cloud Model)
-#
+# 11 Nov 2020: Alexander Gruber/Sara Modanesi, use lis-crtm-profile-utility also for other RTMs
 # Process environment and configure options
 #
 
@@ -626,7 +626,6 @@ if($use_wcm eq ""){
    $use_wcm=0;
 }
 
-
 print "Use LIS-CRTM? (1-yes, 0-no, default=0): ";
 $use_crtm=<stdin>;
 chomp($use_crtm);
@@ -650,23 +649,7 @@ if($use_crtm == 1) {
       print "--------------ERROR---------------------\n";
       exit 1;
    }
-   if(defined($ENV{LIS_CRTM_PROF})){
-      $sys_crtm_prof_path = $ENV{LIS_CRTM_PROF};
-      $inc = "/include/";
-      $lib = "/lib/";
-      $inc_crtm_prof=$sys_crtm_prof_path.$inc;
-      $lib_crtm_prof=$sys_crtm_prof_path.$lib;
-   }
-   else {
-      print "--------------ERROR----------------------------------\n";
-      print "Please specify the CRTM profile utility path using\n";
-      print "the LIS_CRTM_PROF variable.\n";
-      print "Configuration exiting ....\n";
-      print "--------------ERROR----------------------------------\n";
-      exit 1;
-   }
 }
-
 
 print "Use LIS-CMEM? (1-yes, 0-no, default=0): ";
 $use_cmem=<stdin>;
@@ -691,6 +674,24 @@ if($use_cmem == 1) {
       print "--------------ERROR---------------------\n";
       exit 1;
    }
+}
+
+if($use_crtm == 1 || $use_cmem == 1 || $use_wcm == 1) {
+        if(defined($ENV{LIS_CRTM_PROF})){
+           $sys_crtm_prof_path = $ENV{LIS_CRTM_PROF};
+           $inc = "/include/";
+           $lib = "/lib/";
+           $inc_crtm_prof=$sys_crtm_prof_path.$inc;
+           $lib_crtm_prof=$sys_crtm_prof_path.$lib;
+        }
+        else {
+           print "--------------ERROR----------------------------------\n";
+           print "Please specify the CRTM profile utility path using\n";
+           print "the LIS_CRTM_PROF variable.\n";
+           print "Configuration exiting ....\n";
+           print "--------------ERROR----------------------------------\n";
+           exit 1;
+        }
 }
 
 print "Use LIS-LAPACK? (1-yes, 0-no, default=0): ";
@@ -841,16 +842,23 @@ if($use_hdf5 == 1){
       $ldflags = $ldflags." -lz";
    }
 }
+
 if($use_crtm == 1){
-   $fflags77 = $fflags77." -I\$(INC_CRTM) -I\$(INC_PROF_UTIL)";
-   $fflags = $fflags." -I\$(INC_CRTM) -I\$(INC_PROF_UTIL)";
-   $ldflags = $ldflags." -L\$(LIB_CRTM) -lCRTM -L\$(LIB_PROF_UTIL) -lProfile_Utility";
+   $fflags77 = $fflags77." -I\$(INC_CRTM)";
+   $fflags = $fflags." -I\$(INC_CRTM)";
+   $ldflags = $ldflags." -L\$(LIB_CRTM) -lCRTM";
 }
 
 if($use_cmem == 1){
    $fflags77 = $fflags77." -I\$(INC_CMEM)";
    $fflags = $fflags." -I\$(INC_CMEM)";
    $ldflags = $ldflags." -L\$(LIB_CMEM) -llis_mem";
+}
+
+if($use_crtm == 1 || $use_cmem == 1 || $use_wcm == 1) {
+   $fflags77 = $fflags77." -I\$(INC_PROF_UTIL)";
+   $fflags = $fflags." -I\$(INC_PROF_UTIL)";
+   $ldflags = $ldflags." -L\$(LIB_PROF_UTIL) -lProfile_Utility";
 }
 
 if($use_minpack == 1){
