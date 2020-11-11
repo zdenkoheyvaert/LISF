@@ -12,7 +12,6 @@
 !
 ! !REVISION HISTORY:
 !  20 Oct 2009: Sujay Kumar, Initial Specification
-!   4 Sep 2020: Sara Modanesi, modified specification for RTMS
 !
 ! !INTERFACE:
 subroutine timeinterp_gdasLSWG(n, findex)
