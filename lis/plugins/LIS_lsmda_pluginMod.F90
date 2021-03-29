@@ -407,6 +407,8 @@ subroutine LIS_lsmda_plugin
    external noahmp36_scale_soilm
    external noahmp36_descale_soilm
    external noahmp36_updatesoilm
+   external noahmp36_getSig0pred
+   external noahmp36_qc_Sig0obs
 
    external noahmp36_getsnowvars
    external noahmp36_setsnowvars
@@ -1902,6 +1904,27 @@ subroutine LIS_lsmda_plugin
 
 
 #if ( defined SM_NOAHMP_3_6 )
+
+! S1 backscatter DA
+   call registerlsmdainit(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_dasoilm_init)
+   call registerlsmdagetstatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_getsoilm)
+   call registerlsmdasetstatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_setsoilm)
+   call registerlsmdagetobspred(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_getSig0pred)
+   call registerlsmdaqcstate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_qcsoilm)
+   call registerlsmdaqcobsstate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_qc_Sig0obs)
+   call registerlsmdascalestatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_scale_soilm)
+   call registerlsmdadescalestatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_descale_soilm)
+   call registerlsmdaupdatestate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigma_obsId)//char(0),noahmp36_updatesoilm)
+
 ! Noahmp-3.6 synthetic soil moisture
    call registerlsmdainit(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_synsmId)//char(0),noahmp36_dasoilm_init)
