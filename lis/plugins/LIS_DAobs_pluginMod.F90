@@ -217,6 +217,10 @@ subroutine LIS_DAobs_plugin
    use SMMRSNWDsnow_Mod,        only : SMMRSNWDsnow_setup
 #endif
 
+#if ( defined DA_OBS_S1_sigma )
+   use S1_sigma_Mod,       only : S1_sigma_setup 
+#endif 
+
 #if ( defined DA_OBS_SSMI_SNWD )
    use SSMISNWDsnow_Mod,        only : SSMISNWDsnow_setup
 #endif
@@ -367,6 +371,10 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_SMMR_SNWD )
    external read_SMMRSNWDsnow, write_SMMRSNWDsnowobs
 #endif
+
+#if ( defined DA_OBS_S1_sigma)    
+   external read_S1_sigma, write_S1_sigmaobs  
+#endif 
 
 #if ( defined DA_OBS_SSMI_SNWD )
    external read_SSMISNWDsnow, write_SSMISNWDsnowobs
@@ -606,6 +614,16 @@ subroutine LIS_DAobs_plugin
         read_SMMRSNWDsnow)
    call registerwritedaobs(trim(LIS_SMMRSNWDsnowobsId)//char(0), &
         write_SMMRSNWDsnowobs)
+#endif
+
+#if ( defined DA_OBS_S1_sigma )
+!S1 backscatter obs
+   call registerdaobssetup(trim(LIS_S1_sigma_obsId)//char(0), &
+        S1_sigma_setup)
+   call registerreaddaobs(trim(LIS_S1_sigma_obsId)//char(0),  &
+        read_S1_sigma)
+   call registerwritedaobs(trim(LIS_S1_sigma_obsId)//char(0), &
+        write_S1_sigmaobs)
 #endif
 
 #if ( defined DA_OBS_SSMI_SNWD )
