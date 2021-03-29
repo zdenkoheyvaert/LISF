@@ -25,7 +25,7 @@ module WCMRTM_Mod
 !
 ! !HISTORY:
 ! 28 Aug 2020: Sara Modanesi
-!
+! 26 Mar 2021 Sara Modanesi: Added specifications for forward states
 ! !USES:        
 
 
@@ -320,7 +320,41 @@ contains
        CLOSE (19)
    enddo
 
-   end subroutine WCMRTM_initialize 
+   do n=1,LIS_rc%nnest !added fields to State 26032021        
+       call add_fields_toState(n,LIS_forwardState(n),"WCM_Sig0VV")
+       call add_fields_toState(n,LIS_forwardState(n),"WCM_Sig0VH")
+   enddo
+
+   end subroutine WCMRTM_initialize
+
+   subroutine add_fields_toState(n, inState,varname) !added subroutine add-fields_toState 26032021
+
+    use LIS_logMod,   only : LIS_verify
+    use LIS_coreMod,  only : LIS_vecTile
+
+    implicit none
+
+    integer            :: n
+    type(ESMF_State)   :: inState
+    character(len=*)   :: varname
+
+    type(ESMF_Field)     :: varField
+    type(ESMF_ArraySpec) :: arrspec
+    integer              :: status
+    real :: sum
+    call ESMF_ArraySpecSet(arrspec,rank=1,typekind=ESMF_TYPEKIND_R4,&
+         rc=status)
+    call LIS_verify(status)
+
+    varField = ESMF_FieldCreate(arrayspec=arrSpec, &
+         grid=LIS_vecTile(n), name=trim(varname), &
+         rc=status)
+    call LIS_verify(status, 'Error in field_create of '//trim(varname))
+
+    call ESMF_StateAdd(inState, (/varField/), rc=status)
+    call LIS_verify(status, 'Error in StateAdd of '//trim(varname))
+
+   end subroutine add_fields_toState
 !!--------------------------------------------------------------------------------
 
    subroutine add_sfc_fields(n, sfcState,varname)
@@ -383,6 +417,7 @@ contains
                         tt_VV, tt_VH
 
    real                :: theta, ctheta
+   real, pointer       :: sig0val(:) !added for forward states 26032021
 
 
    theta = 0.6458 !incidence angle in radians (37 deg)
@@ -452,6 +487,12 @@ contains
           wcm_struc(n)%Sig0VH(t),             &
           vlevel=1, unit="dB",direction="-")
    enddo
+
+   call getsfcvar(LIS_forwardState(n), "WCM_Sig0VV", sig0val) !added for forward states 26032021
+   sig0val = wcm_struc(n)%Sig0VV
+
+   call getsfcvar(LIS_forwardState(n),"WCM_Sig0VH", sig0val)
+   sig0val = wcm_struc(n)%Sig0VH
 
    end subroutine WCMRTM_run
 
