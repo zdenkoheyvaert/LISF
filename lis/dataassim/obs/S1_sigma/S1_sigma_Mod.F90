@@ -36,10 +36,10 @@ module S1_sigma_Mod
 
   type, public ::  S1_sigma_dec
      logical             :: startMode
-     real                :: ssdev
-     integer             :: sigmafield
+     real,    allocatable    :: ssdev(:)
      integer             :: nc,nr
-     real,    allocatable    :: sigma(:,:)
+     real,    allocatable    :: s_vv(:,:)
+     real,    allocatable    :: s_vh(:,:)
      real,    allocatable    :: sigmatime(:,:)
   end type S1_sigma_dec
 
@@ -54,7 +54,7 @@ contains
 ! !INTERFACE: 
   subroutine S1_sigma_setup(k, OBS_State, OBS_Pert_State)
 ! !USES: 
-
+    use ESMF
     use LIS_coreMod
     use LIS_timeMgrMod
     use LIS_historyMod
@@ -82,16 +82,16 @@ contains
 !EOP
     integer                ::  n
     integer                ::  ftn
-    integer                ::  i
+    integer                ::  i,m
     integer                ::  status
-    type(ESMF_Field)       ::  obsField(LIS_rc%nnest)
+    type(ESMF_Field)       ::  obsField
     type(ESMF_ArraySpec)   ::  intarrspec, realarrspec
     type(ESMF_Field)       ::  pertField(LIS_rc%nnest)
     type(ESMF_ArraySpec)   ::  pertArrSpec
     character*100          ::  S1sigmaobsdir
     character*100          ::  temp
     real,  allocatable         ::  obsstd(:)
-    character*1            ::  vid(2)
+    character*1            ::  vid(3)
     character*40, allocatable  ::  vname(:)
     real,         allocatable  ::  varmin(:)
     real,         allocatable  ::  varmax(:)
@@ -120,6 +120,7 @@ contains
        call ESMF_ConfigGetattribute(LIS_config,S1sigmaobsdir,&
             rc=status)
        call LIS_verify(status,'S1 backscatter data directory: not defined')
+       
        call ESMF_AttributeSet(OBS_State(n),"Data Directory",&
             S1sigmaobsdir, rc=status)
        call LIS_verify(status)
@@ -154,13 +155,13 @@ contains
 
     do n=1,LIS_rc%nnest
        
-       write(unit=temp,fmt='(i2.2)') 1
-       read(unit=temp,fmt='(2a1)') vid
+!       write(unit=temp,fmt='(i2.2)') 1
+!       read(unit=temp,fmt='(2a1)') vid
 
-       obsField(n) = ESMF_FieldCreate(grid=LIS_obsvecGrid(n,k),&
-            arrayspec=realarrspec,&
-            name="Observation"//vid(1)//vid(2), rc=status)
-       call LIS_verify(status)
+!       obsField(n) = ESMF_FieldCreate(grid=LIS_obsvecGrid(n,k),&
+!            arrayspec=realarrspec,&
+!            name="Observation"//vid(1)//vid(2), rc=status)
+!       call LIS_verify(status)
        
 !Perturbations State
        write(LIS_logunit,*) '[INFO] Opening attributes for observations ',&
@@ -182,77 +183,91 @@ contains
        enddo
        call LIS_releaseUnitNumber(ftn)  
        
-       call ESMF_StateAdd(OBS_State(n),(/obsField(n)/),rc=status)
-       call LIS_verify(status)
+       do m=1,LIS_rc%nobtypes(k)
+          write(unit=temp,fmt='(i2.2)') m
+          read(unit=temp,fmt='(2a1)') vid
 
-       allocate(ssdev(LIS_rc%obs_ngrid(k)))
+          obsField = ESMF_FieldCreate(arrayspec=realarrspec,&
+               grid=LIS_vecGrid(n),&
+               name="Observation"//vid(1)//vid(2),rc=status)
+          call LIS_verify(status)
+          
+          call ESMF_StateAdd(OBS_State(n),(/obsField/),rc=status)
+          call LIS_verify(status)
+       enddo
+
+       allocate(ssdev(LIS_rc%obs_ngrid(n)))
 
        if(trim(LIS_rc%perturb_obs(k)).ne."none") then 
+          allocate(obs_pert%vname(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%perttype(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%ssdev(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%stdmax(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%zeromean(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%tcorr(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%xcorr(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%ycorr(LIS_rc%nobtypes(k)))
+          allocate(obs_pert%ccorr(LIS_rc%nobtypes(k),LIS_rc%nobtypes(k)))
 
-          allocate(obs_pert%vname(1))
-          allocate(obs_pert%perttype(1))
-          allocate(obs_pert%ssdev(1))
-          allocate(obs_pert%stdmax(1))
-          allocate(obs_pert%zeromean(1))
-          allocate(obs_pert%tcorr(1))
-          allocate(obs_pert%xcorr(1))
-          allocate(obs_pert%ycorr(1))
-          allocate(obs_pert%ccorr(1,1))
+          call LIS_readPertAttributes(LIS_rc%nobtypes(k),&
+               LIS_rc%obspertAttribfile(k),obs_pert)
 
-          call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
-               obs_pert)
+          do m=1,LIS_rc%nobtypes(k)
+             ssdev = obs_pert%ssdev(m)
+             S1_sigma_struc(n)%ssdev =obs_pert%ssdev(m) 
 
-          ssdev = obs_pert%ssdev(1)
-          S1_sigma_struc(n)%ssdev =obs_pert%ssdev(1) 
+             write(unit=temp,fmt='(i2.2)') m
+             read(unit=temp,fmt='(2a1)') vid
 
-          pertField(n) = ESMF_FieldCreate(arrayspec=pertArrSpec,&
-               grid=LIS_obsEnsOnGrid(n,k),name="Observation"//vid(1)//vid(2),&
-               rc=status)
-          call LIS_verify(status)
+             pertField(n) = ESMF_FieldCreate(arrayspec=pertArrSpec,&
+                  grid=LIS_obsEnsOnGrid(n,k),name="Observation"//vid(1)//vid(2),&
+                  rc=status)
+             call LIS_verify(status)
           
 ! initializing the perturbations to be zero 
-          call ESMF_FieldGet(pertField(n),localDE=0,farrayPtr=obs_temp,rc=status)
-          call LIS_verify(status)
-          obs_temp(:,:) = 0 
-
-          call ESMF_AttributeSet(pertField(n),"Perturbation Type",&
-               obs_pert%perttype(1), rc=status)
-          call LIS_verify(status)
-          
-          if(LIS_rc%obs_ngrid(k).gt.0) then 
-             call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
-                  ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+             call ESMF_FieldGet(pertField(n),localDE=0,farrayPtr=obs_temp,rc=status)
              call LIS_verify(status)
-          endif
+             obs_temp(:,:) = 0 
 
-          call ESMF_AttributeSet(pertField(n),"Std Normal Max",&
-               obs_pert%stdmax(1), rc=status)
-          call LIS_verify(status)
-          
-          call ESMF_AttributeSet(pertField(n),"Ensure Zero Mean",&
-               obs_pert%zeromean(1),rc=status)
-          call LIS_verify(status)
-          
-          call ESMF_AttributeSet(pertField(n),"Temporal Correlation Scale",&
-               obs_pert%tcorr(1),rc=status)
-          
-          call ESMF_AttributeSet(pertField(n),"X Correlation Scale",&
-               obs_pert%xcorr(1),rc=status)
-          
-          call ESMF_AttributeSet(pertField(n),"Y Correlation Scale",&
-               obs_pert%ycorr(1),rc=status)
+             call ESMF_AttributeSet(pertField(n),"Perturbation Type",&
+                  obs_pert%perttype(m), rc=status)
+             call LIS_verify(status)
+           
+             if(LIS_rc%obs_ngrid(k).gt.0) then 
+                call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
+                     ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                call LIS_verify(status)
+             endif
 
-          call ESMF_AttributeSet(pertField(n),"Cross Correlation Strength",&
-               obs_pert%ccorr(1,:),itemCount=1,rc=status)
+             call ESMF_AttributeSet(pertField(n),"Std Normal Max",&
+                  obs_pert%stdmax(m), rc=status)
+             call LIS_verify(status)
+          
+             call ESMF_AttributeSet(pertField(n),"Ensure Zero Mean",&
+                  obs_pert%zeromean(m),rc=status)
+             call LIS_verify(status)
+          
+             call ESMF_AttributeSet(pertField(n),"Temporal Correlation Scale",&
+                  obs_pert%tcorr(m),rc=status)
+          
+             call ESMF_AttributeSet(pertField(n),"X Correlation Scale",&
+                  obs_pert%xcorr(m),rc=status)
+          
+             call ESMF_AttributeSet(pertField(n),"Y Correlation Scale",&
+                  obs_pert%ycorr(m),rc=status)
 
-          call ESMF_StateAdd(OBS_Pert_State(n),(/pertField(n)/),rc=status)
-          call LIS_verify(status)
+             call ESMF_AttributeSet(pertField(n),"Cross Correlation Strength",&
+                  obs_pert%ccorr(m,:),itemCount=LIS_rc%nobtypes(k),rc=status)
+
+             call ESMF_StateAdd(OBS_Pert_State(n),(/pertField(n)/),rc=status)
+             call LIS_verify(status)
+          enddo
+          deallocate(ssdev)
        endif
           
        deallocate(vname)
        deallocate(varmax)
        deallocate(varmin)
-       deallocate(ssdev)
     enddo
 !-------------------------------------------------------------
 ! set up the S1 domain %and interpolation weights. 
@@ -262,10 +277,12 @@ contains
        S1_sigma_struc(n)%nc = 34704
        S1_sigma_struc(n)%nr = 4500
 
-       allocate(S1_sigma_struc(n)%sigma(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
+       allocate(S1_sigma_struc(n)%s_vv(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
+       allocate(S1_sigma_struc(n)%s_vh(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
        allocate(S1_sigma_struc(n)%sigmatime(&
             LIS_rc%obs_lnc(k), LIS_rc%obs_lnr(k)))
-       S1_sigma_struc(n)%sigma = LIS_rc%udef
+       S1_sigma_struc(n)%s_vv = LIS_rc%udef
+       S1_sigma_struc(n)%s_vh = LIS_rc%udef
        S1_sigma_struc(n)%sigmatime = -1
 
        call LIS_registerAlarm("S1 backscatter read alarm",&
