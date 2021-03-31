@@ -50,7 +50,7 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
 !  \end{description}
 !
 !EOP
-  type(ESMF_Field)              :: sigmaField,pertfield
+  type(ESMF_Field)              :: s_vvField,s_vhField,pertfield
   logical                       :: alarmCheck
   logical                       :: data_upd, file_exists
   logical                       :: dataflag(LIS_npes)
@@ -65,12 +65,13 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
   integer                       :: zone
   integer                       :: grid_index
   real                          :: ssdev(LIS_rc%obs_ngrid(k))
-  real,             pointer     :: obsl(:)
+  real,             pointer     :: s_vv(:), s_vh(:)
   integer                       :: gid(LIS_rc%obs_ngrid(k))
   integer                       :: assimflag(LIS_rc%obs_ngrid(k))
   integer                       :: status, iret, ierr
   integer                       :: fnd
-  real                          :: sigma_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+  real                          :: svv_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+  real                          :: svh_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
   integer                       :: days(12)
   data days /31,28,31,30,31,30,31,31,30,31,30,31/  !BZ
 
@@ -88,7 +89,8 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
   if(alarmCheck.or.S1_sigma_struc(n)%startMode) then 
      S1_sigma_struc(n)%startMode = .false.
      
-     S1_sigma_struc(n)%sigma = LIS_rc%udef
+     S1_sigma_struc(n)%s_vv = LIS_rc%udef
+     S1_sigma_struc(n)%s_vh = LIS_rc%udef
      S1_sigma_struc(n)%sigmatime = -1
 
      call S1_sigma_filename(S1_filename,obsdir,&
@@ -98,7 +100,8 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
      if(file_exists) then 
 
         write(LIS_logunit,*)  '[INFO] Reading S1 sigma data ',S1_filename
-        call read_S1_sigma_data(n,k, S1_filename, S1_sigma_struc(n)%sigma)
+        call read_S1_sigma_data(n,k, S1_filename, S1_sigma_struc(n)%s_vv, &
+             S1_sigma_struc(n)%s_vh)
 
 
 !-------------------------------------------------------------------------
@@ -125,14 +128,22 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
 ! Update the OBS_State
 !-------------------------------------------------------------------------
 
-  call ESMF_StateGet(OBS_State,"Observation01",sigmafield,&
+  call ESMF_StateGet(OBS_State,"Observation01",s_vvField,&
        rc=status)
   call LIS_verify(status, 'Error: StateGet Observation01')
+
+  call ESMF_StateGet(OBS_State,"Observation02",s_vhField,&
+       rc=status)
+  call LIS_verify(status, 'Error: StateGet Observation02')
   
-  call ESMF_FieldGet(sigmafield,localDE=0,farrayPtr=obsl,rc=status)
+  call ESMF_FieldGet(s_vvField,localDE=0,farrayPtr=s_vv,rc=status)
+  call LIS_verify(status, 'Error: FieldGet')
+
+  call ESMF_FieldGet(s_vhField,localDE=0,farrayPtr=s_vh,rc=status)
   call LIS_verify(status, 'Error: FieldGet')
   
-  obsl = LIS_rc%udef 
+  s_vv = LIS_rc%udef 
+  s_vh = LIS_rc%udef 
 
 !-------------------------------------------------------------------------
 !  Update the OBS_State by subsetting to the local grid time  
@@ -147,8 +158,10 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
            lon = LIS_obs_domain(n,k)%lon(grid_index)
 
            if(dt.ge.0.and.dt.lt.LIS_rc%ts) then 
-              obsl(LIS_obs_domain(n,k)%gindex(c,r)) = & 
-                   S1_sigma_struc(n)%sigma(c,r)
+              s_vv(LIS_obs_domain(n,k)%gindex(c,r)) = & 
+                   S1_sigma_struc(n)%s_vv(c,r)
+              s_vh(LIS_obs_domain(n,k)%gindex(c,r)) = & 
+                   S1_sigma_struc(n)%s_vh(c,r)
            endif
            
         endif
@@ -165,8 +178,10 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
        //trim(LIS_S1_sigma_obsId)//char(0), & 
        n, k,OBS_state)
 
-  sigma_current = LIS_rc%udef
-  call LIS_checkForValidObs(n,k,obsl,fnd,sigma_current)
+  svv_current = LIS_rc%udef
+  svh_current = LIS_rc%udef
+  call LIS_checkForValidObs(n,k,s_vv,fnd,svv_current) 
+  call LIS_checkForValidObs(n,k,s_vh,fnd,svh_current) 
 
   if(fnd.eq.0) then 
      dataflag_local = .false. 
@@ -187,7 +202,7 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
   if(data_upd) then 
      do t=1,LIS_rc%obs_ngrid(k)
         gid(t) = t
-        if(obsl(t).ne.-9999.0) then 
+        if(s_vv(t).ne.-9999.0) then 
            assimflag(t) = 1
         else
            assimflag(t) = 0
@@ -202,14 +217,18 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
      call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
           rc=status)
      call LIS_verify(status, 'ESMF_StateGet for Observation01 for OBS_Pert_State failed in read_S1_sigma')
+
+     call ESMF_StateGet(OBS_Pert_State,"Observation02",pertfield,&
+          rc=status)
+     call LIS_verify(status, 'ESMF_StateGet for Observation02 for OBS_Pert_State failed in read_S1_sigma')
      
      if(LIS_rc%obs_ngrid(k).gt.0) then 
 
-!linearly scale the observation err
+        !linearly scale the observation err
         ssdev = S1_sigma_struc(n)%ssdev 
         do t=1,LIS_rc%obs_ngrid(k)
-           if(obsl(t).ne.-9999.0) then 
-              ssdev(t) =  S1_sigma_struc(n)%ssdev !+ 0.05*obsl(t)
+           if(s_vv(t).ne.-9999.0) then 
+              ssdev(t) =  S1_sigma_struc(n)%ssdev(t) !+ 0.05*obsl(t)
            endif
         enddo
 
@@ -217,11 +236,19 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
              ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
         call LIS_verify(status)
 
-        call ESMF_AttributeSet(sigmafield,"Grid Number",&
+        call ESMF_AttributeSet(s_vvField,"Grid Number",&
              gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
         call LIS_verify(status,'Error: AttributeSet in Grid Number')
         
-        call ESMF_AttributeSet(sigmafield,"Assimilation Flag",&
+        call ESMF_AttributeSet(s_vvField,"Assimilation Flag",&
+             assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+        call LIS_verify(status, 'Error: AttributeSet in Assimilation Flag')
+
+        call ESMF_AttributeSet(s_vhField,"Grid Number",&
+             gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+        call LIS_verify(status,'Error: AttributeSet in Grid Number')
+        
+        call ESMF_AttributeSet(s_vhField,"Assimilation Flag",&
              assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
         call LIS_verify(status, 'Error: AttributeSet in Assimilation Flag')
         
@@ -244,7 +271,7 @@ end subroutine read_S1_sigma
 ! \label{read_S1_sigma_data}
 !
 ! !INTERFACE:
-subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
+subroutine read_S1_sigma_data(n, k, fname, svv_ip, svh_ip)
 !
 ! !USES:
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
@@ -272,7 +299,7 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
 !  \begin{description}
 !  \item[n]            index of the nest
 !  \item[fname]        name of the S1 sigma file
-!  \item[s0vvobs\_ip]   sigma depth data processed to the LIS domain
+!  \item[svvobs\_ip]   sigma depth data processed to the LIS domain
 ! \end{description}
 !
 ! !FILES USED:
@@ -280,26 +307,29 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
 ! !REVISION HISTORY:
 !
 !EOP
-  real                        :: sigma(S1_sigma_struc(n)%nr,S1_sigma_struc(n)%nc)
+  real                        :: s_vv(S1_sigma_struc(n)%nr,S1_sigma_struc(n)%nc)
+  real                        :: s_vh(S1_sigma_struc(n)%nr,S1_sigma_struc(n)%nc)
   real                        :: lat_nc(S1_sigma_struc(n)%nr)
   real                        :: lon_nc(S1_sigma_struc(n)%nc)
-  real                        :: sigma_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
-  real                        :: sigma_fill(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
-  integer                     :: nsigma_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+  real                        :: svv_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+  real                        :: svv_fill(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+  real                        :: svh_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+  real                        :: svh_fill(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+  integer                     :: ns_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
   logical                     :: file_exists
   integer                     :: c,r,i,j
   integer                     :: stn_col,stn_row
   real                        :: col,row
   integer                     :: nid
-  integer                     :: sigmaId,latId,lonId
+  integer                     :: svvId,svhId,latId,lonId
   integer                     :: ios
 
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
 
-!  sigma = LIS_rc%udef
+!  s_vv = LIS_rc%udef
 !  lat_nc = LIS_rc%udef
 !  lon_nc = LIS_rc%udef
-!  sigma_ip = LIS_rc%udef
+!  svv_ip = LIS_rc%udef
 
   inquire(file=fname, exist=file_exists)
   if(file_exists) then
@@ -308,7 +338,10 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
      call LIS_verify(ios,'Error opening file '//trim(fname))
  
      ! variables
-     ios = nf90_inq_varid(nid, 's0vv',sigmaid)
+     ios = nf90_inq_varid(nid, 's0vv',svvid)
+     call LIS_verify(ios, 'Error nf90_inq_varid: backscatter data')
+
+     ios = nf90_inq_varid(nid, 's0vh',svhid)
      call LIS_verify(ios, 'Error nf90_inq_varid: backscatter data')
 
      ios = nf90_inq_varid(nid, 'lat',latid)
@@ -318,8 +351,11 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
      call LIS_verify(ios, 'Error nf90_inq_varid: longitude data')
 
      !values
-     ios = nf90_get_var(nid, sigmaid, sigma)
+     ios = nf90_get_var(nid, svvid, s_vv)
      call LIS_verify(ios, 'Error nf90_get_var: s0vv')
+
+     ios = nf90_get_var(nid, svhid, s_vh)
+     call LIS_verify(ios, 'Error nf90_get_var: s0vh')
 
      ios = nf90_get_var(nid, latid, lat_nc)
      call LIS_verify(ios, 'Error nf90_get_var: lat')
@@ -334,8 +370,9 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
 
 
 !    ! Initialize 
-     sigma_ip = 0
-     nsigma_ip = 0
+     svv_ip = 0
+     svh_ip = 0
+     ns_ip = 0
 
      ! Interpolate the data by averaging 
      do i=1,S1_sigma_struc(n)%nr
@@ -347,57 +384,72 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
            stn_col = nint(col)
            stn_row = nint(row)
 
-           if(sigma(i,j).ge.-999.and.&
+           if(s_vv(i,j).ge.-999.and.&
                 stn_col.gt.0.and.stn_col.le.LIS_rc%obs_lnc(k).and.&
                 stn_row.gt.0.and.stn_row.le.LIS_rc%obs_lnr(k)) then
-              sigma_ip(stn_col,stn_row) = sigma_ip(stn_col,stn_row) + sigma(i,j)
-              nsigma_ip(stn_col,stn_row) = nsigma_ip(stn_col,stn_row) + 1
+              svv_ip(stn_col,stn_row) = svv_ip(stn_col,stn_row) + s_vv(i,j)
+              svh_ip(stn_col,stn_row) = svh_ip(stn_col,stn_row) + s_vh(i,j)
+              ns_ip(stn_col,stn_row) = ns_ip(stn_col,stn_row) + 1
            endif
         enddo
      enddo
 
      do r=1,LIS_rc%obs_lnr(k)
         do c=1,LIS_rc%obs_lnc(k)
-           if(nsigma_ip(c,r).ne.0) then
-              sigma_ip(c,r) = sigma_ip(c,r)/nsigma_ip(c,r) !average of dB?
+           if(ns_ip(c,r).ne.0) then
+              svv_ip(c,r) = svv_ip(c,r)/ns_ip(c,r) !average of dB, first convert to linear?
+              svh_ip(c,r) = svh_ip(c,r)/ns_ip(c,r)
            else
-              sigma_ip(c,r) = LIS_rc%udef
+              svv_ip(c,r) = LIS_rc%udef
+              svh_ip(c,r) = LIS_rc%udef
            endif
         enddo
      enddo
 
 
      ! Fix stripes in obs caused by regridding (missing obs for LIS grid cell)
-     sigma_fill = 0
-     nsigma_ip = 0
+     svv_fill = 0
+     svh_fill = 0
+     ns_ip = 0
+
      do r=2,LIS_rc%obs_lnr(k)-1
         do c=2,LIS_rc%obs_lnc(k)-1
-           if (sigma_ip(c,r).ne.LIS_rc%udef) then
-              sigma_fill(c-1,r-1)= sigma_fill(c-1,r-1) + sigma_ip(c,r)
-              sigma_fill(c-1,r)= sigma_fill(c-1,r) + sigma_ip(c,r)
-              sigma_fill(c-1,r+1)= sigma_fill(c-1,r+1) + sigma_ip(c,r)
-              sigma_fill(c,r-1)= sigma_fill(c,r-1) + sigma_ip(c,r)
-              sigma_fill(c,r+1)= sigma_fill(c,r+1) + sigma_ip(c,r)
-              sigma_fill(c+1,r-1)= sigma_fill(c+1,r-1) + sigma_ip(c,r)
-              sigma_fill(c+1,r)= sigma_fill(c+1,r) + sigma_ip(c,r)
-              sigma_fill(c+1,r+1)= sigma_fill(c+1,r+1) + sigma_ip(c,r)
+           if (svv_ip(c,r).ne.LIS_rc%udef) then
+              svv_fill(c-1,r-1)= svv_fill(c-1,r-1) + svv_ip(c,r)
+              svv_fill(c-1,r)= svv_fill(c-1,r) + svv_ip(c,r)
+              svv_fill(c-1,r+1)= svv_fill(c-1,r+1) + svv_ip(c,r)
+              svv_fill(c,r-1)= svv_fill(c,r-1) + svv_ip(c,r)
+              svv_fill(c,r+1)= svv_fill(c,r+1) + svv_ip(c,r)
+              svv_fill(c+1,r-1)= svv_fill(c+1,r-1) + svv_ip(c,r)
+              svv_fill(c+1,r)= svv_fill(c+1,r) + svv_ip(c,r)
+              svv_fill(c+1,r+1)= svv_fill(c+1,r+1) + svv_ip(c,r)
+
+              svh_fill(c-1,r-1)= svh_fill(c-1,r-1) + svh_ip(c,r)
+              svh_fill(c-1,r)= svh_fill(c-1,r) + svh_ip(c,r)
+              svh_fill(c-1,r+1)= svh_fill(c-1,r+1) + svh_ip(c,r)
+              svh_fill(c,r-1)= svh_fill(c,r-1) + svh_ip(c,r)
+              svh_fill(c,r+1)= svh_fill(c,r+1) + svh_ip(c,r)
+              svh_fill(c+1,r-1)= svh_fill(c+1,r-1) + svh_ip(c,r)
+              svh_fill(c+1,r)= svh_fill(c+1,r) + svh_ip(c,r)
+              svh_fill(c+1,r+1)= svh_fill(c+1,r+1) + svh_ip(c,r)
               
-              nsigma_ip(c-1,r-1)= nsigma_ip(c-1,r-1) + 1
-              nsigma_ip(c-1,r)= nsigma_ip(c-1,r) + 1
-              nsigma_ip(c-1,r+1)= nsigma_ip(c-1,r+1) + 1
-              nsigma_ip(c,r-1)= nsigma_ip(c,r-1) + 1
-              nsigma_ip(c,r+1)= nsigma_ip(c,r+1) + 1
-              nsigma_ip(c+1,r-1)= nsigma_ip(c+1,r-1) + 1
-              nsigma_ip(c+1,r)= nsigma_ip(c+1,r) + 1
-              nsigma_ip(c+1,r+1)= nsigma_ip(c+1,r+1) + 1
+              ns_ip(c-1,r-1)= ns_ip(c-1,r-1) + 1
+              ns_ip(c-1,r)= ns_ip(c-1,r) + 1
+              ns_ip(c-1,r+1)= ns_ip(c-1,r+1) + 1
+              ns_ip(c,r-1)= ns_ip(c,r-1) + 1
+              ns_ip(c,r+1)= ns_ip(c,r+1) + 1
+              ns_ip(c+1,r-1)= ns_ip(c+1,r-1) + 1
+              ns_ip(c+1,r)= ns_ip(c+1,r) + 1
+              ns_ip(c+1,r+1)= ns_ip(c+1,r+1) + 1
            endif
         enddo
      enddo
 
      do r=1,LIS_rc%obs_lnr(k)
         do c=1,LIS_rc%obs_lnc(k)
-           if(sigma_ip(c,r).eq.LIS_rc%udef.and.nsigma_ip(c,r).gt.0) then
-              sigma_ip(c,r) = sigma_fill(c,r)/nsigma_ip(c,r) 
+           if(svv_ip(c,r).eq.LIS_rc%udef.and.ns_ip(c,r).gt.0) then
+              svv_ip(c,r) = svv_fill(c,r)/ns_ip(c,r) 
+              svh_ip(c,r) = svh_fill(c,r)/ns_ip(c,r) 
            endif
         enddo
      enddo
