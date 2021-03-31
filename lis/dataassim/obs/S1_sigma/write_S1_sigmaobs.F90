@@ -37,10 +37,10 @@ subroutine write_S1_sigmaobs(n, k, OBS_State)
 ! S1 observations to a file
 ! 
 !EOP
-  type(ESMF_Field)         :: sigmaField
+  type(ESMF_Field)         :: s_vvField, s_vhField
   logical                  :: data_update
-  real, pointer            :: sigmaobs(:)
-  character*100            :: obsname
+  real, pointer            :: obs_vv(:), obs_vh(:)
+  character*100            :: obsname_vv, obsname_vh
   integer                  :: ftn
   integer                  :: status
   
@@ -50,42 +50,43 @@ subroutine write_S1_sigmaobs(n, k, OBS_State)
 
   if(data_update) then 
      
-     call ESMF_StateGet(OBS_State, "Observation01",sigmaField, &
+     call ESMF_StateGet(OBS_State, "Observation01",s_vvField, &
+          rc=status)
+     call LIS_verify(status)
+
+     call ESMF_StateGet(OBS_State, "Observation02",s_vhField, &
           rc=status)
      call LIS_verify(status)
      
-     call ESMF_FieldGet(sigmaField, localDE=0, farrayPtr=sigmaobs, rc=status)
+     call ESMF_FieldGet(s_vvField, localDE=0, farrayPtr=obs_vv, rc=status)
      call LIS_verify(status)
 
+     call ESMF_FieldGet(s_vhField, localDE=0, farrayPtr=obs_vh, rc=status)
+     call LIS_verify(status)
+
+!    ! save VV
      if(LIS_masterproc) then 
         ftn = LIS_getNextUnitNumber()
-        call S1_sigma_obsname(n,k,obsname)        
+        call S1_sigma_obsname(n,k,obsname_vv,obsname_vh)        
 
         call LIS_create_output_directory('DAOBS')
-        open(ftn,file=trim(obsname), form='unformatted')
-     endif
 
-#if 0 
-     testdata = LIS_rc%udef
-     do r=1,LIS_rc%obs_lnr(k)
-        do c=1,LIS_rc%obs_lnc(k)
-           if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
-              testdata(c,r) = sigmaobs(LIS_obs_domain(n,k)%gindex(c,r))
-           endif
-        enddo
-     enddo
-     if(LIS_localPet.eq.241) then 
-        open(100,file='test_out.bin',form='unformatted')
-        write(100) testdata
-        close(100)
-        stop
-     endif
-#endif
-     call LIS_writevar_gridded_obs(ftn,n,k,sigmaobs)
-     
-     if(LIS_masterproc) then 
+        open(ftn,file=trim(obsname_vv), form='unformatted')
+        call LIS_writevar_gridded_obs(ftn,n,k,obs_vv)
         call LIS_releaseUnitNumber(ftn)
      endif
+!    ! save VH
+     if(LIS_masterproc) then 
+        ftn = LIS_getNextUnitNumber()
+        call S1_sigma_obsname(n,k,obsname_vv,obsname_vh)        
+
+        call LIS_create_output_directory('DAOBS')
+
+        open(ftn,file=trim(obsname_vh), form='unformatted')
+        call LIS_writevar_gridded_obs(ftn,n,k,obs_vh)
+        call LIS_releaseUnitNumber(ftn)
+     endif
+
 
   endif  
 
@@ -96,14 +97,14 @@ end subroutine write_S1_sigmaobs
 ! \label{S1_sigma_obsname}
 ! 
 ! !INTERFACE: 
-subroutine S1_sigma_obsname(n,k,obsname)
+subroutine S1_sigma_obsname(n,k,obsname_vv,obsname_vh)
 ! !USES: 
   use LIS_coreMod, only : LIS_rc
 
 ! !ARGUMENTS: 
   integer               :: n
   integer               :: k
-  character(len=*)      :: obsname
+  character(len=*)      :: obsname_vv, obsname_vh
 ! 
 ! !DESCRIPTION: 
 ! 
@@ -120,8 +121,10 @@ subroutine S1_sigma_obsname(n,k,obsname)
        LIS_rc%yr, LIS_rc%mo, &
        LIS_rc%da, LIS_rc%hr,LIS_rc%mn
 
-  obsname = trim(LIS_rc%odir)//'/DAOBS/'//cdate1(1:6)//&
-       '/LISDAOBS_'//cdate1// &
+  obsname_vv = trim(LIS_rc%odir)//'/DAOBS/'//cdate1(1:6)//&
+       '/LISDAOBS_VV_'//cdate1// &
        trim(cda)//trim(cdate)//'.1gs4r'
-  
+  obsname_vh = trim(LIS_rc%odir)//'/DAOBS/'//cdate1(1:6)//&
+       '/LISDAOBS_VH_'//cdate1// &
+       trim(cda)//trim(cdate)//'.1gs4r'  
 end subroutine S1_sigma_obsname
