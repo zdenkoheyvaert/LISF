@@ -91,7 +91,7 @@ contains
     character*100          ::  S1sigmaobsdir
     character*100          ::  temp
     real,  allocatable         ::  obsstd(:)
-    character*1            ::  vid(3)
+    character*1            ::  vid(2)
     character*40, allocatable  ::  vname(:)
     real,         allocatable  ::  varmin(:)
     real,         allocatable  ::  varmax(:)
