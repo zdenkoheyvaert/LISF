@@ -225,10 +225,10 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
      if(LIS_rc%obs_ngrid(k).gt.0) then 
 
         !linearly scale the observation err
-        ssdev = S1_sigma_struc(n)%ssdev 
+        ssdev = S1_sigma_struc(n)%ssdev_inp
         do t=1,LIS_rc%obs_ngrid(k)
            if(s_vv(t).ne.-9999.0) then 
-              ssdev(t) =  S1_sigma_struc(n)%ssdev(t) !+ 0.05*obsl(t)
+              ssdev(t) =  S1_sigma_struc(n)%ssdev_inp !+ 0.05*obsl(t)
            endif
         enddo
 
