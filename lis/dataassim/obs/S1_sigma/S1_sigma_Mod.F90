@@ -36,7 +36,7 @@ module S1_sigma_Mod
 
   type, public ::  S1_sigma_dec
      logical             :: startMode
-     real,    allocatable    :: ssdev(:)
+     real                :: ssdev_inp
      integer             :: nc,nr
      real,    allocatable    :: s_vv(:,:)
      real,    allocatable    :: s_vh(:,:)
@@ -214,7 +214,7 @@ contains
 
           do m=1,LIS_rc%nobtypes(k)
              ssdev = obs_pert%ssdev(m)
-             S1_sigma_struc(n)%ssdev =obs_pert%ssdev(m) 
+             S1_sigma_struc(n)%ssdev_inp =obs_pert%ssdev(m) 
 
              write(unit=temp,fmt='(i2.2)') m
              read(unit=temp,fmt='(2a1)') vid
