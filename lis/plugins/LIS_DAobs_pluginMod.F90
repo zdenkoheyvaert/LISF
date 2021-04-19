@@ -618,6 +618,7 @@ subroutine LIS_DAobs_plugin
 
 #if ( defined DA_OBS_S1_sigma )
 !S1 backscatter obs
+   call registerdaobsclass(trim(LIS_S1_sigma_obsId),"LSM")
    call registerdaobssetup(trim(LIS_S1_sigma_obsId)//char(0), &
         S1_sigma_setup)
    call registerreaddaobs(trim(LIS_S1_sigma_obsId)//char(0),  &
