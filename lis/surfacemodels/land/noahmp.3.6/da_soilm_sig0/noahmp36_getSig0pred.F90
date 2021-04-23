@@ -12,11 +12,11 @@
 ! \label{noahmp36_getSig0pred}
 !
 ! !REVISION HISTORY:
-! 15 Mar 2021: Sara Modanesi; Initiated specifications
-!
+! 15 Mar 2021: Sara Modanesi, Michel Bechtold; Initiated specifications
+! 
 ! !INTERFACE:
 
-subroutine noahmp36_getSig0pred(n,obs_pred)
+subroutine noahmp36_getSig0pred(n,k,obs_pred)
 
 ! !USES:
 
@@ -32,8 +32,9 @@ subroutine noahmp36_getSig0pred(n,obs_pred)
   implicit none
 ! !ARGUMENTS: 
   integer, intent(in)    :: n
-  real                   :: obs_pred(LIS_rc%ngrid(n)*2,LIS_rc%nensem(n))
-  integer                :: count1(LIS_rc%ngrid(n)*2,LIS_rc%nensem(n))
+  integer, intent(in)    :: k
+  real                   :: obs_pred(LIS_rc%ngrid(k)*2,LIS_rc%nensem(n))
+  integer                :: count1(LIS_rc%ngrid(k)*2,LIS_rc%nensem(n))
 !
 ! !DESCRIPTION:
 !
@@ -87,13 +88,13 @@ call LIS_RTM_run(n)
      do m=1,LIS_rc%nensem(n)
         t = i+m-1
         gid = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%index + &
-             LIS_rc%ngrid(n)
+             LIS_rc%ngrid(k)
         obs_pred(gid,m)= obs_pred(gid,m) + s0VH(t)
         count1(gid,m) = count1(gid,m) +1
      enddo
   enddo
 
-  do i=1,LIS_rc%ngrid(n)*2
+  do i=1,LIS_rc%ngrid(k)*2
      do m=1,LIS_rc%nensem(n)
         obs_pred(i,m) = obs_pred(i,m)/(count1(i,m))
      enddo
