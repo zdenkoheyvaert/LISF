@@ -121,18 +121,18 @@ contains
 !allocate memory for all tile in current nest
 
 
-      allocate(wcm_struc(n)%AA_VV(LIS_rc%ngrid(n)))
-      allocate(wcm_struc(n)%BB_VV(LIS_rc%ngrid(n)))
-      allocate(wcm_struc(n)%CC_VV(LIS_rc%ngrid(n)))
-      allocate(wcm_struc(n)%DD_VV(LIS_rc%ngrid(n)))
+      allocate(wcm_struc(n)%AA_VV(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%BB_VV(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%CC_VV(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%DD_VV(LIS_rc%glbngrid(n)))
 
-      allocate(wcm_struc(n)%AA_VH(LIS_rc%ngrid(n)))
-      allocate(wcm_struc(n)%BB_VH(LIS_rc%ngrid(n)))
-      allocate(wcm_struc(n)%CC_VH(LIS_rc%ngrid(n)))
-      allocate(wcm_struc(n)%DD_VH(LIS_rc%ngrid(n)))
+      allocate(wcm_struc(n)%AA_VH(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%BB_VH(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%CC_VH(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%DD_VH(LIS_rc%glbngrid(n)))
 
-      allocate(wcm_struc(n)%lone(LIS_rc%ngrid(n)))
-      allocate(wcm_struc(n)%late(LIS_rc%ngrid(n)))
+      allocate(wcm_struc(n)%lone(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%late(LIS_rc%glbngrid(n)))
 
       allocate(wcm_struc(n)%Sig0VV(LIS_rc%npatch(n,LIS_rc%lsm_index)))
       allocate(wcm_struc(n)%Sig0VH(LIS_rc%npatch(n,LIS_rc%lsm_index)))
@@ -202,7 +202,7 @@ contains
          'failure opening AA_VV_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%ngrid(n)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%AA_VV(t),wcm_struc(n)%lone(t),&
           wcm_struc(n)%late(t)
        enddo 
@@ -217,7 +217,7 @@ contains
          'failure opening BB_VV_PARM.TBL'
          CALL wrf_error_fatal ( message ) 
        END IF
-       do t=1,LIS_rc%ngrid(n)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%BB_VV(t)
        enddo
 
@@ -233,7 +233,7 @@ contains
          'failure opening CC_VV_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%ngrid(n)  
+       do t=1,LIS_rc%glbngrid(n)  
            READ (19,*) wcm_struc(n)%CC_VV(t)
        enddo
 
@@ -249,7 +249,7 @@ contains
          'failure opening DD_VV_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%ngrid(n)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*) wcm_struc(n)%DD_VV(t)
        enddo
 
@@ -267,7 +267,7 @@ contains
          'failure opening AA_VH_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%ngrid(n)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%AA_VH(t)
        enddo 
        CLOSE (19)
@@ -281,7 +281,7 @@ contains
          'failure opening BB_VH_PARM.TBL'
          CALL wrf_error_fatal ( message ) 
        END IF
-       do t=1,LIS_rc%ngrid(n)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%BB_VH(t)
        enddo
 
@@ -297,7 +297,7 @@ contains
          'failure opening CC_VH_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%ngrid(n)  
+       do t=1,LIS_rc%glbngrid(n)  
            READ (19,*) wcm_struc(n)%CC_VH(t)
        enddo
 
@@ -313,7 +313,7 @@ contains
          'failure opening DD_VH_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%ngrid(n)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*) wcm_struc(n)%DD_VH(t)
        enddo
 
@@ -439,7 +439,7 @@ contains
        col = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%col
        lat = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lat
        lon = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lon
-       do p=1,LIS_rc%ngrid(n)
+       do p=1,LIS_rc%glbngrid(n)
           lon1= wcm_struc(n)%lone(p)
           lat1= wcm_struc(n)%late(p)
           if (lon1 .eq. lon .and. lat1 .eq. lat) then
