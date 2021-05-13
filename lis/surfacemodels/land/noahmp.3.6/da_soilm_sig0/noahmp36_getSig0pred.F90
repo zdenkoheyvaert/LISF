@@ -12,7 +12,7 @@
 ! \label{noahmp36_getSig0pred}
 !
 ! !REVISION HISTORY:
-! 15 Mar 2021: Sara Modanesi, Michel Bechtold; Initiated specifications
+! 13 May 2021: Sara Modanesi, Michel Bechtold; Initiated specifications for VV polarization
 ! 
 ! !INTERFACE:
 
@@ -33,12 +33,12 @@ subroutine noahmp36_getSig0pred(n,k,obs_pred)
 ! !ARGUMENTS: 
   integer, intent(in)    :: n
   integer, intent(in)    :: k
-  real                   :: obs_pred(LIS_rc%ngrid(k)*2,LIS_rc%nensem(n))
-  integer                :: count1(LIS_rc%ngrid(k)*2,LIS_rc%nensem(n))
+  real                   :: obs_pred(LIS_rc%ngrid(k),LIS_rc%nensem(n))
+  integer                :: count1(LIS_rc%ngrid(k),LIS_rc%nensem(n))
 !
 ! !DESCRIPTION:
 !
-!  Returns the Backscatter VV and VH obs pred (model's estimate of 
+!  Returns the Backscatter VV obs pred (model's estimate of 
 !  observations) for data assimilation
 ! 
 !  The arguments are: 
@@ -49,7 +49,7 @@ subroutine noahmp36_getSig0pred(n,k,obs_pred)
 !EOP
 
   integer                :: i,t,m,gid
-  real, pointer          :: s0VV(:), s0VH(:)
+  real, pointer          :: s0VV(:)
   type(ESMF_Field)       :: varField
   integer                :: status
 
@@ -66,13 +66,6 @@ call LIS_RTM_run(n)
   call LIS_verify(status, &
        'Error in FieldGet in noahmp36_getSig0Pred for WCM_Sig0VV')
 
-  call ESMF_StateGet(LIS_forwardState(n), "WCM_Sig0VH", varField, rc=status)
-  call LIS_verify(status, &
-       "Error in StateGet in noahmp36_getSig0Pred for WCM_Sig0VH")
-
-  call ESMF_FieldGet(varField, localDE=0,farrayPtr=s0VH, rc=status)
-  call LIS_verify(status, &
-       'Error in FieldGet in noahmp36_getSig0Pred for WCM_Sig0VH')
   obs_pred = 0.0
   count1 = 0.0
   do i=1,LIS_rc%npatch(n,LIS_rc%lsm_index),LIS_rc%nensem(n)
@@ -84,17 +77,7 @@ call LIS_RTM_run(n)
      enddo
   enddo
 
-  do i=1,LIS_rc%npatch(n,LIS_rc%lsm_index),LIS_rc%nensem(n)
-     do m=1,LIS_rc%nensem(n)
-        t = i+m-1
-        gid = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%index + &
-             LIS_rc%ngrid(k)
-        obs_pred(gid,m)= obs_pred(gid,m) + s0VH(t)
-        count1(gid,m) = count1(gid,m) +1
-     enddo
-  enddo
-
-  do i=1,LIS_rc%ngrid(k)*2
+  do i=1,LIS_rc%ngrid(k)
      do m=1,LIS_rc%nensem(n)
         obs_pred(i,m) = obs_pred(i,m)/(count1(i,m))
      enddo
