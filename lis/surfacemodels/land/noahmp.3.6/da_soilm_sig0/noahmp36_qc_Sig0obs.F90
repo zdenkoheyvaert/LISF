@@ -13,7 +13,7 @@
 !
 ! !REVISION HISTORY:
 ! 26/03/2021 Sara Modanesi: Initial specifications
-! 02/04/2021 Sara Modanesi: added specifications for both Sig0VV and Sig0VH S1 obs and removed flag for veg. cover
+! 12/05/2021 Sara Modanesi: added specifications for Sig0VV S1 obs only and removed flag for veg. cover
 !
 ! !INTERFACE:
 subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
@@ -47,9 +47,9 @@ subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
 !  \end{description}
 !
 !EOP
-  type(ESMF_Field)         :: s_vvField,s_vhField
+  type(ESMF_Field)         :: sigmaField
 
-  real, pointer            :: s_vv(:),s_vh(:)
+  real, pointer            :: obsl(:)
   integer                  :: t
   integer                  :: gid
   integer                  :: status
@@ -95,23 +95,14 @@ subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
   real                     :: vegt_obs(LIS_rc%obs_ngrid(k))
 
 !-----this part is derived from ./lis/dataassim/obs/s1_sigma/read_S1_sigma.F90
-  call ESMF_StateGet(OBS_State,"Observation01",s_vvField,&
+  call ESMF_StateGet(OBS_State,"Observation01",sigmaField,&
        rc=status) !
   call LIS_verify(status,&
-       "ESMF_StateGet failed in noahmp36_qc_Sig0obs s_vv")
+       "ESMF_StateGet failed in noahmp36_qc_Sig0obs sigmaField")
 
-  call ESMF_StateGet(OBS_State,"Observation02",s_vhField,&
-       rc=status) !
-  call LIS_verify(status,&
-       "ESMF_StateGet failed in noahmp36_qc_Sig0obs s_vh")
-
-  call ESMF_FieldGet(s_vvField,localDE=0,farrayPtr=s_vv,rc=status)
+  call ESMF_FieldGet(sigmaField,localDE=0,farrayPtr=obsl,rc=status)
   call LIS_verify(status,& 
-       "ESMF_FieldGet failed in noahmp36_qc_Sigobs s_vv")
-
-  call ESMF_FieldGet(s_vhField,localDE=0,farrayPtr=s_vh,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet failed in noahmp36_qc_Sigobs s_vh")
+       "ESMF_FieldGet failed in noahmp36_qc_Sigobs obsl")
 
 !---------------------------------------------------------------------------  
 
@@ -225,100 +216,51 @@ subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
        vegt_obs)
 
   do t = 1,LIS_rc%obs_ngrid(k)
-!------------------start loop considering s_vv--------------------------
-     if(s_vv(t).ne.LIS_rc%udef) then 
+!------------------start loop considering one obs--------------------------
+     if(obsl(t).ne.LIS_rc%udef) then 
 ! MN: check for rain
         if(rainf_obs(t).gt.3E-6) then   ! Var name Noah36 --> rainf 
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
 !           print*, 'rainf ',gid,t,NOAHMP36_struc(n)%noahmp36(t)%prcp
 ! MN: check for frozen soil
         elseif(abs(smc1_obs(t)- &
              sh2o1_obs(t)).gt.0.0001) then
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(abs(smc2_obs(t)- &
              sh2o2_obs(t)).gt.0.0001) then
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(abs(smc3_obs(t)- &
              sh2o3_obs(t)).gt.0.0001) then
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(abs(smc4_obs(t)- &
              sh2o4_obs(t)).gt.0.0001) then
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc1_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc2_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc3_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc4_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vv(t) = LIS_rc%udef 
+           obsl(t) = LIS_rc%udef 
         elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
  ! MN: check for snow  
         elseif(sneqv_obs(t).gt.0.001) then 
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(sca_obs(t).gt.0.0001) then  ! Var name sca 
-           s_vv(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
  ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to 0.7 !commented out for now
  !      elseif(shdfac_obs(t).gt.0.7) then  ! var name Noah36 shdfac 12-month green veg. frac.  
- !          s_vv(t) = LIS_rc%udef        
+ !          obsl(t) = LIS_rc%udef        
 !too close to the tails, could be due to scaling, so reject. !commented out for
 !now. It was written for soil moisture
-!        elseif(smcmax_obs(t)-s_vv(t).lt.0.02) then 
-!           s_vv(t) = LIS_rc%udef
-!        elseif(s_vv(t) - smcwlt_obs(t).lt.0.02) then 
-!           s_vv(t) = LIS_rc%udef
-        endif
-     endif
-!------------------start loop considering s_vh--------------------------
-     if(s_vh(t).ne.LIS_rc%udef) then
-! MN: check for rain
-        if(rainf_obs(t).gt.3E-6) then   ! Var name Noah36 --> rainf 
-           s_vh(t) = LIS_rc%udef
-!           print*, 'rainf ',gid,t,NOAHMP36_struc(n)%noahmp36(t)%prcp
-! MN: check for frozen soil
-        elseif(abs(smc1_obs(t)- &
-             sh2o1_obs(t)).gt.0.0001) then
-           s_vh(t) = LIS_rc%udef
-        elseif(abs(smc2_obs(t)- &
-             sh2o2_obs(t)).gt.0.0001) then
-           s_vh(t) = LIS_rc%udef
-        elseif(abs(smc3_obs(t)- &
-             sh2o3_obs(t)).gt.0.0001) then
-           s_vh(t) = LIS_rc%udef
-        elseif(abs(smc4_obs(t)- &
-             sh2o4_obs(t)).gt.0.0001) then
-           s_vh(t) = LIS_rc%udef
-        elseif(stc1_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vh(t) = LIS_rc%udef
-        elseif(stc2_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vh(t) = LIS_rc%udef
-        elseif(stc3_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vh(t) = LIS_rc%udef
-        elseif(stc4_obs(t).le.LIS_CONST_TKFRZ) then
-           s_vh(t) = LIS_rc%udef
-        elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
-           s_vh(t) = LIS_rc%udef
-        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
-           s_vh(t) = LIS_rc%udef
- ! MN: check for snow  
-        elseif(sneqv_obs(t).gt.0.001) then
-           s_vh(t) = LIS_rc%udef
-        elseif(sca_obs(t).gt.0.0001) then  ! Var name sca 
-           s_vh(t) = LIS_rc%udef
- ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to
- ! 0.7 !commented out for now
- !      elseif(shdfac_obs(t).gt.0.7) then  ! var name Noah36 shdfac 12-month
- !      green veg. frac.  
- !          s_vh(t) = LIS_rc%udef        
-!too close to the tails, could be due to scaling, so reject. !commented out for
-!now. It was written for soil moisture
-!        elseif(smcmax_obs(t)-s_vh(t).lt.0.02) then 
-!           s_vh(t) = LIS_rc%udef
-!        elseif(s_vh(t) - smcwlt_obs(t).lt.0.02) then 
-!           s_vh(t) = LIS_rc%udef
+!        elseif(smcmax_obs(t)-obsl(t).lt.0.02) then 
+!           obsl(t) = LIS_rc%udef
+!        elseif(obsl(t) - smcwlt_obs(t).lt.0.02) then 
+!           obsl(t) = LIS_rc%udef
         endif
      endif
   enddo
