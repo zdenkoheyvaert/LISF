@@ -8,15 +8,15 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
-! !ROUTINE: noahmp36_getSig0pred
-! \label{noahmp36_getSig0pred}
+! !ROUTINE: noahmp36_getSig0VHpred
+! \label{noahmp36_getSig0VHpred}
 !
 ! !REVISION HISTORY:
-! 13 May 2021: Sara Modanesi, Michel Bechtold; Initiated specifications for VV polarization
+! 13 May 2021: Sara Modanesi, Michel Bechtold; Initiated specifications for VH polarization
 ! 
 ! !INTERFACE:
 
-subroutine noahmp36_getSig0pred(n,k,obs_pred)
+subroutine noahmp36_getSig0VHpred(n,k,obs_pred)
 
 ! !USES:
 
@@ -38,7 +38,7 @@ subroutine noahmp36_getSig0pred(n,k,obs_pred)
 !
 ! !DESCRIPTION:
 !
-!  Returns the Backscatter VV obs pred (model's estimate of 
+!  Returns the Backscatter VH obs pred (model's estimate of 
 !  observations) for data assimilation
 ! 
 !  The arguments are: 
@@ -49,22 +49,22 @@ subroutine noahmp36_getSig0pred(n,k,obs_pred)
 !EOP
 
   integer                :: i,t,m,gid
-  real, pointer          :: s0VV(:)
+  real, pointer          :: s0VH(:)
   type(ESMF_Field)       :: varField
   integer                :: status
 
 !!call the forward model
 call LIS_RTM_run(n)
 
-  call ESMF_StateGet(LIS_forwardState(n), "WCM_Sig0VV", varField, rc=status)
+  call ESMF_StateGet(LIS_forwardState(n), "WCM_Sig0VH", varField, rc=status)
 !LIS_histDAtaMod
   call LIS_verify(status, &
-       "Error in StateGet in noahmp36_getSig0Pred for WCM_Sig0VV")
+       "Error in StateGet in noahmp36_getSig0VHPred for WCM_Sig0VH")
 
-  call ESMF_FieldGet(varField, localDE=0,farrayPtr=s0VV, rc=status)!variable
-!s0VV previously defined
+  call ESMF_FieldGet(varField, localDE=0,farrayPtr=s0VH, rc=status)!variable
+!s0VH previously defined
   call LIS_verify(status, &
-       'Error in FieldGet in noahmp36_getSig0Pred for WCM_Sig0VV')
+       'Error in FieldGet in noahmp36_getSig0VHPred for WCM_Sig0VH')
 
   obs_pred = 0.0
   count1 = 0.0
@@ -72,7 +72,7 @@ call LIS_RTM_run(n)
      do m=1,LIS_rc%nensem(n)
         t = i+m-1
         gid = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%index
-        obs_pred(gid,m)= obs_pred(gid,m) + s0VV(t)
+        obs_pred(gid,m)= obs_pred(gid,m) + s0VH(t)
         count1(gid,m) = count1(gid,m) +1
      enddo
   enddo
@@ -83,5 +83,5 @@ call LIS_RTM_run(n)
      enddo
   enddo
 
-end subroutine noahmp36_getSig0pred
+end subroutine noahmp36_getSig0VHpred
 
