@@ -7,14 +7,14 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
 ! 
-! !ROUTINE: write_S1_sigmaobs
-! \label{write_S1_sigmaobs}
+! !ROUTINE: write_S1_sigmaVHSMLAIobs
+! \label{write_S1_sigmaVHSMLAIobs}
 ! 
 ! !REVISION HISTORY: 
 ! 30 Aug 2019: Hans Lievens; Initial Specification
 ! 
 ! !INTERFACE: 
-subroutine write_S1_sigmaobs(n, k, OBS_State)
+subroutine write_S1_sigmaVHSMLAIobs(n, k, OBS_State)
 ! !USES: 
   use ESMF
   use LIS_coreMod
@@ -59,7 +59,7 @@ subroutine write_S1_sigmaobs(n, k, OBS_State)
 
      if(LIS_masterproc) then 
         ftn = LIS_getNextUnitNumber()
-        call S1_sigma_obsname(n,k,obsname)        
+        call S1_sigmaVHSMLAI_obsname(n,k,obsname)        
 
         call LIS_create_output_directory('DAOBS')
         open(ftn,file=trim(obsname), form='unformatted')
@@ -89,14 +89,14 @@ subroutine write_S1_sigmaobs(n, k, OBS_State)
 
   endif  
 
-end subroutine write_S1_sigmaobs
+end subroutine write_S1_sigmaVHSMLAIobs
 
 !BOP
-! !ROUTINE: S1_sigma_obsname
-! \label{S1_sigma_obsname}
+! !ROUTINE: S1_sigmaVHSMLAI_obsname
+! \label{S1_sigmaVHSMLAI_obsname}
 ! 
 ! !INTERFACE: 
-subroutine S1_sigma_obsname(n,k,obsname)
+subroutine S1_sigmaVHSMLAI_obsname(n,k,obsname)
 ! !USES: 
   use LIS_coreMod, only : LIS_rc
 
@@ -124,4 +124,4 @@ subroutine S1_sigma_obsname(n,k,obsname)
        '/LISDAOBS_'//cdate1// &
        trim(cda)//trim(cdate)//'.1gs4r'
   
-end subroutine S1_sigma_obsname
+end subroutine S1_sigmaVHSMLAI_obsname

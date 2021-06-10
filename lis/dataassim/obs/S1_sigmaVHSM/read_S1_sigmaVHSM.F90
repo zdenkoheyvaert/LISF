@@ -7,15 +7,15 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 #include "LIS_misc.h"
 !BOP
-! !ROUTINE: read_S1_sigma
-! \label{read_S1_sigma}
+! !ROUTINE: read_S1_sigmaVHSM
+! \label{read_S1_sigmaVHSM}
 !
 ! !REVISION HISTORY:
 !  29 Aug 2019: Hans Lievens; Initial Specification for snow depth
 !  9 Mar 2021:  Isis Brangers; adaptation to backscatter
 !
 ! !INTERFACE: 
-subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State) 
+subroutine read_S1_sigmaVHSM(n,k,OBS_State,OBS_Pert_State) 
 ! !USES: 
   use ESMF
   use LIS_mpiMod
@@ -24,8 +24,8 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
   use LIS_logMod
   use map_utils
   use LIS_DAobservationsMod
-  use LIS_pluginIndices, only : LIS_S1_sigma_obsId
-  use S1_sigma_Mod, only : S1_sigma_struc
+  use LIS_pluginIndices, only : LIS_S1_sigmaVHSM_obsId
+  use S1_sigmaVHSM_Mod, only : S1_sigma_struc
 
   implicit none
 ! !ARGUMENTS: 
@@ -91,14 +91,14 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
      S1_sigma_struc(n)%sigma = LIS_rc%udef
      S1_sigma_struc(n)%sigmatime = -1
 
-     call S1_sigma_filename(S1_filename,obsdir,&
+     call S1_sigmaVHSM_filename(S1_filename,obsdir,&
           LIS_rc%yr,LIS_rc%mo,LIS_rc%da)       
 
      inquire(file=S1_filename,exist=file_exists)
      if(file_exists) then 
 
         write(LIS_logunit,*)  '[INFO] Reading S1 sigma data ',S1_filename
-        call read_S1_sigma_data(n,k, S1_filename, S1_sigma_struc(n)%sigma)
+        call read_S1_sigmaVHSM_data(n,k, S1_filename, S1_sigma_struc(n)%sigma)
 
 
 !-------------------------------------------------------------------------
@@ -162,7 +162,7 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
 !-------------------------------------------------------------------------     
 
   call lsmdaqcobsstate(trim(LIS_rc%lsm)//"+"&
-       //trim(LIS_S1_sigma_obsId)//char(0), & 
+       //trim(LIS_S1_sigmaVHSM_obsId)//char(0), & 
        n, k,OBS_state)
 
   sigma_current = LIS_rc%udef
@@ -234,17 +234,17 @@ subroutine read_S1_sigma(n,k,OBS_State,OBS_Pert_State)
   end if
  
 
-end subroutine read_S1_sigma
+end subroutine read_S1_sigmaVHSM
 
 
 
 !BOP
 !
-! !ROUTINE: read_S1_sigma_data
-! \label{read_S1_sigma_data}
+! !ROUTINE: read_S1_sigmaVHSM_data
+! \label{read_S1_sigmaVHSM_data}
 !
 ! !INTERFACE:
-subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
+subroutine read_S1_sigmaVHSM_data(n, k, fname, sigma_ip)
 !
 ! !USES:
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
@@ -253,7 +253,7 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
   use LIS_coreMod
   use LIS_logMod
   use map_utils,    only : latlon_to_ij
-  use S1_sigma_Mod, only : S1_sigma_struc
+  use S1_sigmaVHSM_Mod, only : S1_sigma_struc
 
   implicit none
 !
@@ -272,7 +272,7 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
 !  \begin{description}
 !  \item[n]            index of the nest
 !  \item[fname]        name of the S1 sigma file
-!  \item[s0vvobs\_ip]   sigma depth data processed to the LIS domain
+!  \item[s0vhobs\_ip]   sigma depth data processed to the LIS domain
 ! \end{description}
 !
 ! !FILES USED:
@@ -308,7 +308,7 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
      call LIS_verify(ios,'Error opening file '//trim(fname))
  
      ! variables
-     ios = nf90_inq_varid(nid, 's0vv',sigmaid)
+     ios = nf90_inq_varid(nid, 's0vh',sigmaid)
      call LIS_verify(ios, 'Error nf90_inq_varid: backscatter data')
 
      ios = nf90_inq_varid(nid, 'lat',latid)
@@ -319,7 +319,7 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
 
      !values
      ios = nf90_get_var(nid, sigmaid, sigma)
-     call LIS_verify(ios, 'Error nf90_get_var: s0vv')
+     call LIS_verify(ios, 'Error nf90_get_var: s0vh')
 
      ios = nf90_get_var(nid, latid, lat_nc)
      call LIS_verify(ios, 'Error nf90_get_var: lat')
@@ -413,17 +413,17 @@ subroutine read_S1_sigma_data(n, k, fname, sigma_ip)
 
 #endif
 
-end subroutine read_S1_sigma_data
+end subroutine read_S1_sigmaVHSM_data
 
 
 
 !BOP
 !
-! !ROUTINE: S1_sigma_filename
+! !ROUTINE: S1_sigmaVHSM_filename
 ! \label{S1_SWND_filename}
 ! 
 ! !INTERFACE: 
-subroutine S1_sigma_filename(filename, ndir, yr, mo, da)
+subroutine S1_sigmaVHSM_filename(filename, ndir, yr, mo, da)
   
   implicit none
 ! !ARGUMENTS: 
@@ -452,7 +452,7 @@ subroutine S1_sigma_filename(filename, ndir, yr, mo, da)
   write(unit=fda, fmt='(i2.2)') da 
   filename = trim(ndir)//'/S1_'//trim(fyr)//trim(fmo)//trim(fda)//'.nc'
     
-end subroutine S1_sigma_filename
+end subroutine S1_sigmaVHSM_filename
 
 
 

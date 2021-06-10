@@ -7,7 +7,7 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
 !
-! !MODULE: S1_sigma_Mod
+! !MODULE: S1_sigmaVHSMLAI_Mod
 ! 
 ! !DESCRIPTION: 
 !   This module contains interfaces and subroutines to
@@ -17,7 +17,7 @@
 !  29 Aug 2019   Hans Lievens;   Initial Specification for sigma depth
 !  9 Mar 2021    Isis Brangers;  Adaptation for backscatter
 ! 
-module S1_sigma_Mod
+module S1_sigmaVHSMLAI_Mod
 ! !USES: 
   use ESMF
 !EOP
@@ -28,7 +28,7 @@ module S1_sigma_Mod
 !-----------------------------------------------------------------------------
 ! !PUBLIC MEMBER FUNCTIONS:
 !-----------------------------------------------------------------------------
-  public :: S1_sigma_setup
+  public :: S1_sigmaVHSMLAI_setup
 !-----------------------------------------------------------------------------
 ! !PUBLIC TYPES:
 !-----------------------------------------------------------------------------
@@ -48,11 +48,11 @@ module S1_sigma_Mod
 contains
 !BOP
 ! 
-! !ROUTINE: S1_sigma_setup
-! \label{S1_sigma_setup}
+! !ROUTINE: S1_sigmaVHSMLAI_setup
+! \label{S1_sigmaVHSMLAI_setup}
 ! 
 ! !INTERFACE: 
-  subroutine S1_sigma_setup(k, OBS_State, OBS_Pert_State)
+  subroutine S1_sigmaVHSMLAI_setup(k, OBS_State, OBS_Pert_State)
 ! !USES: 
 
     use LIS_coreMod
@@ -276,6 +276,6 @@ contains
 
     write(LIS_logunit,*) '[INFO] Created ESMF States to hold S1 observations data'
 
-  end subroutine S1_sigma_setup
+  end subroutine S1_sigmaVHSMLAI_setup
   
-end module S1_sigma_Mod
+end module S1_sigmaVHSMLAI_Mod
