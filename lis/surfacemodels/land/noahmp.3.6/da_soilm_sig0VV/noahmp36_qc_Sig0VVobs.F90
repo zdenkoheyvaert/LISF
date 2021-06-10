@@ -8,15 +8,15 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
-! !ROUTINE: noahmp36_qc_Sig0obs
-! \label{noahmp36_qc_Sig0obs}
+! !ROUTINE: noahmp36_qc_Sig0VVobs
+! \label{noahmp36_qc_Sig0VVobs}
 !
 ! !REVISION HISTORY:
 ! 26/03/2021 Sara Modanesi: Initial specifications
 ! 12/05/2021 Sara Modanesi: added specifications for Sig0VV S1 obs only and removed flag for veg. cover
 !
 ! !INTERFACE:
-subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
+subroutine noahmp36_qc_Sig0VVobs(n,k,OBS_State)
 ! !USES:
   use ESMF
   use LIS_coreMod
@@ -98,7 +98,7 @@ subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
   call ESMF_StateGet(OBS_State,"Observation01",sigmaField,&
        rc=status) !
   call LIS_verify(status,&
-       "ESMF_StateGet failed in noahmp36_qc_Sig0obs sigmaField")
+       "ESMF_StateGet failed in noahmp36_qc_Sig0VVobs sigmaField")
 
   call ESMF_FieldGet(sigmaField,localDE=0,farrayPtr=obsl,rc=status)
   call LIS_verify(status,& 
@@ -245,8 +245,8 @@ subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
            obsl(t) = LIS_rc%udef 
         elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
            obsl(t) = LIS_rc%udef
- !       elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
- !          obsl(t) = LIS_rc%udef
+!        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
+!           obsl(t) = LIS_rc%udef
  ! MN: check for snow  
         elseif(sneqv_obs(t).gt.0.001) then 
            obsl(t) = LIS_rc%udef
@@ -265,5 +265,5 @@ subroutine noahmp36_qc_Sig0obs(n,k,OBS_State)
      endif
   enddo
 
-end subroutine noahmp36_qc_Sig0obs
+end subroutine noahmp36_qc_Sig0VVobs
 
