@@ -15,6 +15,7 @@
 ! 27Feb2005: Sujay Kumar; Initial Specification
 ! 25Jun2006: Sujay Kumar: Updated for the ESMF design
 ! 1 Aug 2016: Mahdi Navari; Modified for NoahMP36 
+! 18 Jun 2021: Michel Bechtold: SM and LAI updating with S1 backscatter w/ WCM
 !
 ! !INTERFACE:
 subroutine noahmp36_qcsoilmLAI(n, LSM_State)

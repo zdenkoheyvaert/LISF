@@ -16,6 +16,7 @@
 ! 25Jun2006: Sujay Kumar: Updated for the ESMF design
 ! 1 Aug 2016: Mahdi Navari; Modified for NoahMP36 
 !   To do: make it general for x layers (currently hard coded for 4 layers)
+! 18 Jun 2021: Michel Bechtold: SM and LAI updating with S1 backscatter w/ WCM
 !
 ! !INTERFACE:
 subroutine noahmp36_write_soilmLAI(ftn,n, LSM_State)
