@@ -14,6 +14,7 @@
 ! !REVISION HISTORY:
 ! 26/03/2021 Sara Modanesi: Initial specifications
 ! 12/05/2021 Sara Modanesi: added specifications for Sig0VH S1 obs only and removed flag for veg. cover
+! 18/06/2021 Michel Bechtold: assimilation flag for urban and water grid cells
 !
 ! !INTERFACE:
 subroutine noahmp36_qc_Sig0VHobs(n,k,OBS_State)
@@ -247,6 +248,10 @@ subroutine noahmp36_qc_Sig0VHobs(n,k,OBS_State)
            obsl(t) = LIS_rc%udef
 !        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
 !           obsl(t) = LIS_rc%udef
+        elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah36 --> vegt
+           obsl(t) = LIS_rc%udef
+        elseif(vegt_obs(t).eq.17) then !urban ! Var name Noah36 --> vegt
+           obsl(t) = LIS_rc%udef
  ! MN: check for snow  
         elseif(sneqv_obs(t).gt.0.001) then 
            obsl(t) = LIS_rc%udef
