@@ -16,6 +16,7 @@
 ! 25Jun2006: Sujay Kumar: Updated for the ESMF design
 ! 9 Sep 2016: Mahdi Navari: Modified for NoahMP36 
 ! 18Apr 2018: Mahdi Navari: Bug fixed
+! 18 Jun 2021: Michel Bechtold: SM and LAI updating with S1 backscatter w/ WCM
 ! 
 ! Apply the update if it met the update conditions
 ! Update conditions: 
