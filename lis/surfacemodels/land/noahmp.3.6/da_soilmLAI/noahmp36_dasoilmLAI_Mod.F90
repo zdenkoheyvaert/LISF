@@ -19,7 +19,7 @@ module noahmp36_dasoilmLAI_Mod
 
 ! Sujay Kumar; Initial Code
 ! 9 Sep 2016: Mahdi Navari; Modified for NoahMP36 !
-
+! 18 Jun 2021: Michel Bechtold: SM and LAI updating with S1 backscatter w/ WCM
 ! !USES:        
   use ESMF
   use LIS_coreMod
