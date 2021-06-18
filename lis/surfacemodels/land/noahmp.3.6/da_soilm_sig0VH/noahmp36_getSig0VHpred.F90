@@ -13,7 +13,7 @@
 !
 ! !REVISION HISTORY:
 ! 13 May 2021: Sara Modanesi, Michel Bechtold; Initiated specifications for VH polarization
-! 
+! 18 June 2021: Michel Bechtold; bug fix obs_ngrid needed for multiple obs 
 ! !INTERFACE:
 
 subroutine noahmp36_getSig0VHpred(n,k,obs_pred)
@@ -33,8 +33,8 @@ subroutine noahmp36_getSig0VHpred(n,k,obs_pred)
 ! !ARGUMENTS: 
   integer, intent(in)    :: n
   integer, intent(in)    :: k
-  real                   :: obs_pred(LIS_rc%ngrid(k),LIS_rc%nensem(n))
-  integer                :: count1(LIS_rc%ngrid(k),LIS_rc%nensem(n))
+  real                   :: obs_pred(LIS_rc%obs_ngrid(k),LIS_rc%nensem(n))
+  integer                :: count1(LIS_rc%obs_ngrid(k),LIS_rc%nensem(n))
 !
 ! !DESCRIPTION:
 !
@@ -77,7 +77,7 @@ call LIS_RTM_run(n)
      enddo
   enddo
 
-  do i=1,LIS_rc%ngrid(k)
+  do i=1,LIS_rc%obs_ngrid(k)
      do m=1,LIS_rc%nensem(n)
         obs_pred(i,m) = obs_pred(i,m)/(count1(i,m))
      enddo
