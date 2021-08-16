@@ -61,6 +61,7 @@ contains
     use LIS_perturbMod
     use LIS_DAobservationsMod
     use LIS_logMod
+    use netcdf
    
     implicit none 
 
@@ -89,6 +90,7 @@ contains
     type(ESMF_Field)       ::  pertField(LIS_rc%nnest)
     type(ESMF_ArraySpec)   ::  pertArrSpec
     character*100          ::  S1sigmaobsdir
+    character*80           ::  S1_filename
     character*100          ::  temp
     real,  allocatable         ::  obsstd(:)
     character*1            ::  vid(2)
@@ -99,6 +101,11 @@ contains
     real, pointer          :: obs_temp(:,:)
     real, allocatable          :: ssdev(:)
     real                   :: dx, dy
+    integer                :: NX, NY 
+    integer                :: ncid
+    integer                :: ios
+    character*100          :: infile 
+    character*100          :: xname, yname 
 
     allocate(S1_sigma_struc(LIS_rc%nnest))
 
@@ -258,9 +265,19 @@ contains
 ! set up the S1 domain %and interpolation weights. 
 !-------------------------------------------------------------
 
+    ! get nx ny dimensions
+    ! 2015 01 01 as example file
+    call S1_sigmaVVSMLAI_filename(S1_filename,S1sigmaobsdir,&
+                     2015,1,1)
+    ios = nf90_open(path=trim(S1_filename),mode=NF90_NOWRITE,ncid=ncid)
+    call LIS_verify(ios,'Error reading in S1 data dimensions: Error opening file '// S1_filename)
+    ios = nf90_inquire_dimension(ncid,1,yname,NY)
+    ios = nf90_inquire_dimension(ncid,2,xname,NX)
+    ios = nf90_close(ncid)
+
     do n=1,LIS_rc%nnest
-       S1_sigma_struc(n)%nc = 34704
-       S1_sigma_struc(n)%nr = 4500
+       S1_sigma_struc(n)%nc = NX
+       S1_sigma_struc(n)%nr = NY
 
        allocate(S1_sigma_struc(n)%sigma(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
        allocate(S1_sigma_struc(n)%sigmatime(&
