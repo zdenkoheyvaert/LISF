@@ -308,7 +308,10 @@ subroutine read_S1_sigmaVVSM_data(n, k, fname, sigma_ip)
      call LIS_verify(ios,'Error opening file '//trim(fname))
  
      ! variables
-     ios = nf90_inq_varid(nid, 's0vv',sigmaid)
+     ios = nf90_inq_varid(nid, 'g0vv',sigmaid)
+     if(ios.lt.0) then
+       ios = nf90_inq_varid(nid, 's0vv',sigmaid)
+     endif
      call LIS_verify(ios, 'Error nf90_inq_varid: backscatter data')
 
      ios = nf90_inq_varid(nid, 'lat',latid)
@@ -450,7 +453,7 @@ subroutine S1_sigmaVVSM_filename(filename, ndir, yr, mo, da)
   write(unit=fyr, fmt='(i4.4)') yr
   write(unit=fmo, fmt='(i2.2)') mo
   write(unit=fda, fmt='(i2.2)') da 
-  filename = trim(ndir)//'/S1_'//trim(fyr)//trim(fmo)//trim(fda)//'.nc'
+  filename = trim(ndir)//'/S1_g0_'//trim(fyr)//trim(fmo)//trim(fda)//'.nc'
     
 end subroutine S1_sigmaVVSM_filename
 
