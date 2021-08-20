@@ -282,6 +282,7 @@ subroutine read_S1_sigmaVHSMLAI_data(n, k, fname, sigma_ip)
 !EOP
   real                        :: sigma(S1_sigma_struc(n)%nr,S1_sigma_struc(n)%nc)
   real                        :: lat_nc(S1_sigma_struc(n)%nr)
+  real                        :: lat_nc_fold(S1_sigma_struc(n)%nr)
   real                        :: lon_nc(S1_sigma_struc(n)%nc)
   real                        :: sigma_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
   real                        :: sigma_fill(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
@@ -324,9 +325,12 @@ subroutine read_S1_sigmaVHSMLAI_data(n, k, fname, sigma_ip)
      ios = nf90_get_var(nid, sigmaid, sigma)
      call LIS_verify(ios, 'Error nf90_get_var: s0vh')
 
-     ios = nf90_get_var(nid, latid, lat_nc)
+     ios = nf90_get_var(nid, latid, lat_nc_fold)
      call LIS_verify(ios, 'Error nf90_get_var: lat')
-
+     !new g0 dataset of Hans with flipped lat variable
+     do i=1,size(lat_nc_fold)
+       lat_nc(i)=lat_nc_fold(size(lat_nc_fold)+1-i)
+     end do 
      ios = nf90_get_var(nid, lonid, lon_nc)
      call LIS_verify(ios, 'Error nf90_get_var: lon')
 
