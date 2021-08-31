@@ -421,7 +421,7 @@ contains
    real, pointer       :: sig0val(:) !added for forward states 26032021
 
 
-   theta = 0.6458 !incidence angle in radians (37 deg)
+   theta = 0. !incidence angle in radians (i.e., rad(37° for backscatter or rad(0°) for gamma0)
    ctheta = cos(theta)
 
 
