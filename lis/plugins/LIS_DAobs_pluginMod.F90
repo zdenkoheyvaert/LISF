@@ -266,6 +266,9 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_MCD15A2H_LAI )
     use MCD15A2HLAI_Mod,       only : MCD15A2Hlai_setup
 #endif
+#if ( defined DA_OBS_CGLS_LAI )
+    use CGLSLAI_Mod,       only : CGLSlai_setup
+#endif
 #if ( defined DA_OBS_NRT_SMAPSM )
     use SMAPNRTsm_Mod,           only : SMAPNRTsm_setup
 #endif
@@ -426,6 +429,10 @@ subroutine LIS_DAobs_plugin
 
 #if ( defined DA_OBS_MCD15A2H_LAI)
     external read_MCD15A2Hlai, write_MCD15A2Hlai
+#endif
+
+#if ( defined DA_OBS_CGLS_LAI)
+    external read_CGLSlai, write_CGLSlai
 #endif
 
 #if ( defined DA_OBS_GLASS_Albedo)
@@ -815,6 +822,16 @@ subroutine LIS_DAobs_plugin
         read_MCD15A2Hlai)
    call registerwritedaobs(trim(LIS_MCD15A2HlaiobsId)//char(0),&
         write_MCD15A2Hlai)
+#endif
+
+#if ( defined DA_OBS_CGLS_LAI)
+   call registerdaobsclass(trim(LIS_CGLSlaiobsId),"LSM")
+   call registerdaobssetup(trim(LIS_CGLSlaiobsId)//char(0),&
+        CGLSlai_setup)
+   call registerreaddaobs(trim(LIS_CGLSlaiobsId)//char(0),&
+        read_CGLSlai)
+   call registerwritedaobs(trim(LIS_CGLSlaiobsId)//char(0),&
+        write_CGLSlai)
 #endif
 
 #if ( defined DA_OBS_NRT_SMAPSM )
