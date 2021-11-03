@@ -1,0 +1,476 @@
+!-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
+! NASA Goddard Space Flight Center Land Information System (LIS) v7.2
+!
+! Copyright (c) 2015 United States Government as represented by the
+! Administrator of the National Aeronautics and Space Administration.
+! All Rights Reserved.
+!-------------------------END NOTICE -- DO NOT EDIT-----------------------
+#include "LIS_misc.h"
+!BOP
+! !ROUTINE: read_CGLSlai
+! \label{read_CGLSlai}
+!
+! !REVISION HISTORY:
+!  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
+!
+! !INTERFACE: 
+subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
+    ! !USES: 
+    use ESMF
+    use LIS_mpiMod
+    use LIS_coreMod
+    use LIS_logMod
+    use LIS_timeMgrMod
+    use LIS_dataAssimMod
+    use LIS_DAobservationsMod
+    use map_utils
+    use LIS_pluginIndices
+    use CGLSlai_Mod, only : CGLSlai_struc
+
+    implicit none
+    ! !ARGUMENTS: 
+    integer, intent(in) :: n 
+    integer, intent(in) :: k
+    type(ESMF_State)    :: OBS_State
+    type(ESMF_State)    :: OBS_Pert_State
+    !
+    ! !DESCRIPTION:
+    !  
+    !  reads the CGLS LAI observations from NETCDF files.
+
+    ! 
+    !  The arguments are: 
+    !  \begin{description}
+    !  \item[n] index of the nest
+    !  \item[k] number of observation state
+    !  \item[OBS\_State] observations state
+    !  \item[OBS\_Pert\_State] observation perturbations state
+    !  \end{description}
+    !
+    !EOP
+    integer                :: status
+    integer                :: grid_index
+    character*100          :: laiobsdir
+    character*300          :: fname
+    integer                :: cyr, cmo, cda, chr,cmn,css,cdoy
+    real                   :: wt1, wt2,ts
+    integer                :: count
+    real                   :: cgmt
+    real*8                 :: time
+    logical                :: alarmCheck, file_exists,dataCheck
+    integer                :: t,c,r,i,j,p,jj
+    real,          pointer :: obsl(:)
+    type(ESMF_Field)       :: laifield, pertField
+    integer                :: gid(LIS_rc%obs_ngrid(k))
+    integer                :: assimflag(LIS_rc%obs_ngrid(k))
+    logical                :: data_update
+    logical                :: data_upd_flag(LIS_npes)
+    logical                :: data_upd_flag_local
+    logical                :: data_upd
+    real                   :: laiobs(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+    integer                :: fnd
+    real                   :: timenow
+
+
+    call ESMF_AttributeGet(OBS_State,"Data Directory",&
+         laiobsdir, rc=status)
+    call LIS_verify(status)
+    call ESMF_AttributeGet(OBS_State,"Data Update Status",&
+         data_update, rc=status)
+    call LIS_verify(status)
+
+    data_upd = .false. 
+
+    alarmCheck = LIS_isAlarmRinging(LIS_rc, "CGLS LAI read alarm")
+
+    if(alarmCheck.or.CGLSlai_struc(n)%startMode) then 
+        CGLSlai_struc(n)%startMode = .false.
+
+        call create_CGLSlai_filename(laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
+
+        inquire(file=fname,exist=file_exists)          
+        if(file_exists) then 
+            write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
+            call read_CGLS_LAI_data(n,k, fname,laiobs)
+            fnd = 1
+        else
+            fnd = 0 
+            write(LIS_logunit,*) '[WARN] Missing LAI file: ',trim(fname)
+        endif
+    else
+        fnd = 0 
+        laiobs = LIS_rc%udef
+    endif
+
+    dataCheck = .false.
+    if(alarmCheck) then 
+        if(fnd.eq.1) then 
+            dataCheck = .true. 
+        endif
+    else
+        fnd = 0 
+        dataCheck = .false.
+    endif
+
+    if(dataCheck) then 
+
+        call ESMF_StateGet(OBS_State,"Observation01",laifield,&
+             rc=status)
+        call LIS_verify(status, 'Error: StateGet Observation01')
+
+        call ESMF_FieldGet(laifield,localDE=0,farrayPtr=obsl,rc=status)
+        call LIS_verify(status, 'Error: FieldGet')
+
+        obsl = LIS_rc%udef 
+        do r=1, LIS_rc%obs_lnr(k)
+            do c=1, LIS_rc%obs_lnc(k)
+                if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
+                    obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
+                         laiobs(c+(r-1)*LIS_rc%obs_lnc(k))
+                endif
+            enddo
+        enddo
+
+        if(fnd.eq.0) then 
+            data_upd_flag_local = .false. 
+        else
+            data_upd_flag_local = .true. 
+        endif
+
+#if (defined SPMD)
+        call MPI_ALLGATHER(data_upd_flag_local,1, &
+             MPI_LOGICAL, data_upd_flag(:),&
+             1, MPI_LOGICAL, LIS_mpi_comm, status)
+#endif
+        data_upd = .false.
+        do p=1,LIS_npes
+            data_upd = data_upd.or.data_upd_flag(p)
+        enddo
+
+        if(data_upd) then 
+
+            do t=1,LIS_rc%obs_ngrid(k)
+                gid(t) = t
+                if(obsl(t).ne.-9999.0) then 
+                    assimflag(t) = 1
+                else
+                    assimflag(t) = 0
+                endif
+            enddo
+
+            call ESMF_AttributeSet(OBS_State,"Data Update Status",&
+                 .true. , rc=status)
+            call LIS_verify(status)
+
+            if(LIS_rc%obs_ngrid(k).gt.0) then 
+                call ESMF_AttributeSet(laifield,"Grid Number",&
+                     gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                call LIS_verify(status)
+
+                call ESMF_AttributeSet(laifield,"Assimilation Flag",&
+                     assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                call LIS_verify(status)
+
+            endif
+
+        else
+            call ESMF_AttributeSet(OBS_State,"Data Update Status",&
+                 .false., rc=status)
+            call LIS_verify(status)     
+        endif
+    else
+        call ESMF_AttributeSet(OBS_State,"Data Update Status",&
+             .false., rc=status)
+        call LIS_verify(status)     
+    endif
+end subroutine read_CGLSlai
+
+!BOP
+! 
+! !ROUTINE: read_CGLS_LAI_data
+! \label{read_CGLS_LAI_data}
+!
+! !INTERFACE:
+subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
+    ! 
+    ! !USES:   
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
+    use netcdf
+#endif
+    use LIS_coreMod,  only : LIS_rc, LIS_domain
+    use LIS_logMod
+    use LIS_timeMgrMod
+    use CGLSlai_Mod, only : CGLSlai_struc
+
+    implicit none
+    !
+    ! !INPUT PARAMETERS: 
+    ! 
+    integer                       :: n 
+    integer                       :: k
+    character (len=*)             :: fname
+    real                          :: laiobs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+    real*8                        :: cornerlat(2), cornerlon(2)
+    character*3                   :: fdoy
+
+    ! !OUTPUT PARAMETERS:
+    !
+    !
+    ! !DESCRIPTION: 
+    !  This subroutine reads the CGLS LAI file and applies the data
+    !  quality flags to filter the data. 
+    !
+    !  The arguments are: 
+    !  \begin{description}
+    !  \item[n]            index of the nest
+    !  \item[k]            number of observation state
+    !  \item[k]            number of observation state
+    !  \item[fname]        name of the CGLS LAI file
+    !  \item[laiobs\_ip]   CGLS LAI data processed to the LIS domain
+    !  \end{description}
+    !
+    !
+    !EOP
+
+    integer                 :: lat_offset, lon_offset
+    integer                 :: lai(CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr)
+    integer                 :: flag(CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr)
+    real                    :: lai_flagged(CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr)
+    real                    :: lai_in(CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr)
+    logical*1               :: lai_data_b(CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr)
+    logical*1               :: laiobs_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+    integer                 :: c,r,t
+    integer                 :: nid
+    integer                 :: laiid, flagid
+    integer                 :: ios
+
+    integer, dimension(nf90_max_var_dims) :: dimIDs
+    integer                                :: numLons, numLats
+
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
+    ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
+    call LIS_verify(ios,'Error opening file '//trim(fname))
+
+    ios = nf90_inq_varid(nid, 'LAI',laiid)
+    call LIS_verify(ios, 'Error nf90_inq_varid: LAI')
+
+    ios = nf90_inq_varid(nid, 'QFLAG',flagid)
+    call LIS_verify(ios, 'Error nf90_inq_varid: QFLAG')
+
+    !values
+
+    cornerlat(1)=CGLSlai_struc(n)%gridDesci(4)
+    cornerlon(1)=CGLSlai_struc(n)%gridDesci(5)
+    cornerlat(2)=CGLSlai_struc(n)%gridDesci(7)
+    cornerlon(2)=CGLSlai_struc(n)%gridDesci(8)
+
+    lai_data_b = .false.
+
+    lat_offset = 1  ! no offset
+    lon_offset = 1
+
+    ios = nf90_get_var(nid, laiid, lai, &
+         start=(/lon_offset,lat_offset/), &
+         count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/)) 
+
+    call LIS_verify(ios, 'Error nf90_get_var: LAI')
+
+    ios = nf90_get_var(nid, flagid, flag, &
+         start=(/lon_offset,lat_offset/), &
+         count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/))
+
+    call LIS_verify(ios, 'Error nf90_get_var: QFLAG')
+
+    ios = nf90_close(ncid=nid)
+    call LIS_verify(ios,'Error closing file '//trim(fname))
+
+    ! read the data from a file and optionally apply quality flags
+    do r=1, CGLSlai_struc(n)%nr
+        do c=1, CGLSlai_struc(n)%nc
+
+            if(CGLSlai_struc(n)%qcflag.eq.1) then !apply QC flag
+
+                if(lai(c,r).gt.0) then
+                    if (is_valid_CGLSlai_flag(flag(c,r))) then
+                        lai_flagged(c,r) =&
+                             lai(c,r)*CGLSlai_struc(n)%scale
+                    else
+                        lai_flagged(c,r) = LIS_rc%udef
+                    endif
+                else
+                    lai_flagged(c,r) = LIS_rc%udef
+                endif
+
+            else  ! no QC flag applied                
+
+                if(lai(c,r).gt.0) then
+                    lai_flagged(c,r) =&
+                         lai(c,r)*CGLSlai_struc(n)%scale
+                else
+                    lai_flagged(c,r) = LIS_rc%udef
+                endif
+            endif
+        end do
+    end do
+
+
+    ! fill lai_in and lai_data_b, which are required further on
+    do r=1, CGLSlai_struc(n)%nr
+        do c=1, CGLSlai_struc(n)%nc
+            lai_in(c+(r-1)*CGLSlai_struc(n)%nc) = lai_flagged(c,r)
+            if(lai_flagged(c,r).ne.LIS_rc%udef) then
+                lai_data_b(c+(r-1)*CGLSlai_struc(n)%nc) = .true.
+            else
+                lai_data_b(c+(r-1)*CGLSlai_struc(n)%nc) = .false.
+            endif
+        enddo
+    enddo
+
+    if(LIS_rc%obs_gridDesc(k,10).le.CGLSlai_struc(n)%dlon) then 
+        !--------------------------------------------------------------------------
+        ! Interpolate to the LIS running domain if model has finer resolution
+        ! than observations
+        !-------------------------------------------------------------------------- 
+        call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
+             lai_data_b, lai_in, laiobs_b_ip, laiobs_ip, &
+             CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr, &
+             LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
+             CGLSlai_struc(n)%rlat,CGLSlai_struc(n)%rlon,&
+             CGLSlai_struc(n)%w11,CGLSlai_struc(n)%w12,&
+             CGLSlai_struc(n)%w21,CGLSlai_struc(n)%w22,&
+             CGLSlai_struc(n)%n11,CGLSlai_struc(n)%n12,&
+             CGLSlai_struc(n)%n21,CGLSlai_struc(n)%n22,LIS_rc%udef,ios)
+    else
+        !--------------------------------------------------------------------------
+        ! Upscale to the LIS running domain if model has coarser resolution
+        ! than observations
+        !-------------------------------------------------------------------------- 
+        call upscaleByAveraging(CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr,&
+             LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
+             LIS_rc%udef, CGLSlai_struc(n)%n11,&
+             lai_data_b,lai_in, laiobs_b_ip, laiobs_ip)
+
+    endif
+
+#endif
+
+end subroutine read_CGLS_LAI_data
+
+
+!BOP
+! !ROUTINE: create_CGLSlai_filename
+! \label{create_CGLSlai_filename}
+! 
+! !INTERFACE: 
+subroutine create_CGLSlai_filename(ndir, year, month, day, filename)
+    ! !USES:   
+
+    implicit none
+    ! !ARGUMENTS: 
+    character(len=*)  :: filename
+    integer, value    :: year, month, day
+    character (len=*) :: ndir
+    ! 
+    ! !DESCRIPTION: 
+    !  This subroutine creates the CGLS LAI filename
+    !  based on the time and date 
+    ! 
+    !  The arguments are: 
+    !  \begin{description}
+    !  \item[ndir] name of the CGLS LAI data directory
+    !  \item[version] version of the CGLS LAI data
+    !  \item[year]  current year
+    !  \item[month]  current month
+    !  \item[day]  current day
+    !  \item[filename] Generated CGLS LAI filename
+    !  \end{description}
+    !
+    !EOP
+
+    !  The naming scheme is
+    !    <prefix>_<year><month><day>0000_GLOBE_<sensor>_<version>/
+    !        c_gls_<prefix2>_<year><month><day>0000_GLOBE_<sensor>_<version>.nc
+    !  where
+    !    <prefix> is LAI or LAI_RT6
+    !    <prefix2> is LAI or LAI-RT6 (corresponding always to <version>)
+    !    <sensor> is VGT or PROBAV
+    !    <version> is V2.0.1 or V2.0.2
+    !
+    !  Based on the data access portal for 1km LAI, version 2, the following
+    !  combinations are available:
+    !  - until 2003-06-30:
+    !      <prefix> = LAI, <sensor> = VGT, <version> = V2.0.2
+    !  - from 2003-07 to 2013-12-31:
+    !      <prefix> = LAI, <sensor> = VGT, <version> = V2.0.1
+    !  - from 2014 to 2017-05-31:
+    !      <prefix> = LAI_RT6, <sensor> = PROBAV, <version> = V2.0.2
+    !  - from 2017-06 to 2020-04-30:
+    !      <prefix> = LAI_RT6, <sensor> = PROBAV, <version> = V2.0.1
+
+    character (len=7) :: prefix
+    character (len=7) :: prefix2
+    character (len=6) :: sensor
+    character (len=6) :: version
+    character (len=8) :: time
+
+    write(unit=time, fmt='((i4.4)(i2.2)(i2.2))') year, month, day
+
+    if (year < 2003 .or. (year == 2003 .and. month <= 6)) then
+        prefix = "LAI"
+        prefix2 = "LAI"
+        sensor = "VGT"
+        version = "V2.0.2"
+    else if (year < 2014) then
+        prefix = "LAI"
+        prefix2 = "LAI"
+        sensor = "VGT"
+        version = "V2.0.1"
+    else if (year < 2017 .or. (year == 2017 .and. month <= 5)) then
+        prefix = "LAI_RT6"
+        prefix2 = "LAI-RT6"
+        sensor = "PROBAV"
+        version = "V2.0.2"
+    else 
+        prefix = "LAI_RT6"
+        prefix2 = "LAI-RT6"
+        sensor = "PROBAV"
+        version = "V2.0.1"
+    endif
+
+    filename = trim(ndir)//'/'//&
+         trim(prefix)//'_'//trim(time)//'0000_GLOBE_'//trim(sensor)//'_'//trim(version)//'/'//&
+         'c_gls_'//trim(prefix2)//'_'//trim(time)//'0000_GLOBE_'//trim(sensor)//'_'//trim(version)//'.nc'
+
+end subroutine create_CGLSlai_filename
+
+
+function is_valid_CGLSlai_flag(flag) result(isvalid)
+    implicit none
+    integer, value :: flag
+    logical :: sea, filled, no_obs, lai_invalid, climato_filled, gap_filled
+    ! logical :: fapar_invalid, fcover_invalid, high_lat_correction, EBF, bare
+    logical :: isvalid
+
+    sea = (iand(flag, 1) /= 0)
+    filled = (iand(flag, 4) /= 0)
+    no_obs = (iand(flag, 32) /= 0)
+    lai_invalid = (iand(flag, 64) /= 0)
+    ! fapar_invalid = (iand(flag, 128) /= 0)
+    ! fcover_invalid = (iand(flag, 256) /= 0)
+    ! high_lat_correction = (iand(flag, 512) /= 0)
+    ! EBF = (iand(flag, 1024) /= 0)
+    ! bare = (iand(flag, 2048) /= 0)
+    climato_filled = (iand(flag, 4096) /= 0)
+    gap_filled = (iand(flag, 8192) /= 0)
+
+    isvalid = .not. sea &
+         .and. .not. filled &
+         .and. .not. no_obs &
+         .and. .not. lai_invalid &
+         .and. .not. climato_filled &
+         .and. .not. gap_filled &
+
+end function is_valid_CGLSlai_flag
+
+
+
