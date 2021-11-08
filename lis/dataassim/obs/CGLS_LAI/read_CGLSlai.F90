@@ -354,6 +354,36 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
 
 #endif
 
+contains
+
+    function is_valid_CGLSlai_flag(flag) result(isvalid)
+        implicit none
+        integer, value :: flag
+        logical :: sea, filled, no_obs, lai_invalid, climato_filled, gap_filled
+        ! logical :: fapar_invalid, fcover_invalid, high_lat_correction, EBF, bare
+        logical :: isvalid
+
+        sea = (iand(flag, 1) /= 0)
+        filled = (iand(flag, 4) /= 0)
+        no_obs = (iand(flag, 32) /= 0)
+        lai_invalid = (iand(flag, 64) /= 0)
+        ! fapar_invalid = (iand(flag, 128) /= 0)
+        ! fcover_invalid = (iand(flag, 256) /= 0)
+        ! high_lat_correction = (iand(flag, 512) /= 0)
+        ! EBF = (iand(flag, 1024) /= 0)
+        ! bare = (iand(flag, 2048) /= 0)
+        climato_filled = (iand(flag, 4096) /= 0)
+        gap_filled = (iand(flag, 8192) /= 0)
+
+        isvalid = .not. sea &
+            .and. .not. filled &
+            .and. .not. no_obs &
+            .and. .not. lai_invalid &
+            .and. .not. climato_filled &
+            .and. .not. gap_filled
+
+    end function is_valid_CGLSlai_flag
+
 end subroutine read_CGLS_LAI_data
 
 
@@ -442,35 +472,3 @@ subroutine create_CGLSlai_filename(ndir, year, month, day, filename)
          'c_gls_'//trim(prefix2)//'_'//trim(time)//'0000_GLOBE_'//trim(sensor)//'_'//trim(version)//'.nc'
 
 end subroutine create_CGLSlai_filename
-
-
-function is_valid_CGLSlai_flag(flag) result(isvalid)
-    implicit none
-    integer, value :: flag
-    logical :: sea, filled, no_obs, lai_invalid, climato_filled, gap_filled
-    ! logical :: fapar_invalid, fcover_invalid, high_lat_correction, EBF, bare
-    logical :: isvalid
-
-    sea = (iand(flag, 1) /= 0)
-    filled = (iand(flag, 4) /= 0)
-    no_obs = (iand(flag, 32) /= 0)
-    lai_invalid = (iand(flag, 64) /= 0)
-    ! fapar_invalid = (iand(flag, 128) /= 0)
-    ! fcover_invalid = (iand(flag, 256) /= 0)
-    ! high_lat_correction = (iand(flag, 512) /= 0)
-    ! EBF = (iand(flag, 1024) /= 0)
-    ! bare = (iand(flag, 2048) /= 0)
-    climato_filled = (iand(flag, 4096) /= 0)
-    gap_filled = (iand(flag, 8192) /= 0)
-
-    isvalid = .not. sea &
-         .and. .not. filled &
-         .and. .not. no_obs &
-         .and. .not. lai_invalid &
-         .and. .not. climato_filled &
-         .and. .not. gap_filled &
-
-end function is_valid_CGLSlai_flag
-
-
-

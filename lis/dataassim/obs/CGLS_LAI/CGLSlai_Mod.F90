@@ -287,7 +287,7 @@ contains
         do n=1,LIS_rc%nnest
 
             ! scale factor for unpacking the data
-            CGLSlai_struc(n)%scale = 0.033333f
+            CGLSlai_struc(n)%scale = 0.033333
 
             if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
                 ! hard-coded for now based on the coordinate values in the netCDF files
@@ -295,8 +295,10 @@ contains
                 CGLSlai_struc(n)%lon_lower_left = -180
                 CGLSlai_struc(n)%lat_upper_right = -59.9910714285396
                 CGLSlai_struc(n)%lon_upper_right = 179.991071429063
-                CGLSlai_struc(n)%dlat = -0.00892857
-                CGLSlai_struc(n)%dlon = -dlat
+                ! dlat is positive since LIS will figure out that latitude is
+                ! decreasing
+                CGLSlai_struc(n)%dlat = 0.008928002004371148
+                CGLSlai_struc(n)%dlon = 0.008928349985839856
             elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
                 write(unit=error_unit, fmt=*) &
                      'The CGLS_LAI module only works with latlon projection'
@@ -307,7 +309,7 @@ contains
             CGLSlai_struc(n)%nc = 40320
             CGLSlai_struc(n)%nr = 15680
 
-            CGLSlai_struc(n)%gridDesci(1) = 0 
+            CGLSlai_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
             CGLSlai_struc(n)%gridDesci(2) = CGLSlai_struc(n)%nc
             CGLSlai_struc(n)%gridDesci(3) = CGLSlai_struc(n)%nr 
             CGLSlai_struc(n)%gridDesci(4) = CGLSlai_struc(n)%lat_lower_left
@@ -324,7 +326,7 @@ contains
             !-----------------------------------------------------------------------------
             !   Use interpolation if LIS is running finer than native resolution. 
             !-----------------------------------------------------------------------------
-            if(LIS_rc%obs_gridDesc(k,10).le.dlon) then 
+            if(LIS_rc%obs_gridDesc(k,10).le.CGLSlai_struc(n)%dlon) then 
 
                 allocate(CGLSlai_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(CGLSlai_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
@@ -336,6 +338,9 @@ contains
                 allocate(CGLSlai_struc(n)%w12(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(CGLSlai_struc(n)%w21(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(CGLSlai_struc(n)%w22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+
+                write(LIS_logunit,*)&
+                     '[INFO] create interpolation input for CGLS LAI'       
 
                 call bilinear_interp_input_withgrid(CGLSlai_struc(n)%gridDesci(:), &
                      LIS_rc%obs_gridDesc(k,:),&
@@ -350,10 +355,16 @@ contains
                 allocate(CGLSlai_struc(n)%n11(&
                      CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr))
 
+                write(LIS_logunit,*)&
+                     '[INFO] create upscaling input for CGLS LAI'       
+
                 call upscaleByAveraging_input(CGLSlai_struc(n)%gridDesci(:),&
                      LIS_rc%obs_gridDesc(k,:),&
                      CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr, &
                      LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), CGLSlai_struc(n)%n11)
+
+                write(LIS_logunit,*)&
+                     '[INFO] finished creating upscaling input for CGLS LAI'       
             endif
 
             call LIS_registerAlarm("CGLS LAI read alarm",&
