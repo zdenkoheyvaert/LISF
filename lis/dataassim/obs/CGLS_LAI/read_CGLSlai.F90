@@ -399,7 +399,7 @@ subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, fil
 
     implicit none
     ! !ARGUMENTS: 
-    logical, intent(in)  :: isresampled
+    logical, value       :: isresampled
     real*8, value        :: res
     character (len=*)    :: ndir
     integer, value       :: year, month, day
@@ -423,9 +423,9 @@ subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, fil
     !EOP
 
     if (isresampled) then
-        create_CGLSlai_filename_from_resampled(res, ndir, year, month, day, filename)
+        call create_CGLSlai_filename_from_resampled(res, ndir, year, month, day, filename)
     else
-        create_CGLSlai_filename_from_original(ndir, year, month, day, filename)
+        call create_CGLSlai_filename_from_original(ndir, year, month, day, filename)
     endif
 
 contains
