@@ -48,6 +48,8 @@ module CGLSlai_Mod
         real*8                 :: time1, time2
         integer                :: fnd
         integer                :: qcflag
+        logical                :: isresampled
+        real*8                 :: spatialres
         real                   :: scale
         real*8                 ::  dlat, dlon
         real*8                 ::  lat_lower_left, lon_lower_left
@@ -155,6 +157,24 @@ contains
             call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%qcflag,&
                  rc=status)
             call LIS_verify(status, 'CGLS LAI apply QC flags: is missing')
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI is resampled:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%isresampled,&
+                 rc=status)
+            call LIS_verify(status, 'CGLS LAI is resampled: is missing')
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI spatial resolution:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if (CGLSlai_struc(n)%isresampled) then
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%spatialres,&
+                     rc=status)
+                call LIS_verify(status, 'CGLS LAI spatial resolution: is missing')
+            endif
         enddo
 
         do n=1,LIS_rc%nnest
@@ -290,15 +310,27 @@ contains
             CGLSlai_struc(n)%scale = 0.033333
 
             if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
-                ! hard-coded for now based on the coordinate values in the netCDF files
-                CGLSlai_struc(n)%lat_lower_left = 80
-                CGLSlai_struc(n)%lon_lower_left = -180
-                CGLSlai_struc(n)%lat_upper_right = -59.9910714285396
-                CGLSlai_struc(n)%lon_upper_right = 179.991071429063
-                ! dlat is positive since LIS will figure out that latitude is
-                ! decreasing
-                CGLSlai_struc(n)%dlat = 0.008928002004371148
-                CGLSlai_struc(n)%dlon = 0.008928349985839856
+                if(CGLSlai_struc(n)%isresampled) then
+                    ! original spatial resolution of the downloaded data product
+                    CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
+                    CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
+                    CGLSlai_struc(n)%lat_upper_right = -90 + 0.5 * CGLSlai_struc(n)%spatialres
+                    CGLSlai_struc(n)%lat_lower_left = 180 - 0.5 * CGLSlai_struc(n)%spatialres
+                    ! dlat is positive since LIS will figure out that latitude is
+                    ! decreasing
+                    CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
+                    CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
+                else
+                    ! original spatial resolution of the downloaded data product
+                    CGLSlai_struc(n)%lat_lower_left = 80
+                    CGLSlai_struc(n)%lon_lower_left = -180
+                    CGLSlai_struc(n)%lat_upper_right = -59.9910714285396
+                    CGLSlai_struc(n)%lon_upper_right = 179.991071429063
+                    ! dlat is positive since LIS will figure out that latitude is
+                    ! decreasing
+                    CGLSlai_struc(n)%dlat = 0.008928002004371148
+                    CGLSlai_struc(n)%dlon = 0.008928349985839856
+                endif
             elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
                 write(unit=error_unit, fmt=*) &
                      'The CGLS_LAI module only works with latlon projection'

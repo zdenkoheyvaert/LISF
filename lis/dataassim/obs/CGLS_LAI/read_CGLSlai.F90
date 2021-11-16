@@ -86,7 +86,9 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     if(alarmCheck.or.CGLSlai_struc(n)%startMode) then 
         CGLSlai_struc(n)%startMode = .false.
 
-        call create_CGLSlai_filename(laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
+        call create_CGLSlai_filename(&
+            CGLSlai_struc(n)%isresampled, CGLSlai_struc(n)%spatialres,&
+            laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
         inquire(file=fname,exist=file_exists)          
         if(file_exists) then 
@@ -392,14 +394,16 @@ end subroutine read_CGLS_LAI_data
 ! \label{create_CGLSlai_filename}
 ! 
 ! !INTERFACE: 
-subroutine create_CGLSlai_filename(ndir, year, month, day, filename)
+subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, filename)
     ! !USES:   
 
     implicit none
     ! !ARGUMENTS: 
-    character(len=*)  :: filename
-    integer, value    :: year, month, day
-    character (len=*) :: ndir
+    logical, intent(in)  :: isresampled
+    real*8, value        :: res
+    character (len=*)    :: ndir
+    integer, value       :: year, month, day
+    character(len=*)     :: filename
     ! 
     ! !DESCRIPTION: 
     !  This subroutine creates the CGLS LAI filename
@@ -407,6 +411,7 @@ subroutine create_CGLSlai_filename(ndir, year, month, day, filename)
     ! 
     !  The arguments are: 
     !  \begin{description}
+    !  \item[resampled] whether the original or the resampled files are read
     !  \item[ndir] name of the CGLS LAI data directory
     !  \item[version] version of the CGLS LAI data
     !  \item[year]  current year
@@ -417,58 +422,102 @@ subroutine create_CGLSlai_filename(ndir, year, month, day, filename)
     !
     !EOP
 
-    !  The naming scheme is
-    !    <prefix>_<year><month><day>0000_GLOBE_<sensor>_<version>/
-    !        c_gls_<prefix2>_<year><month><day>0000_GLOBE_<sensor>_<version>.nc
-    !  where
-    !    <prefix> is LAI or LAI_RT6
-    !    <prefix2> is LAI or LAI-RT6 (corresponding always to <version>)
-    !    <sensor> is VGT or PROBAV
-    !    <version> is V2.0.1 or V2.0.2
-    !
-    !  Based on the data access portal for 1km LAI, version 2, the following
-    !  combinations are available:
-    !  - until 2003-06-30:
-    !      <prefix> = LAI, <sensor> = VGT, <version> = V2.0.2
-    !  - from 2003-07 to 2013-12-31:
-    !      <prefix> = LAI, <sensor> = VGT, <version> = V2.0.1
-    !  - from 2014 to 2017-05-31:
-    !      <prefix> = LAI_RT6, <sensor> = PROBAV, <version> = V2.0.2
-    !  - from 2017-06 to 2020-04-30:
-    !      <prefix> = LAI_RT6, <sensor> = PROBAV, <version> = V2.0.1
-
-    character (len=7) :: prefix
-    character (len=7) :: prefix2
-    character (len=6) :: sensor
-    character (len=6) :: version
-    character (len=8) :: time
-
-    write(unit=time, fmt='((i4.4)(i2.2)(i2.2))') year, month, day
-
-    if (year < 2003 .or. (year == 2003 .and. month <= 6)) then
-        prefix = "LAI"
-        prefix2 = "LAI"
-        sensor = "VGT"
-        version = "V2.0.2"
-    else if (year < 2014) then
-        prefix = "LAI"
-        prefix2 = "LAI"
-        sensor = "VGT"
-        version = "V2.0.1"
-    else if (year < 2017 .or. (year == 2017 .and. month <= 5)) then
-        prefix = "LAI_RT6"
-        prefix2 = "LAI-RT6"
-        sensor = "PROBAV"
-        version = "V2.0.2"
-    else 
-        prefix = "LAI_RT6"
-        prefix2 = "LAI-RT6"
-        sensor = "PROBAV"
-        version = "V2.0.1"
+    if (isresampled) then
+        create_CGLSlai_filename_from_resampled(res, ndir, year, month, day, filename)
+    else
+        create_CGLSlai_filename_from_original(ndir, year, month, day, filename)
     endif
 
-    filename = trim(ndir)//'/'//&
-         trim(prefix)//'_'//trim(time)//'0000_GLOBE_'//trim(sensor)//'_'//trim(version)//'/'//&
-         'c_gls_'//trim(prefix2)//'_'//trim(time)//'0000_GLOBE_'//trim(sensor)//'_'//trim(version)//'.nc'
+contains
+    subroutine create_CGLSlai_filename_from_original(ndir, year, month, day, filename)
+        implicit none
+        character(len=*)  :: filename
+        integer, value    :: year, month, day
+        character (len=*) :: ndir
+
+        !  The naming scheme is
+        !    <prefix>_<year><month><day>0000_GLOBE_<sensor>_<version>/
+        !        c_gls_<prefix2>_<year><month><day>0000_GLOBE_<sensor>_<version>.nc
+        !  where
+        !    <prefix> is LAI or LAI_RT6
+        !    <prefix2> is LAI or LAI-RT6 (corresponding always to <version>)
+        !    <sensor> is VGT or PROBAV
+        !    <version> is V2.0.1 or V2.0.2
+        !
+        !  Based on the data access portal for 1km LAI, version 2, the following
+        !  combinations are available:
+        !  - until 2003-06-30:
+        !      <prefix> = LAI, <sensor> = VGT, <version> = V2.0.2
+        !  - from 2003-07 to 2013-12-31:
+        !      <prefix> = LAI, <sensor> = VGT, <version> = V2.0.1
+        !  - from 2014 to 2017-05-31:
+        !      <prefix> = LAI_RT6, <sensor> = PROBAV, <version> = V2.0.2
+        !  - from 2017-06 to 2020-04-30:
+        !      <prefix> = LAI_RT6, <sensor> = PROBAV, <version> = V2.0.1
+
+        character (len=7) :: prefix
+        character (len=7) :: prefix2
+        character (len=6) :: sensor
+        character (len=6) :: version
+        character (len=8) :: time
+
+        write(unit=time, fmt='((i4.4)(i2.2)(i2.2))') year, month, day
+
+        if (year < 2003 .or. (year == 2003 .and. month <= 6)) then
+            prefix = "LAI"
+            prefix2 = "LAI"
+            sensor = "VGT"
+            version = "V2.0.2"
+        else if (year < 2014) then
+            prefix = "LAI"
+            prefix2 = "LAI"
+            sensor = "VGT"
+            version = "V2.0.1"
+        else if (year < 2017 .or. (year == 2017 .and. month <= 5)) then
+            prefix = "LAI_RT6"
+            prefix2 = "LAI-RT6"
+            sensor = "PROBAV"
+            version = "V2.0.2"
+        else 
+            prefix = "LAI_RT6"
+            prefix2 = "LAI-RT6"
+            sensor = "PROBAV"
+            version = "V2.0.1"
+        endif
+
+        filename = trim(ndir)//'/'//&
+             trim(prefix)//'_'//trim(time)//'0000_GLOBE_'//trim(sensor)//'_'//trim(version)//'/'//&
+             'c_gls_'//trim(prefix2)//'_'//trim(time)//'0000_GLOBE_'//trim(sensor)//'_'//trim(version)//'.nc'
+
+    end subroutine create_CGLSlai_filename_from_original
+
+    subroutine create_CGLSlai_filename_from_resampled(res, ndir, year, month, day, filename)
+        implicit none
+        real*8, value     :: res
+        character (len=*) :: ndir
+        integer, value    :: year, month, day
+        character(len=*)  :: filename
+
+        !  The naming scheme is
+        !    CGLS_LAI_resampled_<res>_<year>_<month>_<day>.nc
+        !  where
+        !    <res> is the resolution in degrees with two decimals
+
+        character(len=5) :: resstr
+        character(len=4) :: yearstr
+        character(len=2) :: monthstr
+        character(len=2) :: daystr
+
+        write(unit=resstr, fmt='(f5.2)') res
+        resstr=trim(adjustl(resstr))
+        write(unit=yearstr, fmt='(i4.4)') year
+        write(unit=monthstr, fmt='(i2.2)') month
+        write(unit=daystr, fmt='(i2.2)') day
+
+
+        filename = trim(ndir)//'/'//&
+             'CGLS_LAI_resampled_'//resstr//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
+
+    end subroutine create_CGLSlai_filename_from_resampled
 
 end subroutine create_CGLSlai_filename
