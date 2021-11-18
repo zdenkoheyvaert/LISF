@@ -7,16 +7,16 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
 !
-! !MODULE: CGLSlai_Mod
+! !MODULE: VODCAlai_Mod
 ! 
 ! !DESCRIPTION: 
 !   This module contains interfaces and subroutines to
-!   handle the CGLS LAI data.
+!   read VODCA X data that has been rescaled to a reference LAI.
 ! 
 ! !REVISION HISTORY: 
-!  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
+!  18 Nov 2021    Samuel Scherrer; initial reader based on VODCA LAI reader
 ! 
-module CGLSlai_Mod
+module VODCAlai_Mod
     ! !USES: 
     use ESMF
     use map_utils
@@ -29,13 +29,13 @@ module CGLSlai_Mod
     !-----------------------------------------------------------------------------
     ! !PUBLIC MEMBER FUNCTIONS:
     !-----------------------------------------------------------------------------
-    public :: CGLSlai_setup
+    public :: VODCAlai_setup
     !-----------------------------------------------------------------------------
     ! !PUBLIC TYPES:
     !-----------------------------------------------------------------------------
-    public :: CGLSlai_struc
+    public :: VODCAlai_struc
     !EOP
-    type, public:: CGLSlai_dec
+    type, public:: VODCAlai_dec
 
         character*100          :: version
         logical                :: startMode
@@ -47,13 +47,10 @@ module CGLSlai_Mod
         real                   :: gridDesci(50)    
         real*8                 :: time1, time2
         integer                :: fnd
-        integer                :: qcflag
-        integer                :: isresampled
-        real*8                 :: spatialres
-        real                   :: scale
-        real*8                 ::  dlat, dlon
-        real*8                 ::  lat_lower_left, lon_lower_left
-        real*8                 ::  lat_upper_right, lon_upper_right
+        character              :: band
+        real*8                 :: dlat, dlon
+        real*8                 :: lat_lower_left, lon_lower_left
+        real*8                 :: lat_upper_right, lon_upper_right
         real,    allocatable :: rlat(:)
         real,    allocatable :: rlon(:)
         integer, allocatable :: n11(:)
@@ -65,19 +62,19 @@ module CGLSlai_Mod
         real,    allocatable :: w21(:)
         real,    allocatable :: w22(:)
 
-    end type CGLSlai_dec
+    end type VODCAlai_dec
 
-    type(CGLSlai_dec),allocatable :: CGLSlai_struc(:)
+    type(VODCAlai_dec),allocatable :: VODCAlai_struc(:)
 
 contains
 
     !BOP
     ! 
-    ! !ROUTINE: CGLSlai_setup
-    ! \label{CGLSlai_setup}
+    ! !ROUTINE: VODCAlai_setup
+    ! \label{VODCAlai_setup}
     ! 
     ! !INTERFACE: 
-    subroutine CGLSlai_setup(k, OBS_State, OBS_Pert_State)
+    subroutine VODCAlai_setup(k, OBS_State, OBS_Pert_State)
         ! !USES: 
         use ESMF
         use LIS_coreMod
@@ -98,7 +95,7 @@ contains
         ! !DESCRIPTION: 
         !   
         !   This routine completes the runtime initializations and 
-        !   creation of data structures required for handling CGLS LAI data.
+        !   creation of data structures required for handling VODCA LAI data.
         !  
         !   The arguments are: 
         !   \begin{description}
@@ -125,7 +122,7 @@ contains
         real        , allocatable  ::  varmax(:)
         integer                :: c,r
 
-        allocate(CGLSlai_struc(LIS_rc%nnest))
+        allocate(VODCAlai_struc(LIS_rc%nnest))
 
         call ESMF_ArraySpecSet(intarrspec,rank=1,typekind=ESMF_TYPEKIND_I4,&
              rc=status)
@@ -139,42 +136,24 @@ contains
              rc=status)
         call LIS_verify(status)
 
-        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI data directory:",&
+        call ESMF_ConfigFindLabel(LIS_config,"VODCA LAI data directory:",&
              rc=status)
         do n=1,LIS_rc%nnest
             call ESMF_ConfigGetAttribute(LIS_config,laiobsdir,&
                  rc=status)
-            call LIS_verify(status, 'CGLS LAI data directory: is missing')
+            call LIS_verify(status, 'VODCA LAI data directory: is missing')
 
             call ESMF_AttributeSet(OBS_State(n),"Data Directory",&
                  laiobsdir, rc=status)
             call LIS_verify(status)
         enddo
 
-        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI apply QC flags:",&
+        call ESMF_ConfigFindLabel(LIS_config,"VODCA LAI frequency band:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%qcflag,&
+            call ESMF_ConfigGetAttribute(LIS_config,VODCAlai_struc(n)%band,&
                  rc=status)
-            call LIS_verify(status, 'CGLS LAI apply QC flags: is missing')
-        enddo
-
-        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI is resampled:",&
-             rc=status)
-        do n=1,LIS_rc%nnest
-            call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%isresampled,&
-                 rc=status)
-            call LIS_verify(status, 'CGLS LAI is resampled: is missing')
-        enddo
-
-        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI spatial resolution:",&
-             rc=status)
-        do n=1,LIS_rc%nnest
-            if (CGLSlai_struc(n)%isresampled) then
-                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%spatialres,&
-                     rc=status)
-                call LIS_verify(status, 'CGLS LAI spatial resolution: is missing')
-            endif
+            call LIS_verify(status, 'VODCA LAI frequency band: is missing')
         enddo
 
         do n=1,LIS_rc%nnest
@@ -197,12 +176,12 @@ contains
         enddo
 
         write(LIS_logunit,*)&
-             '[INFO] read CGLS LAI data specifications'       
+             '[INFO] read VODCA LAI data specifications'       
 
         do n=1,LIS_rc%nnest
 
-            allocate(CGLSlai_struc(n)%laiobs1(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-            allocate(CGLSlai_struc(n)%laiobs2(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+            allocate(VODCAlai_struc(n)%laiobs1(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+            allocate(VODCAlai_struc(n)%laiobs2(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
 
             write(unit=temp,fmt='(i2.2)') 1
             read(unit=temp,fmt='(2a1)') vid
@@ -306,109 +285,92 @@ contains
 
         do n=1,LIS_rc%nnest
 
-            ! scale factor for unpacking the data
-            CGLSlai_struc(n)%scale = 0.033333
-
             if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
-                if(CGLSlai_struc(n)%isresampled == 1) then
-                    ! images are rescaled to custom resolution
-                    CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lat_upper_right = -90 + 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lat_lower_left = 180 - 0.5 * CGLSlai_struc(n)%spatialres
-                    ! dlat is positive since LIS will figure out that latitude is
-                    ! decreasing
-                    CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%nr = nint(180.0 / CGLSlai_struc(n)%spatialres)
-                    CGLSlai_struc(n)%nc = 2 * CGLSlai_struc(n)%nr
-                else
-                    ! original spatial resolution of the downloaded data product
-                    CGLSlai_struc(n)%lat_lower_left = 80
-                    CGLSlai_struc(n)%lon_lower_left = -180
-                    CGLSlai_struc(n)%lat_upper_right = -59.9910714285396
-                    CGLSlai_struc(n)%lon_upper_right = 179.991071429063
-                    ! dlat is positive since LIS will figure out that latitude is
-                    ! decreasing
-                    CGLSlai_struc(n)%dlat = 0.008928002004371148
-                    CGLSlai_struc(n)%dlon = 0.008928349985839856
-                    CGLSlai_struc(n)%nc = 40320
-                    CGLSlai_struc(n)%nr = 15680
-                endif
+                ! original spatial resolution of the downloaded data product
+                VODCAlai_struc(n)%lat_lower_left = 89.875
+                VODCAlai_struc(n)%lon_lower_left = -179.875
+                VODCAlai_struc(n)%lat_upper_right = -89.875
+                VODCAlai_struc(n)%lon_upper_right = 179.875
+                ! dlat is positive since LIS will figure out that latitude is
+                ! decreasing
+                VODCAlai_struc(n)%dlat = 0.25
+                VODCAlai_struc(n)%dlon = 0.25
+                VODCAlai_struc(n)%nc = 720
+                VODCAlai_struc(n)%nr = 1440
             elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
                 write(unit=error_unit, fmt=*) &
-                     'The CGLS_LAI module only works with latlon projection'
+                     'The VODCA_LAI module only works with latlon projection'
                 stop 1
             endif
 
             ! from netCDF files
 
-            CGLSlai_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
-            CGLSlai_struc(n)%gridDesci(2) = CGLSlai_struc(n)%nc
-            CGLSlai_struc(n)%gridDesci(3) = CGLSlai_struc(n)%nr 
-            CGLSlai_struc(n)%gridDesci(4) = CGLSlai_struc(n)%lat_lower_left
-            CGLSlai_struc(n)%gridDesci(5) = CGLSlai_struc(n)%lon_lower_left
-            CGLSlai_struc(n)%gridDesci(6) = 128
-            CGLSlai_struc(n)%gridDesci(7) = CGLSlai_struc(n)%lat_upper_right
-            CGLSlai_struc(n)%gridDesci(8) = CGLSlai_struc(n)%lon_upper_right
-            CGLSlai_struc(n)%gridDesci(9) = CGLSlai_struc(n)%dlat
-            CGLSlai_struc(n)%gridDesci(10) = CGLSlai_struc(n)%dlon
-            CGLSlai_struc(n)%gridDesci(20) = 64
+            VODCAlai_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
+            VODCAlai_struc(n)%gridDesci(2) = VODCAlai_struc(n)%nc
+            VODCAlai_struc(n)%gridDesci(3) = VODCAlai_struc(n)%nr 
+            VODCAlai_struc(n)%gridDesci(4) = VODCAlai_struc(n)%lat_lower_left
+            VODCAlai_struc(n)%gridDesci(5) = VODCAlai_struc(n)%lon_lower_left
+            VODCAlai_struc(n)%gridDesci(6) = 128
+            VODCAlai_struc(n)%gridDesci(7) = VODCAlai_struc(n)%lat_upper_right
+            VODCAlai_struc(n)%gridDesci(8) = VODCAlai_struc(n)%lon_upper_right
+            VODCAlai_struc(n)%gridDesci(9) = VODCAlai_struc(n)%dlat
+            VODCAlai_struc(n)%gridDesci(10) = VODCAlai_struc(n)%dlon
+            VODCAlai_struc(n)%gridDesci(20) = 64
 
-            CGLSlai_struc(n)%mi = CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr
+            VODCAlai_struc(n)%mi = VODCAlai_struc(n)%nc*VODCAlai_struc(n)%nr
 
             !-----------------------------------------------------------------------------
             !   Use interpolation if LIS is running finer than native resolution. 
             !-----------------------------------------------------------------------------
-            if(LIS_rc%obs_gridDesc(k,10).le.CGLSlai_struc(n)%dlon) then 
+            if(LIS_rc%obs_gridDesc(k,10).le.VODCAlai_struc(n)%dlon) then 
 
-                allocate(CGLSlai_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%n11(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%n12(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%n21(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%n22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%w11(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%w12(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%w21(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
-                allocate(CGLSlai_struc(n)%w22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%n11(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%n12(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%n21(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%n22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%w11(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%w12(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%w21(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(VODCAlai_struc(n)%w22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create interpolation input for CGLS LAI'       
+                     '[INFO] create interpolation input for VODCA LAI'       
 
-                call bilinear_interp_input_withgrid(CGLSlai_struc(n)%gridDesci(:), &
+                call bilinear_interp_input_withgrid(VODCAlai_struc(n)%gridDesci(:), &
                      LIS_rc%obs_gridDesc(k,:),&
                      LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k),&
-                     CGLSlai_struc(n)%rlat, CGLSlai_struc(n)%rlon,&
-                     CGLSlai_struc(n)%n11, CGLSlai_struc(n)%n12, &
-                     CGLSlai_struc(n)%n21, CGLSlai_struc(n)%n22, &
-                     CGLSlai_struc(n)%w11, CGLSlai_struc(n)%w12, &
-                     CGLSlai_struc(n)%w21, CGLSlai_struc(n)%w22)
+                     VODCAlai_struc(n)%rlat, VODCAlai_struc(n)%rlon,&
+                     VODCAlai_struc(n)%n11, VODCAlai_struc(n)%n12, &
+                     VODCAlai_struc(n)%n21, VODCAlai_struc(n)%n22, &
+                     VODCAlai_struc(n)%w11, VODCAlai_struc(n)%w12, &
+                     VODCAlai_struc(n)%w21, VODCAlai_struc(n)%w22)
             else
 
-                allocate(CGLSlai_struc(n)%n11(&
-                     CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr))
+                allocate(VODCAlai_struc(n)%n11(&
+                     VODCAlai_struc(n)%nc*VODCAlai_struc(n)%nr))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create upscaling input for CGLS LAI'       
+                     '[INFO] create upscaling input for VODCA LAI'       
 
-                call upscaleByAveraging_input(CGLSlai_struc(n)%gridDesci(:),&
+                call upscaleByAveraging_input(VODCAlai_struc(n)%gridDesci(:),&
                      LIS_rc%obs_gridDesc(k,:),&
-                     CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr, &
-                     LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), CGLSlai_struc(n)%n11)
+                     VODCAlai_struc(n)%nc*VODCAlai_struc(n)%nr, &
+                     LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), VODCAlai_struc(n)%n11)
 
                 write(LIS_logunit,*)&
-                     '[INFO] finished creating upscaling input for CGLS LAI'       
+                     '[INFO] finished creating upscaling input for VODCA LAI'       
             endif
 
-            call LIS_registerAlarm("CGLS LAI read alarm",&
+            call LIS_registerAlarm("VODCA LAI read alarm",&
                  86400.0, 86400.0)
 
-            CGLSlai_struc(n)%startMode = .true. 
+            VODCAlai_struc(n)%startMode = .true. 
 
             call ESMF_StateAdd(OBS_State(n),(/obsField(n)/),rc=status)
             call LIS_verify(status)
 
         enddo
-    end subroutine CGLSlai_setup
-end module CGLSlai_Mod
+    end subroutine VODCAlai_setup
+end module VODCAlai_Mod

@@ -213,7 +213,6 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
     character (len=*)             :: fname
     real                          :: laiobs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     real*8                        :: cornerlat(2), cornerlon(2)
-    character*3                   :: fdoy
 
     ! !OUTPUT PARAMETERS:
     !
@@ -448,7 +447,8 @@ subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, fil
     ! 
     !  The arguments are: 
     !  \begin{description}
-    !  \item[resampled] whether the original or the resampled files are read
+    !  \item[isresampled] whether the original or the resampled files are read
+    !  \item[res] resolution of the files
     !  \item[ndir] name of the CGLS LAI data directory
     !  \item[version] version of the CGLS LAI data
     !  \item[year]  current year
