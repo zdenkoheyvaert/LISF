@@ -87,7 +87,7 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
         CGLSlai_struc(n)%startMode = .false.
 
         call create_CGLSlai_filename(&
-            CGLSlai_struc(n)%isresampled, CGLSlai_struc(n)%spatialres,&
+            CGLSlai_struc(n)%isresampled == 1, CGLSlai_struc(n)%spatialres,&
             laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
         inquire(file=fname,exist=file_exists)          
@@ -250,14 +250,6 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
     integer                                :: numLons, numLats
 
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
-    ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
-    call LIS_verify(ios,'Error opening file '//trim(fname))
-
-    ios = nf90_inq_varid(nid, 'LAI',laiid)
-    call LIS_verify(ios, 'Error nf90_inq_varid: LAI')
-
-    ios = nf90_inq_varid(nid, 'QFLAG',flagid)
-    call LIS_verify(ios, 'Error nf90_inq_varid: QFLAG')
 
     !values
 
@@ -271,49 +263,91 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
     lat_offset = 1  ! no offset
     lon_offset = 1
 
-    ios = nf90_get_var(nid, laiid, lai, &
-         start=(/lon_offset,lat_offset/), &
-         count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/)) 
 
-    call LIS_verify(ios, 'Error nf90_get_var: LAI')
+    if (CGLSlai_struc(n)%isresampled.eq.0) then
+        ! read the data from a file and optionally apply quality flags
+        ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
+        call LIS_verify(ios,'Error opening file '//trim(fname))
 
-    ios = nf90_get_var(nid, flagid, flag, &
-         start=(/lon_offset,lat_offset/), &
-         count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/))
+        ios = nf90_inq_varid(nid, 'LAI',laiid)
+        call LIS_verify(ios, 'Error nf90_inq_varid: LAI')
 
-    call LIS_verify(ios, 'Error nf90_get_var: QFLAG')
+        ios = nf90_inq_varid(nid, 'QFLAG',flagid)
+        call LIS_verify(ios, 'Error nf90_inq_varid: QFLAG')
 
-    ios = nf90_close(ncid=nid)
-    call LIS_verify(ios,'Error closing file '//trim(fname))
+        ios = nf90_get_var(nid, laiid, lai, &
+             start=(/lon_offset,lat_offset/), &
+             count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/)) 
 
-    ! read the data from a file and optionally apply quality flags
-    do r=1, CGLSlai_struc(n)%nr
-        do c=1, CGLSlai_struc(n)%nc
+        call LIS_verify(ios, 'Error nf90_get_var: LAI')
 
-            if(CGLSlai_struc(n)%qcflag.eq.1) then !apply QC flag
+        ios = nf90_get_var(nid, flagid, flag, &
+             start=(/lon_offset,lat_offset/), &
+             count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/))
 
-                if(lai(c,r).gt.0) then
-                    if (is_valid_CGLSlai_flag(flag(c,r))) then
+        call LIS_verify(ios, 'Error nf90_get_var: QFLAG')
+
+        ios = nf90_close(ncid=nid)
+        call LIS_verify(ios,'Error closing file '//trim(fname))
+
+        do r=1, CGLSlai_struc(n)%nr
+            do c=1, CGLSlai_struc(n)%nc
+
+                if(CGLSlai_struc(n)%qcflag.eq.1) then !apply QC flag
+
+                    if(lai(c,r).gt.0) then
+                        if (is_valid_CGLSlai_flag(flag(c,r))) then
+                            lai_flagged(c,r) =&
+                                 lai(c,r)*CGLSlai_struc(n)%scale
+                        else
+                            lai_flagged(c,r) = LIS_rc%udef
+                        endif
+                    else
+                        lai_flagged(c,r) = LIS_rc%udef
+                    endif
+
+                else  ! no QC flag applied                
+
+                    if(lai(c,r).gt.0) then
                         lai_flagged(c,r) =&
                              lai(c,r)*CGLSlai_struc(n)%scale
                     else
                         lai_flagged(c,r) = LIS_rc%udef
                     endif
-                else
-                    lai_flagged(c,r) = LIS_rc%udef
                 endif
-
-            else  ! no QC flag applied                
-
-                if(lai(c,r).gt.0) then
-                    lai_flagged(c,r) =&
-                         lai(c,r)*CGLSlai_struc(n)%scale
-                else
-                    lai_flagged(c,r) = LIS_rc%udef
-                endif
-            endif
+            end do
         end do
-    end do
+    else
+        ! if the data has been resampled, we assume that it also has been
+        ! unpacked and flagged already, so we can directly read it into
+        ! lai_flagged
+        ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
+        call LIS_verify(ios,'Error opening file '//trim(fname))
+
+        ios = nf90_inq_varid(nid, 'CGLS_LAI',laiid)
+        call LIS_verify(ios, 'Error nf90_inq_varid: CGLS_LAI')
+
+        ios = nf90_get_var(nid, laiid, lai_flagged, &
+             start=(/lon_offset,lat_offset/), &
+             count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/)) 
+
+        call LIS_verify(ios, 'Error nf90_get_var: CGLS_LAI')
+
+        ios = nf90_close(ncid=nid)
+        call LIS_verify(ios,'Error closing file '//trim(fname))
+
+        ! the data is already read into lai_flagged, but we have to replace
+        ! NaNs/invalid values with LIS_rc%udef
+        do r=1, CGLSlai_struc(n)%nr
+            do c=1, CGLSlai_struc(n)%nc
+                if (isnan(lai_flagged(c, r))) then
+                    lai_flagged(c, r) = LIS_rc%udef
+                else if (.not. (0.0 < lai_flagged(c, r) .and. lai_flagged(c, r) < 20.0)) then
+                    lai_flagged(c, r) = LIS_rc%udef
+                endif
+            end do
+        end do
+    endif
 
 
     ! fill lai_in and lai_data_b, which are required further on
@@ -328,7 +362,8 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
         enddo
     enddo
 
-    if(LIS_rc%obs_gridDesc(k,10).le.CGLSlai_struc(n)%dlon) then 
+    if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then 
+        write(LIS_logunit,*) '[INFO] interpolating CGLS LAI',trim(fname)
         !--------------------------------------------------------------------------
         ! Interpolate to the LIS running domain if model has finer resolution
         ! than observations
@@ -342,7 +377,8 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
              CGLSlai_struc(n)%w21,CGLSlai_struc(n)%w22,&
              CGLSlai_struc(n)%n11,CGLSlai_struc(n)%n12,&
              CGLSlai_struc(n)%n21,CGLSlai_struc(n)%n22,LIS_rc%udef,ios)
-    else
+     else if(LIS_rc%obs_gridDesc(k,10).gt.CGLSlai_struc(n)%dlon) then
+        write(LIS_logunit,*) '[INFO] upscaling CGLS LAI',trim(fname)
         !--------------------------------------------------------------------------
         ! Upscale to the LIS running domain if model has coarser resolution
         ! than observations
@@ -351,7 +387,8 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
              LIS_rc%udef, CGLSlai_struc(n)%n11,&
              lai_data_b,lai_in, laiobs_b_ip, laiobs_ip)
-
+    else
+        write(LIS_logunit,*) '[INFO] CGLS LAI already at correct resolution',trim(fname)
     endif
 
 #endif
@@ -509,14 +546,14 @@ contains
         character(len=2) :: daystr
 
         write(unit=resstr, fmt='(f5.2)') res
-        resstr=trim(adjustl(resstr))
+        resstr=adjustl(resstr)
         write(unit=yearstr, fmt='(i4.4)') year
         write(unit=monthstr, fmt='(i2.2)') month
         write(unit=daystr, fmt='(i2.2)') day
 
 
         filename = trim(ndir)//'/'//&
-             'CGLS_LAI_resampled_'//resstr//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
+             'CGLS_LAI_resampled_'//trim(resstr)//'deg_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
 
     end subroutine create_CGLSlai_filename_from_resampled
 

@@ -48,7 +48,7 @@ module CGLSlai_Mod
         real*8                 :: time1, time2
         integer                :: fnd
         integer                :: qcflag
-        logical                :: isresampled
+        integer                :: isresampled
         real*8                 :: spatialres
         real                   :: scale
         real*8                 ::  dlat, dlon
@@ -310,7 +310,7 @@ contains
             CGLSlai_struc(n)%scale = 0.033333
 
             if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
-                if(CGLSlai_struc(n)%isresampled) then
+                if(CGLSlai_struc(n)%isresampled == 1) then
                     ! original spatial resolution of the downloaded data product
                     CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
                     CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
@@ -320,6 +320,8 @@ contains
                     ! decreasing
                     CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
                     CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
+                    CGLSlai_struc(n)%nr = nint(180.0 / CGLSlai_struc(n)%spatialres)
+                    CGLSlai_struc(n)%nc = 2 * CGLSlai_struc(n)%nr
                 else
                     ! original spatial resolution of the downloaded data product
                     CGLSlai_struc(n)%lat_lower_left = 80
@@ -330,6 +332,8 @@ contains
                     ! decreasing
                     CGLSlai_struc(n)%dlat = 0.008928002004371148
                     CGLSlai_struc(n)%dlon = 0.008928349985839856
+                    CGLSlai_struc(n)%nc = 40320
+                    CGLSlai_struc(n)%nr = 15680
                 endif
             elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
                 write(unit=error_unit, fmt=*) &
@@ -338,8 +342,6 @@ contains
             endif
 
             ! from netCDF files
-            CGLSlai_struc(n)%nc = 40320
-            CGLSlai_struc(n)%nr = 15680
 
             CGLSlai_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
             CGLSlai_struc(n)%gridDesci(2) = CGLSlai_struc(n)%nc
