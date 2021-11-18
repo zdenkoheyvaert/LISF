@@ -241,6 +241,7 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     integer                 :: nid
     integer                 :: laiid, flagid
     integer                 :: ios
+    character(len=20)       :: lai_name
 
     integer, dimension(nf90_max_var_dims) :: dimIDs
     integer                                :: numLons, numLats
@@ -263,14 +264,17 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
     call LIS_verify(ios,'Error opening file '//trim(fname))
 
-    ios = nf90_inq_varid(nid, 'VODCA_LAI',laiid)
-    call LIS_verify(ios, 'Error nf90_inq_varid: VODCA_LAI')
+    lai_name = 'VODCA_'//VODCAlai_struc(n)%band//'_LAI'
+    ios = nf90_inq_varid(nid, trim(lai_name), laiid)
+    call LIS_verify(ios, 'Error nf90_inq_varid: VODCA_'&
+         //VODCAlai_struc(n)%band//'_LAI')
 
     ios = nf90_get_var(nid, laiid, lai, &
          start=(/lon_offset,lat_offset/), &
          count=(/VODCAlai_struc(n)%nc,VODCAlai_struc(n)%nr/)) 
 
-    call LIS_verify(ios, 'Error nf90_get_var: VODCA_LAI')
+    call LIS_verify(ios, 'Error nf90_get_var: VODCA_'&
+         //VODCAlai_struc(n)%band//'_LAI')
 
     ios = nf90_close(ncid=nid)
     call LIS_verify(ios,'Error closing file '//trim(fname))
