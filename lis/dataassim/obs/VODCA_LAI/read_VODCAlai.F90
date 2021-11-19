@@ -86,7 +86,7 @@ subroutine read_VODCAlai(n, k, OBS_State, OBS_Pert_State)
     if(alarmCheck.or.VODCAlai_struc(n)%startMode) then 
         VODCAlai_struc(n)%startMode = .false.
 
-        call create_VODCAlai_filename(VODCAlai_struc(n)%band,&
+        call create_VODCAlai_filename(VODCAlai_struc(n)%nc_varname,&
              laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
         inquire(file=fname,exist=file_exists)          
@@ -264,17 +264,14 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
     call LIS_verify(ios,'Error opening file '//trim(fname))
 
-    lai_name = 'VODCA_'//VODCAlai_struc(n)%band//'_LAI'
-    ios = nf90_inq_varid(nid, trim(lai_name), laiid)
-    call LIS_verify(ios, 'Error nf90_inq_varid: VODCA_'&
-         //VODCAlai_struc(n)%band//'_LAI')
+    ios = nf90_inq_varid(nid, trim(VODCAlai_struc(n)%nc_varname), laiid)
+    call LIS_verify(ios, 'Error nf90_inq_varid: '//VODCAlai_struc(n)%nc_varname)
 
     ios = nf90_get_var(nid, laiid, lai, &
          start=(/lon_offset,lat_offset/), &
          count=(/VODCAlai_struc(n)%nc,VODCAlai_struc(n)%nr/)) 
 
-    call LIS_verify(ios, 'Error nf90_get_var: VODCA_'&
-         //VODCAlai_struc(n)%band//'_LAI')
+    call LIS_verify(ios, 'Error nf90_get_var: '//VODCAlai_struc(n)%nc_varname)
 
     ios = nf90_close(ncid=nid)
     call LIS_verify(ios,'Error closing file '//trim(fname))
@@ -342,15 +339,15 @@ end subroutine read_VODCA_LAI_data
 ! \label{create_VODCAlai_filename}
 ! 
 ! !INTERFACE: 
-subroutine create_VODCAlai_filename(band, ndir, year, month, day, filename)
+subroutine create_VODCAlai_filename(varname, ndir, year, month, day, filename)
     ! !USES:   
 
     implicit none
     ! !ARGUMENTS: 
-    character, value     :: band
-    character (len=*)    :: ndir
-    integer, value       :: year, month, day
-    character(len=*)     :: filename
+    character (len=*), intent(in)     :: varname
+    character (len=*)                 :: ndir
+    integer, value                    :: year, month, day
+    character(len=*)                  :: filename
     ! 
     ! !DESCRIPTION: 
     !  This subroutine creates the VODCA LAI filename
@@ -358,7 +355,7 @@ subroutine create_VODCAlai_filename(band, ndir, year, month, day, filename)
     ! 
     !  The arguments are: 
     !  \begin{description}
-    !  \item[band] frequency band
+    !  \item[varname] variable name of the netCDF variable
     !  \item[ndir] name of the VODCA LAI data directory
     !  \item[version] version of the VODCA LAI data
     !  \item[year]  current year
@@ -370,7 +367,7 @@ subroutine create_VODCAlai_filename(band, ndir, year, month, day, filename)
     !EOP
 
     !  The naming scheme is
-    !    VODCA_<band>_LAI_<year>_<month>_<day>.nc
+    !    <varname>_<year>_<month>_<day>.nc
 
 
     character(len=4) :: yearstr
@@ -383,6 +380,6 @@ subroutine create_VODCAlai_filename(band, ndir, year, month, day, filename)
 
 
     filename = trim(ndir)//'/'//&
-         'VODCA_'//band//'_LAI_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
+         varname//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
 
 end subroutine create_VODCAlai_filename

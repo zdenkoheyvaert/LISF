@@ -47,7 +47,7 @@ module VODCAlai_Mod
         real                   :: gridDesci(50)    
         real*8                 :: time1, time2
         integer                :: fnd
-        character              :: band
+        character*20           :: nc_varname
         real*8                 :: dlat, dlon
         real*8                 :: lat_lower_left, lon_lower_left
         real*8                 :: lat_upper_right, lon_upper_right
@@ -148,12 +148,12 @@ contains
             call LIS_verify(status)
         enddo
 
-        call ESMF_ConfigFindLabel(LIS_config,"VODCA LAI frequency band:",&
+        call ESMF_ConfigFindLabel(LIS_config,"VODCA LAI netCDF variable name:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            call ESMF_ConfigGetAttribute(LIS_config,VODCAlai_struc(n)%band,&
+            call ESMF_ConfigGetAttribute(LIS_config,VODCAlai_struc(n)%nc_varname,&
                  rc=status)
-            call LIS_verify(status, 'VODCA LAI frequency band: is missing')
+            call LIS_verify(status, 'VODCA LAI netCDF variable name: is missing')
         enddo
 
         do n=1,LIS_rc%nnest
