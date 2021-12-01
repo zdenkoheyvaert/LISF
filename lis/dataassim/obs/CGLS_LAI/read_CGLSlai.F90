@@ -48,6 +48,10 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     !  \end{description}
     !
     !EOP
+    real, parameter        ::  minssdev = 0.05
+    real, parameter        ::  maxssdev = 0.11
+    real, allocatable      :: ssdev(:)
+    real,  parameter       :: MAX_LAI_VALUE=10.0, MIN_LAI_VALUE=0.0001
     integer                :: status
     integer                :: grid_index
     character*100          :: laiobsdir
@@ -123,6 +127,25 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
         call ESMF_FieldGet(laifield,localDE=0,farrayPtr=obsl,rc=status)
         call LIS_verify(status, 'Error: FieldGet')
 
+        !-------------------------------------------------------------------------
+        !  Transform data to the LSM climatology using a CDF-scaling approach
+        !-------------------------------------------------------------------------     
+        
+        if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then
+
+            call LIS_rescale_with_CDF_matching(     &
+                 n,k,                               & 
+                 CGLSlai_struc(n)%nbins,         & 
+                 CGLSlai_struc(n)%ntimes,        & 
+                 MAX_LAI_VALUE,                      & 
+                 MIN_LAI_VALUE,                      & 
+                 CGLSlai_struc(n)%model_xrange,  &
+                 CGLSlai_struc(n)%obs_xrange,    &
+                 CGLSlai_struc(n)%model_cdf,     &
+                 CGLSlai_struc(n)%obs_cdf,       &
+                 laiobs)
+        endif
+
         obsl = LIS_rc%udef 
         do r=1, LIS_rc%obs_lnr(k)
             do c=1, LIS_rc%obs_lnc(k)
@@ -173,6 +196,38 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
                      assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                 call LIS_verify(status)
 
+            endif
+            if(LIS_rc%dascaloption(k).eq."CDF matching") then 
+                if(CGLSlai_struc(n)%useSsdevScal.eq.1) then
+                    call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
+                         rc=status)
+                    call LIS_verify(status, 'Error: StateGet Observation01')
+
+                    allocate(ssdev(LIS_rc%obs_ngrid(k)))
+                    ssdev = CGLSlai_struc(n)%ssdev_inp 
+
+                    if(CGLSlai_struc(n)%ntimes.eq.1) then 
+                        jj = 1
+                    else
+                        jj = LIS_rc%mo
+                    endif
+                    do t=1,LIS_rc%obs_ngrid(k)
+                        if(CGLSlai_struc(n)%obs_sigma(t,jj).gt.0) then 
+                            ssdev(t) = ssdev(t)*CGLSlai_struc(n)%model_sigma(t,jj)/&
+                                 CGLSlai_struc(n)%obs_sigma(t,jj)
+                            if(ssdev(t).lt.minssdev) then 
+                                ssdev(t) = minssdev
+                            endif
+                        endif
+                    enddo
+
+                    if(LIS_rc%obs_ngrid(k).gt.0) then 
+                        call ESMF_AttributeSet(pertField,"Standard Deviation",&
+                             ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                        call LIS_verify(status)
+                    endif
+                    deallocate(ssdev)
+                endif
             endif
 
         else

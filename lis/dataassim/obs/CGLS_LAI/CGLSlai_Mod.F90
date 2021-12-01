@@ -47,6 +47,7 @@ module CGLSlai_Mod
         real                   :: gridDesci(50)    
         real*8                 :: time1, time2
         integer                :: fnd
+        integer                :: useSsdevScal
         integer                :: qcflag
         integer                :: isresampled
         real*8                 :: spatialres
@@ -64,6 +65,19 @@ module CGLSlai_Mod
         real,    allocatable :: w12(:)
         real,    allocatable :: w21(:)
         real,    allocatable :: w22(:)
+
+        real                       :: ssdev_inp
+        real,    allocatable       :: model_xrange(:,:,:)
+        real,    allocatable       :: obs_xrange(:,:,:)
+        real,    allocatable       :: model_cdf(:,:,:)
+        real,    allocatable       :: obs_cdf(:,:,:)
+        real,    allocatable       :: model_mu(:,:)
+        real,    allocatable       :: obs_mu(:,:)
+        real,    allocatable       :: model_sigma(:,:)
+        real,    allocatable       :: obs_sigma(:,:)
+
+        integer                :: nbins
+        integer                :: ntimes
 
     end type CGLSlai_dec
 
@@ -116,6 +130,7 @@ contains
         type(ESMF_ArraySpec)   ::  pertArrSpec
         character*100          ::  laiobsdir
         character*100          ::  temp
+        real, parameter        ::  minssdev =0.001
         real,  allocatable         ::  ssdev(:)
         character*1            ::  vid(2)
         type(pert_dec_type)    ::  obs_pert
@@ -123,7 +138,11 @@ contains
         character*40, allocatable  ::  vname(:)
         real        , allocatable  ::  varmin(:)
         real        , allocatable  ::  varmax(:)
+        real, allocatable          :: xrange(:), cdf(:)
+        character*100          :: modelcdffile(LIS_rc%nnest)
+        character*100          :: obscdffile(LIS_rc%nnest)
         integer                :: c,r
+        integer                :: ngrid
 
         allocate(CGLSlai_struc(LIS_rc%nnest))
 
@@ -174,6 +193,32 @@ contains
                 call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%spatialres,&
                      rc=status)
                 call LIS_verify(status, 'CGLS LAI spatial resolution: is missing')
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI model CDF file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,modelcdffile(n),rc=status)
+                call LIS_verify(status, 'CGLS LAI model CDF file: not defined')
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI observation CDF file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,obscdffile(n),rc=status)
+                call LIS_verify(status, 'CGLS LAI observation CDF file: not defined')
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config, "CGLS LAI number of bins in the CDF:", rc=status)
+        do n=1, LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%nbins, rc=status)
+                call LIS_verify(status, "CGLS LAI number of bins in the CDF: not defined")
             endif
         enddo
 
@@ -250,6 +295,7 @@ contains
 
                 ! Set obs err to be uniform (will be rescaled later for each grid point). 
                 ssdev = obs_pert%ssdev(1)
+                CGLSlai_struc(n)%ssdev_inp = obs_pert%ssdev(1)
 
                 pertField(n) = ESMF_FieldCreate(arrayspec=pertArrSpec,&
                      grid=LIS_obsEnsOnGrid(n,k),name="Observation"//vid(1)//vid(2),&
@@ -305,7 +351,106 @@ contains
         enddo
 
         do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
 
+                call LIS_getCDFattributes(k,modelcdffile(n),&
+                     CGLSlai_struc(n)%ntimes, ngrid)
+
+                allocate(ssdev(LIS_rc%obs_ngrid(k)))
+                ssdev = obs_pert%ssdev(1)
+
+                allocate(CGLSlai_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
+                     CGLSlai_struc(n)%ntimes))
+                allocate(CGLSlai_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
+                     CGLSlai_struc(n)%ntimes))
+                allocate(CGLSlai_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
+                     CGLSlai_struc(n)%ntimes))
+                allocate(CGLSlai_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
+                     CGLSlai_struc(n)%ntimes))
+                allocate(CGLSlai_struc(n)%model_xrange(&
+                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, &
+                     CGLSlai_struc(n)%nbins))
+                allocate(CGLSlai_struc(n)%obs_xrange(&
+                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, &
+                     CGLSlai_struc(n)%nbins))
+                allocate(CGLSlai_struc(n)%model_cdf(&
+                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, &
+                     CGLSlai_struc(n)%nbins))
+                allocate(CGLSlai_struc(n)%obs_cdf(&
+                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, & 
+                     CGLSlai_struc(n)%nbins))
+
+                !----------------------------------------------------------------------------
+                ! Read the model and observation CDF data
+                !----------------------------------------------------------------------------
+                call LIS_readMeanSigmaData(n,k,&
+                     CGLSlai_struc(n)%ntimes, & 
+                     LIS_rc%obs_ngrid(k), &
+                     modelcdffile(n), &
+                     "LAI",&
+                     CGLSlai_struc(n)%model_mu,&
+                     CGLSlai_struc(n)%model_sigma)
+
+                call LIS_readMeanSigmaData(n,k,&
+                     CGLSlai_struc(n)%ntimes, & 
+                     LIS_rc%obs_ngrid(k), &
+                     obscdffile(n), &
+                     "LAI",&
+                     CGLSlai_struc(n)%obs_mu,&
+                     CGLSlai_struc(n)%obs_sigma)
+
+                call LIS_readCDFdata(n,k,&
+                     CGLSlai_struc(n)%nbins,&
+                     CGLSlai_struc(n)%ntimes, & 
+                     LIS_rc%obs_ngrid(k), &
+                     modelcdffile(n), &
+                     "LAI",&
+                     CGLSlai_struc(n)%model_xrange,&
+                     CGLSlai_struc(n)%model_cdf)
+
+                call LIS_readCDFdata(n,k,&
+                     CGLSlai_struc(n)%nbins,&
+                     CGLSlai_struc(n)%ntimes, & 
+                     LIS_rc%obs_ngrid(k), &
+                     obscdffile(n), &
+                     "LAI",&
+                     CGLSlai_struc(n)%obs_xrange,&
+                     CGLSlai_struc(n)%obs_cdf)
+
+                if(CGLSlai_struc(n)%useSsdevScal.eq.1) then 
+                    if(CGLSlai_struc(n)%ntimes.eq.1) then 
+                        jj = 1
+                    else
+                        jj = LIS_rc%mo
+                    endif
+                    do t=1,LIS_rc%obs_ngrid(k)
+                        if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then 
+                            print*, ssdev(t),CGLSlai_struc(n)%model_sigma(t,jj),&
+                                 CGLSlai_struc(n)%obs_sigma(t,jj)
+                            if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.0) then 
+                                ssdev(t) = ssdev(t)*CGLSlai_struc(n)%model_sigma(t,jj)/&
+                                     CGLSlai_struc(n)%obs_sigma(t,jj)
+                            endif
+
+                            if(ssdev(t).lt.minssdev) then 
+                                ssdev(t) = minssdev
+                            endif
+                        endif
+                    enddo
+                endif
+
+                if(LIS_rc%obs_ngrid(k).gt.0) then 
+                    call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
+                         ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                    call LIS_verify(status)
+                endif
+
+                deallocate(ssdev)
+
+            endif
+        enddo
+
+        do n=1,LIS_rc%nnest
             ! scale factor for unpacking the data
             CGLSlai_struc(n)%scale = 0.033333
 
