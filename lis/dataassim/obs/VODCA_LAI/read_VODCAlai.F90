@@ -292,8 +292,8 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     ! fill lai_in and lai_data_b, which are required further on
     do r=1, VODCAlai_struc(n)%nr
         do c=1, VODCAlai_struc(n)%nc
-            lai_in(c+(r-1)*VODCAlai_struc(n)%nc) = lai_flagged(c,r)
-            if(lai_flagged(c,r).ne.LIS_rc%udef) then
+            lai_in(c+(r-1)*VODCAlai_struc(n)%nc) = lai(c,r)
+            if(lai(c,r).ne.LIS_rc%udef) then
                 lai_data_b(c+(r-1)*VODCAlai_struc(n)%nc) = .true.
             else
                 lai_data_b(c+(r-1)*VODCAlai_struc(n)%nc) = .false.

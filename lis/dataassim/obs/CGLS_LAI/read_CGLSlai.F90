@@ -376,7 +376,7 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
              CGLSlai_struc(n)%w21,CGLSlai_struc(n)%w22,&
              CGLSlai_struc(n)%n11,CGLSlai_struc(n)%n12,&
              CGLSlai_struc(n)%n21,CGLSlai_struc(n)%n22,LIS_rc%udef,ios)
-     else if(LIS_rc%obs_gridDesc(k,10).gt.CGLSlai_struc(n)%dlon) then
+     else
         write(LIS_logunit,*) '[INFO] upscaling CGLS LAI',trim(fname)
         !--------------------------------------------------------------------------
         ! Upscale to the LIS running domain if model has coarser resolution
@@ -386,8 +386,6 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
              LIS_rc%udef, CGLSlai_struc(n)%n11,&
              lai_data_b,lai_in, laiobs_b_ip, laiobs_ip)
-    else
-        write(LIS_logunit,*) '[INFO] CGLS LAI already at correct resolution',trim(fname)
     endif
 
 #endif

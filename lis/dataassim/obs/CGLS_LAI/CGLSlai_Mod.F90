@@ -313,9 +313,9 @@ contains
                 if(CGLSlai_struc(n)%isresampled == 1) then
                     ! images are rescaled to custom resolution
                     CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
                     CGLSlai_struc(n)%lat_upper_right = -90 + 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lat_lower_left = 180 - 0.5 * CGLSlai_struc(n)%spatialres
+                    CGLSlai_struc(n)%lon_lower_left = -180 + 0.5 * CGLSlai_struc(n)%spatialres
+                    CGLSlai_struc(n)%lon_upper_right = 180 - 0.5 * CGLSlai_struc(n)%spatialres
                     ! dlat is positive since LIS will figure out that latitude is
                     ! decreasing
                     CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
@@ -325,8 +325,8 @@ contains
                 else
                     ! original spatial resolution of the downloaded data product
                     CGLSlai_struc(n)%lat_lower_left = 80
-                    CGLSlai_struc(n)%lon_lower_left = -180
                     CGLSlai_struc(n)%lat_upper_right = -59.9910714285396
+                    CGLSlai_struc(n)%lon_lower_left = -180
                     CGLSlai_struc(n)%lon_upper_right = 179.991071429063
                     ! dlat is positive since LIS will figure out that latitude is
                     ! decreasing
@@ -360,7 +360,7 @@ contains
             !-----------------------------------------------------------------------------
             !   Use interpolation if LIS is running finer than native resolution. 
             !-----------------------------------------------------------------------------
-            if(LIS_rc%obs_gridDesc(k,10).le.CGLSlai_struc(n)%dlon) then 
+            if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then 
 
                 allocate(CGLSlai_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(CGLSlai_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
