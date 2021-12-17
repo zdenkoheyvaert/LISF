@@ -32,6 +32,7 @@ module LIS_lsmda_pluginMod
 !                            enabled the compilation of JULES 5.3 DA
 !  13 Dec 2019: Eric Kemp, replaced LDTSI with USAFSI
 !  17 Feb 2020: Yeosang Yoon, added SNODEP & USAFSI Assimilation for Jules 5.x
+!  16 December 2021: Zdenko Heyvaert, added ESA CCI SM Assimilation for Noah-MP.4.0.1
 !
 !EOP
   implicit none
@@ -2553,6 +2554,27 @@ subroutine LIS_lsmda_plugin
         trim(LIS_NASASMAPsmobsId )//char(0),NoahMP401_descale_soilm)
    call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_NASASMAPsmobsId )//char(0),NoahMP401_updatesoilm)
+
+!ZH
+! Noah-MP.4.0.1 ESACCI soil moisture
+   call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_dasoilm_init)
+   call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_getsoilm)
+   call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_setsoilm)
+   call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_getsmpred)
+   call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_qcsoilm)
+   call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_qc_soilmobs)
+   call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_scale_soilm)
+   call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_descale_soilm)
+   call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_updatesoilm)
 
 !YK
 ! Noah-MP.4.0.1 SMOS NRT NN soil moisture
