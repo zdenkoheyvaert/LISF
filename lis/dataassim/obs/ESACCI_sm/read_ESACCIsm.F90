@@ -227,7 +227,7 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
   endif
   
 
-  if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then  
+  if(trim(LIS_rc%dascaloption(k)).eq."CDF matching".and.fnd.ne.0) then  
    if (ESACCI_sm_struc(n)%ntimes.gt.1.and.ESACCI_sm_struc(n)%cdf_read_opt.eq.1) then
       call LIS_rescale_with_CDF_matching(    &
            n,k,                              & 

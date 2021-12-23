@@ -393,7 +393,7 @@ contains
        allocate(ssdev(LIS_rc%obs_ngrid(k)))
        ssdev = obs_pert%ssdev(1)
 
-       if(LIS_rc%dascaloption(k).eq."CDF matching") then 
+       if(trim(LIS_rc%dascaloption(k)).eq."CDF matching") then 
 
           call LIS_getCDFattributes(k,ESACCI_sm_struc(n)%modelcdffile,&
                ESACCI_sm_struc(n)%ntimes, ngrid)
