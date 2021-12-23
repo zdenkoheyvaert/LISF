@@ -50,6 +50,7 @@
 !   
 ! !REVISION HISTORY: 
 !  01 Oct 2012: Sujay Kumar, Initial Specification
+!  22 Dec 2021: Zdenko Heyvaert, Updated for reading monthly CDF for the current month
 ! 
 module ESACCI_sm_Mod
 ! !USES: 
@@ -97,6 +98,12 @@ module ESACCI_sm_Mod
 
      integer                :: nbins
      integer                :: ntimes
+     logical                :: cdf_read_mon ! (ensures that we also read in the
+                                            !  data in the first simulated month)
+     integer                :: cdf_read_opt ! 0: read all months at one time
+                                            ! 1: read only the current month
+     character*100          :: modelcdffile
+     character*100          :: obscdffile
 
   end type ESACCI_sm_dec
   
@@ -160,8 +167,6 @@ contains
     real, pointer          ::  obs_temp(:,:)
     real, allocatable          :: xrange(:), cdf(:)
     real                   :: gridDesci(50)
-    character*100          :: modelcdffile(LIS_rc%nnest)
-    character*100          :: obscdffile(LIS_rc%nnest)
     real,      allocatable     :: ssdev(:)
 
     real, allocatable          ::  obserr(:,:)
@@ -214,7 +219,7 @@ contains
          rc=status)
     do n=1,LIS_rc%nnest
        if(LIS_rc%dascaloption(k).ne."none") then 
-          call ESMF_ConfigGetAttribute(LIS_config,modelcdffile(n),rc=status)
+          call ESMF_ConfigGetAttribute(LIS_config,ESACCI_sm_struc(n)%modelcdffile,rc=status)
           call LIS_verify(status, 'ESA CCI model CDF file: not defined')
        endif
     enddo
@@ -223,7 +228,7 @@ contains
          rc=status)
     do n=1,LIS_rc%nnest
        if(LIS_rc%dascaloption(k).ne."none") then 
-          call ESMF_ConfigGetAttribute(LIS_config,obscdffile(n),rc=status)
+          call ESMF_ConfigGetAttribute(LIS_config,ESACCI_sm_struc(n)%obscdffile,rc=status)
           call LIS_verify(status, 'ESA CCI observation CDF file: not defined')
        endif
     enddo
@@ -235,6 +240,15 @@ contains
           call LIS_verify(status, "ESA CCI soil moisture number of bins in the CDF: not defined")
        endif
     enddo
+
+   do n=1,LIS_rc%nnest
+     ESACCI_sm_struc(n)%cdf_read_mon = .false.
+
+     call ESMF_ConfigFindLabel(LIS_config, "ESA CCI CDF read option:", rc=status) ! 0: read CDF for all months/year
+                                                                                  ! 1: read CDF for current month
+     call ESMF_ConfigGetAttribute(LIS_config, ESACCI_sm_struc(n)%cdf_read_opt, rc=status)
+     call LIS_verify(status, "ESA CCI CDF read option: not defined")
+   enddo
 
    do n=1,LIS_rc%nnest
        call ESMF_AttributeSet(OBS_State(n),"Data Update Status",&
@@ -376,92 +390,114 @@ contains
     enddo
     
     do n=1,LIS_rc%nnest
-       if(LIS_rc%dascaloption(k).ne."none") then 
+       allocate(ssdev(LIS_rc%obs_ngrid(k)))
+       ssdev = obs_pert%ssdev(1)
 
-          call LIS_getCDFattributes(k,modelcdffile(n),&
+       if(LIS_rc%dascaloption(k).eq."CDF matching") then 
+
+          call LIS_getCDFattributes(k,ESACCI_sm_struc(n)%modelcdffile,&
                ESACCI_sm_struc(n)%ntimes, ngrid)
 
-          allocate(ssdev(LIS_rc%obs_ngrid(k)))
-          ssdev = obs_pert%ssdev(1)
-
-          allocate(ESACCI_sm_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
-               ESACCI_sm_struc(n)%ntimes))
-          allocate(ESACCI_sm_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
-               ESACCI_sm_struc(n)%ntimes))
-          allocate(ESACCI_sm_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
-               ESACCI_sm_struc(n)%ntimes))
-          allocate(ESACCI_sm_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
-               ESACCI_sm_struc(n)%ntimes))
-          allocate(ESACCI_sm_struc(n)%model_xrange(&
-               LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, &
-               ESACCI_sm_struc(n)%nbins))
-          allocate(ESACCI_sm_struc(n)%obs_xrange(&
-               LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, &
-               ESACCI_sm_struc(n)%nbins))
-          allocate(ESACCI_sm_struc(n)%model_cdf(&
-               LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, &
-               ESACCI_sm_struc(n)%nbins))
-          allocate(ESACCI_sm_struc(n)%obs_cdf(&
-               LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, & 
-               ESACCI_sm_struc(n)%nbins))
+          if (ESACCI_sm_struc(n)%cdf_read_opt.eq.0) then
+               allocate(ESACCI_sm_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
+                    ESACCI_sm_struc(n)%ntimes))
+               allocate(ESACCI_sm_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
+                    ESACCI_sm_struc(n)%ntimes))
+               allocate(ESACCI_sm_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
+                    ESACCI_sm_struc(n)%ntimes))
+               allocate(ESACCI_sm_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
+                    ESACCI_sm_struc(n)%ntimes))
+               allocate(ESACCI_sm_struc(n)%model_xrange(&
+                    LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, &
+                    ESACCI_sm_struc(n)%nbins))
+               allocate(ESACCI_sm_struc(n)%obs_xrange(&
+                    LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, &
+                    ESACCI_sm_struc(n)%nbins))
+               allocate(ESACCI_sm_struc(n)%model_cdf(&
+                    LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, &
+                    ESACCI_sm_struc(n)%nbins))
+               allocate(ESACCI_sm_struc(n)%obs_cdf(&
+                    LIS_rc%obs_ngrid(k), ESACCI_sm_struc(n)%ntimes, & 
+                    ESACCI_sm_struc(n)%nbins))
+          else
+               allocate(ESACCI_sm_struc(n)%model_mu(LIS_rc%obs_ngrid(k),1))
+               allocate(ESACCI_sm_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),1))
+               allocate(ESACCI_sm_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),1))
+               allocate(ESACCI_sm_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),1))
+               allocate(ESACCI_sm_struc(n)%model_xrange(&
+                    LIS_rc%obs_ngrid(k), 1, &
+                    ESACCI_sm_struc(n)%nbins))
+               allocate(ESACCI_sm_struc(n)%obs_xrange(&
+                    LIS_rc%obs_ngrid(k), 1, &
+                    ESACCI_sm_struc(n)%nbins))
+               allocate(ESACCI_sm_struc(n)%model_cdf(&
+                    LIS_rc%obs_ngrid(k), 1, &
+                    ESACCI_sm_struc(n)%nbins))
+               allocate(ESACCI_sm_struc(n)%obs_cdf(&
+                    LIS_rc%obs_ngrid(k), 1, & 
+                    ESACCI_sm_struc(n)%nbins))
+          endif
 
 !----------------------------------------------------------------------------
 ! Read the model and observation CDF data
+! Only if not monthly: otherwise this is done in the read_ESACCIsm module
 !----------------------------------------------------------------------------
-          call LIS_readMeanSigmaData(n,k,&
-               ESACCI_sm_struc(n)%ntimes, & 
-               LIS_rc%obs_ngrid(k), &
-               modelcdffile(n), &
-               "SoilMoist",&
-               ESACCI_sm_struc(n)%model_mu,&
-               ESACCI_sm_struc(n)%model_sigma)
+          if (ESACCI_sm_struc(n)%cdf_read_opt.eq.0) then
+               call LIS_readMeanSigmaData(n,k,&
+                    ESACCI_sm_struc(n)%ntimes, & 
+                    LIS_rc%obs_ngrid(k), &
+                    ESACCI_sm_struc(n)%modelcdffile, &
+                    "SoilMoist",&
+                    ESACCI_sm_struc(n)%model_mu,&
+                    ESACCI_sm_struc(n)%model_sigma)
 
-          call LIS_readMeanSigmaData(n,k,&
-               ESACCI_sm_struc(n)%ntimes, & 
-               LIS_rc%obs_ngrid(k), &
-               obscdffile(n), &
-               "SoilMoist",&
-               ESACCI_sm_struc(n)%obs_mu,&
-               ESACCI_sm_struc(n)%obs_sigma)
+               call LIS_readMeanSigmaData(n,k,&
+                    ESACCI_sm_struc(n)%ntimes, & 
+                    LIS_rc%obs_ngrid(k), &
+                    ESACCI_sm_struc(n)%obscdffile, &
+                    "SoilMoist",&
+                    ESACCI_sm_struc(n)%obs_mu,&
+                    ESACCI_sm_struc(n)%obs_sigma)
 
-          call LIS_readCDFdata(n,k,&
-               ESACCI_sm_struc(n)%nbins,&
-               ESACCI_sm_struc(n)%ntimes, & 
-               LIS_rc%obs_ngrid(k), &
-               modelcdffile(n), &
-               "SoilMoist",&
-               ESACCI_sm_struc(n)%model_xrange,&
-               ESACCI_sm_struc(n)%model_cdf)
+               call LIS_readCDFdata(n,k,&
+                    ESACCI_sm_struc(n)%nbins,&
+                    ESACCI_sm_struc(n)%ntimes, & 
+                    LIS_rc%obs_ngrid(k), &
+                    ESACCI_sm_struc(n)%modelcdffile, &
+                    "SoilMoist",&
+                    ESACCI_sm_struc(n)%model_xrange,&
+                    ESACCI_sm_struc(n)%model_cdf)
 
-          call LIS_readCDFdata(n,k,&
-               ESACCI_sm_struc(n)%nbins,&
-               ESACCI_sm_struc(n)%ntimes, & 
-               LIS_rc%obs_ngrid(k), &
-               obscdffile(n), &
-               "SoilMoist",&
-               ESACCI_sm_struc(n)%obs_xrange,&
-               ESACCI_sm_struc(n)%obs_cdf)
+               call LIS_readCDFdata(n,k,&
+                    ESACCI_sm_struc(n)%nbins,&
+                    ESACCI_sm_struc(n)%ntimes, & 
+                    LIS_rc%obs_ngrid(k), &
+                    ESACCI_sm_struc(n)%obscdffile, &
+                    "SoilMoist",&
+                    ESACCI_sm_struc(n)%obs_xrange,&
+                    ESACCI_sm_struc(n)%obs_cdf)
 
-          if(ESACCI_sm_struc(n)%useSsdevScal.eq.1) then 
-             if(ESACCI_sm_struc(n)%ntimes.eq.1) then 
-                jj = 1
-             else
-                jj = LIS_rc%mo
-             endif
-             do t=1,LIS_rc%obs_ngrid(k)
-                if(ESACCI_sm_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then 
-                   print*, ssdev(t),ESACCI_sm_struc(n)%model_sigma(t,jj),&
-                        ESACCI_sm_struc(n)%obs_sigma(t,jj)
-                   if(ESACCI_sm_struc(n)%obs_sigma(t,jj).ne.0) then 
-                   ssdev(t) = ssdev(t)*ESACCI_sm_struc(n)%model_sigma(t,jj)/&
-                        ESACCI_sm_struc(n)%obs_sigma(t,jj)
-                   endif
+               if(ESACCI_sm_struc(n)%useSsdevScal.eq.1) then 
+                    if(ESACCI_sm_struc(n)%ntimes.eq.1) then 
+                         jj = 1
+                    else
+                         jj = LIS_rc%mo
+                    endif
+                    do t=1,LIS_rc%obs_ngrid(k)
+                         if(ESACCI_sm_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then 
+                              print*, ssdev(t),ESACCI_sm_struc(n)%model_sigma(t,jj),&
+                              ESACCI_sm_struc(n)%obs_sigma(t,jj)
+                              if(ESACCI_sm_struc(n)%obs_sigma(t,jj).ne.0) then 
+                                   ssdev(t) = ssdev(t)*ESACCI_sm_struc(n)%model_sigma(t,jj)/&
+                                   ESACCI_sm_struc(n)%obs_sigma(t,jj)
+                              endif
                       
-                   if(ssdev(t).lt.minssdev) then 
-                      ssdev(t) = minssdev
-                   endif
-                endif
-             enddo
+                              if(ssdev(t).lt.minssdev) then 
+                                   ssdev(t) = minssdev
+                              endif
+                         endif
+                    enddo
+               endif
           endif
 
 #if 0           
@@ -504,10 +540,8 @@ contains
                   ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
              call LIS_verify(status)
           endif
-
-          deallocate(ssdev)
-
        endif
+       deallocate(ssdev)
     enddo
 
     do n=1,LIS_rc%nnest

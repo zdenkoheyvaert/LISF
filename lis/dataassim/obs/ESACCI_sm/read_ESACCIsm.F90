@@ -15,6 +15,7 @@
 ! !REVISION HISTORY:
 !  01 Oct 2012: Sujay Kumar, Initial Specification
 !  13 Jul 2016: Sujay Kumar, Updated the code to support DA in observation space
+!  22 Dec 2021: Zdenko Heyvaert, Updated for reading monthly CDF for the current month
 !
 ! !INTERFACE: 
 subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
@@ -178,19 +179,80 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
 
 !-------------------------------------------------------------------------
 !  Transform data to the LSM climatology using a CDF-scaling approach
-!-------------------------------------------------------------------------     
-  if(LIS_rc%dascaloption(k).ne."none".and.fnd.ne.0) then  
-     call LIS_rescale_with_CDF_matching(    &
-          n,k,                              & 
-          ESACCI_sm_struc(n)%nbins,         & 
-          ESACCI_sm_struc(n)%ntimes,        & 
-          MAX_SM_VALUE,                     & 
-          MIN_SM_VALUE,                     & 
-          ESACCI_sm_struc(n)%model_xrange,  &
-          ESACCI_sm_struc(n)%obs_xrange,    &
-          ESACCI_sm_struc(n)%model_cdf,     &
-          ESACCI_sm_struc(n)%obs_cdf,       &
-          sm_current)
+!-------------------------------------------------------------------------
+  
+  if (ESACCI_sm_struc(n)%ntimes.gt.1.and.ESACCI_sm_struc(n)%cdf_read_opt.eq.1) then
+   if (.not. ESACCI_sm_struc(n)%cdf_read_mon.or.LIS_rc%da.eq.1.and.LIS_rc%hr.eq.0.and.LIS_rc%mn.eq.0.and.LIS_rc%ss.eq.0) then
+      
+      call LIS_readMeanSigmaData(n,k,&
+            ESACCI_sm_struc(n)%ntimes, & 
+            LIS_rc%obs_ngrid(k), &
+            ESACCI_sm_struc(n)%modelcdffile, &
+            "SoilMoist",&
+            ESACCI_sm_struc(n)%model_mu,&
+            ESACCI_sm_struc(n)%model_sigma,&
+            LIS_rc%mo)
+
+      call LIS_readMeanSigmaData(n,k,&
+            ESACCI_sm_struc(n)%ntimes, & 
+            LIS_rc%obs_ngrid(k), &
+            ESACCI_sm_struc(n)%obscdffile, &
+            "SoilMoist",&
+            ESACCI_sm_struc(n)%obs_mu,&
+            ESACCI_sm_struc(n)%obs_sigma,&
+            LIS_rc%mo)
+
+      call LIS_readCDFdata(n,k,&
+            ESACCI_sm_struc(n)%nbins,&
+            ESACCI_sm_struc(n)%ntimes, & 
+            LIS_rc%obs_ngrid(k), &
+            ESACCI_sm_struc(n)%modelcdffile, &
+            "SoilMoist",&
+            ESACCI_sm_struc(n)%model_xrange,&
+            ESACCI_sm_struc(n)%model_cdf,&
+            LIS_rc%mo)
+
+      call LIS_readCDFdata(n,k,&
+            ESACCI_sm_struc(n)%nbins,&
+            ESACCI_sm_struc(n)%ntimes, & 
+            LIS_rc%obs_ngrid(k), &
+            ESACCI_sm_struc(n)%obscdffile, &
+            "SoilMoist",&
+            ESACCI_sm_struc(n)%obs_xrange,&
+            ESACCI_sm_struc(n)%obs_cdf,&
+            LIS_rc%mo)
+
+      ESACCI_sm_struc(n)%cdf_read_mon = .true.
+   endif
+  endif
+  
+
+  if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then  
+   if (ESACCI_sm_struc(n)%ntimes.gt.1.and.ESACCI_sm_struc(n)%cdf_read_opt.eq.1) then
+      call LIS_rescale_with_CDF_matching(    &
+           n,k,                              & 
+           ESACCI_sm_struc(n)%nbins,         & 
+           1,                                & 
+           MAX_SM_VALUE,                     & 
+           MIN_SM_VALUE,                     & 
+           ESACCI_sm_struc(n)%model_xrange,  &
+           ESACCI_sm_struc(n)%obs_xrange,    &
+           ESACCI_sm_struc(n)%model_cdf,     &
+           ESACCI_sm_struc(n)%obs_cdf,       &
+           sm_current)
+   else
+      call LIS_rescale_with_CDF_matching(    &
+           n,k,                              & 
+           ESACCI_sm_struc(n)%nbins,         & 
+           ESACCI_sm_struc(n)%ntimes,        & 
+           MAX_SM_VALUE,                     & 
+           MIN_SM_VALUE,                     & 
+           ESACCI_sm_struc(n)%model_xrange,  &
+           ESACCI_sm_struc(n)%obs_xrange,    &
+           ESACCI_sm_struc(n)%model_cdf,     &
+           ESACCI_sm_struc(n)%obs_cdf,       &
+           sm_current)
+   endif
   endif
 
   obsl = LIS_rc%udef 
