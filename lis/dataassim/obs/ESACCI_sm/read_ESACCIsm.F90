@@ -328,7 +328,10 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
 
         allocate(ssdev(LIS_rc%obs_ngrid(k)))
         ssdev = ESACCI_sm_struc(n)%ssdev_inp
-        if(ESACCI_sm_struc(n)%ntimes.eq.1) then 
+
+        if(ESACCI_sm_struc(n)%cdf_read_opt .eq. 1) then
+           jj = 1
+        else if(ESACCI_sm_struc(n)%ntimes.eq.1) then 
            jj = 1
         else
            jj = LIS_rc%mo
