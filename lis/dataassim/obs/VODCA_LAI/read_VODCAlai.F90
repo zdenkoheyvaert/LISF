@@ -242,6 +242,7 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     integer                 :: laiid, flagid
     integer                 :: ios
     character(len=20)       :: lai_name
+    integer                 :: numvalidobs
 
     integer, dimension(nf90_max_var_dims) :: dimIDs
     integer                                :: numLons, numLats
@@ -316,7 +317,7 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
              VODCAlai_struc(n)%w21,VODCAlai_struc(n)%w22,&
              VODCAlai_struc(n)%n11,VODCAlai_struc(n)%n12,&
              VODCAlai_struc(n)%n21,VODCAlai_struc(n)%n22,LIS_rc%udef,ios)
-     else if(LIS_rc%obs_gridDesc(k,10).gt.VODCAlai_struc(n)%dlon) then
+     else
         write(LIS_logunit,*) '[INFO] upscaling VODCA LAI',trim(fname)
         !--------------------------------------------------------------------------
         ! Upscale to the LIS running domain if model has coarser resolution
@@ -326,8 +327,6 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
              LIS_rc%udef, VODCAlai_struc(n)%n11,&
              lai_data_b,lai_in, laiobs_b_ip, laiobs_ip)
-    else
-        write(LIS_logunit,*) '[INFO] VODCA LAI already at correct resolution',trim(fname)
     endif
 
 #endif
@@ -380,6 +379,6 @@ subroutine create_VODCAlai_filename(varname, ndir, year, month, day, filename)
 
 
     filename = trim(ndir)//'/'//&
-         varname//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
+         trim(varname)//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
 
 end subroutine create_VODCAlai_filename

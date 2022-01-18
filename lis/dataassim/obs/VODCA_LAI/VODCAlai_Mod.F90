@@ -295,8 +295,8 @@ contains
                 ! decreasing
                 VODCAlai_struc(n)%dlat = 0.25
                 VODCAlai_struc(n)%dlon = 0.25
-                VODCAlai_struc(n)%nc = 720
-                VODCAlai_struc(n)%nr = 1440
+                VODCAlai_struc(n)%nc = 1440
+                VODCAlai_struc(n)%nr = 720
             elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
                 write(unit=error_unit, fmt=*) &
                      'The VODCA_LAI module only works with latlon projection'
@@ -322,7 +322,7 @@ contains
             !-----------------------------------------------------------------------------
             !   Use interpolation if LIS is running finer than native resolution. 
             !-----------------------------------------------------------------------------
-            if(LIS_rc%obs_gridDesc(k,10).le.VODCAlai_struc(n)%dlon) then 
+            if(LIS_rc%obs_gridDesc(k,10).lt.VODCAlai_struc(n)%dlon) then
 
                 allocate(VODCAlai_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(VODCAlai_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
