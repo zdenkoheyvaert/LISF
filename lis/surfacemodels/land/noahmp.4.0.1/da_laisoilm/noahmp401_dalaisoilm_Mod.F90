@@ -8,15 +8,15 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 #include "LIS_misc.h"
-module NoahMP401_dalaisoilm_Mod
+module noahmp401_dalaisoilm_Mod
 !BOP
 !
-! !MODULE: NoahMP401_dalaisoilm_Mod
+! !MODULE: noahmp401_dalaisoilm_Mod
 !
 ! !DESCRIPTION: Updates LAI and SSM at the same time.
 !  
 ! !REVISION HISTORY:
-! 15 Dec 2018: Mahdi Navari, Sujay Kumar ; Modified for NoahMP401 !
+! 15 Dec 2018: Mahdi Navari, Sujay Kumar ; Modified for noahmp401 !
 ! 19 Jan 2022: Samuel Scherrer: Modified from da_soilm for da_laisoilm
 
 ! !USES:        
@@ -31,7 +31,7 @@ module NoahMP401_dalaisoilm_Mod
 !-----------------------------------------------------------------------------
 ! !PUBLIC MEMBER FUNCTIONS:
 !-----------------------------------------------------------------------------
-  public :: NoahMP401_dalaisoilm_init
+  public :: noahmp401_dalaisoilm_init
 !-----------------------------------------------------------------------------
 ! !PUBLIC TYPES:
 !-----------------------------------------------------------------------------
@@ -47,18 +47,18 @@ module NoahMP401_dalaisoilm_Mod
      integer                :: ntimes
      integer                :: scal
 
-  end type dasm_dec
+  end type dalaism_dec
   
-  type(dasm_dec), allocatable :: noahmp401_dalaism_struc(:)
+  type(dalaism_dec), allocatable :: noahmp401_dalaism_struc(:)
 
 contains
 !BOP
 ! 
-! !ROUTINE: NoahMP401_dalaisoilm_init
-! \label{NoahMP401_dalaisoilm_init}
+! !ROUTINE: noahmp401_dalaisoilm_init
+! \label{noahmp401_dalaisoilm_init}
 ! 
 ! !INTERFACE:
-  subroutine NoahMP401_dalaisoilm_init(k)
+  subroutine noahmp401_dalaisoilm_init(k)
 ! !USES:
 ! !DESCRIPTION:        
 !
@@ -76,5 +76,5 @@ contains
        allocate(noahmp401_dalaism_struc(LIS_rc%nnest))
     endif
 
-  end subroutine NoahMP401_dalaisoilm_init
-end module NoahMP401_dalaisoilm_Mod
+  end subroutine noahmp401_dalaisoilm_init
+end module noahmp401_dalaisoilm_Mod

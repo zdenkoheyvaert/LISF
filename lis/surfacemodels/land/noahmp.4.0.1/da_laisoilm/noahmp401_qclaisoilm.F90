@@ -22,7 +22,7 @@ subroutine NoahMP401_qclaisoilm(n, LSM_State)
 
 ! !USES:
   use ESMF
-  use LIS_coreMod, only : LIS_rc
+  use LIS_coreMod, only : LIS_rc, LIS_domain, LIS_surface
   use LIS_logMod,  only  : LIS_verify
   use NoahMP401_lsmMod
 

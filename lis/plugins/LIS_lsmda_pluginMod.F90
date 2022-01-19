@@ -197,14 +197,14 @@ subroutine LIS_lsmda_plugin
 #endif
 
 #if ( defined SM_NOAHMP_4_0_1 )
-   use NoahMP401_dasoilm_Mod
-   use NoahMP401_dasnow_Mod
+   use noahmp401_dasoilm_Mod
+   use noahmp401_dasnow_Mod
    use noahmp401_dasnodep_Mod
    use noahmp401_dausafsi_Mod
    use noahmp401_tws_DAlogMod, only : noahmp401_tws_DAlog
    use noahmp401_datws_Mod
    use noahmp401_daveg_Mod
-   use NoahMP401_dalaisoilm_Mod
+   use noahmp401_dalaisoilm_Mod
 #endif
 
 
@@ -508,7 +508,7 @@ subroutine LIS_lsmda_plugin
 
    ! NOAHMP4.0.1 LAI+SM update with LAI DA
    external NoahMP401_getlaisoilm
-   external NoahMP401_setsoilm
+   external NoahMP401_setlaisoilm
    external NoahMP401_getlaipred_laism
    external NoahMP401_qclaisoilm
    external NoahMP401_qc_laiobs_laism
@@ -2739,7 +2739,7 @@ subroutine LIS_lsmda_plugin
         trim(LIS_MCD15A2HlaiobsId)//char(0),noahmp401_descale_veg)
 
    call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_dalaism_init)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_dalaisoilm_init)
    call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getlaisoilm)
    call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
@@ -2759,7 +2759,7 @@ subroutine LIS_lsmda_plugin
         trim(LIS_CGLSlaiobsId)//char(0),noahmp401_descale_laisoilm)
 
    call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_dalaism_init)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_dalaisoilm_init)
    call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getlaisoilm)
    call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&

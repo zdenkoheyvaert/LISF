@@ -67,6 +67,7 @@ subroutine NoahMP401_setlaisoilm(n, LSM_State)
   real, pointer          :: soilm3(:)
   real, pointer          :: soilm4(:)
   integer                :: t, j,i, gid, m, t_unpert
+  real                   :: lfmass
   integer                :: status
   real                   :: delta(4)
   real                   :: delta1,delta2,delta3,delta4
