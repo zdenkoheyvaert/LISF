@@ -204,6 +204,7 @@ subroutine LIS_lsmda_plugin
    use noahmp401_tws_DAlogMod, only : noahmp401_tws_DAlog
    use noahmp401_datws_Mod
    use noahmp401_daveg_Mod
+   use NoahMP401_dalaisoilm_Mod
 #endif
 
 
@@ -504,6 +505,16 @@ subroutine LIS_lsmda_plugin
    external noahmp401_scale_tws
    external noahmp401_descale_tws
    external noahmp401_updatetws
+
+   ! NOAHMP4.0.1 LAI+SM update with LAI DA
+   external NoahMP401_getlaisoilm
+   external NoahMP401_setsoilm
+   external NoahMP401_getlaipred_laism
+   external NoahMP401_qclaisoilm
+   external NoahMP401_qc_laiobs_laism
+   external NoahMP401_scale_laisoilm
+   external NoahMP401_descale_laisoilm
+   external NoahMP401_updatelaisoilm
 
 #if ( defined DA_OBS_SNODEP )
 ! NoahMP-4.0.1 SNODEP
@@ -2728,45 +2739,44 @@ subroutine LIS_lsmda_plugin
         trim(LIS_MCD15A2HlaiobsId)//char(0),noahmp401_descale_veg)
 
    call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_daveg_init)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_dalaism_init)
    call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getvegvars)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getlaisoilm)
    call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_setvegvars)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_setlaisoilm)
    call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_updatevegvars)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_updatelaisoilm)
    call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qcveg)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qclaisoilm)
 
    call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getLAIpred)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getlaipred_laism)
    call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qc_LAIobs)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qc_laiobs_laism)
    call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_scale_veg)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_scale_laisoilm)
    call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_descale_veg)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_descale_laisoilm)
 
    call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_daveg_init)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_dalaism_init)
    call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getvegvars)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getlaisoilm)
    call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_setvegvars)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_setlaisoilm)
    call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_updatevegvars)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_updatelaisoilm)
    call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qcveg)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qclaisoilm)
 
    call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getLAIpred)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getlaipred_laism)
    call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qc_LAIobs)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qc_laiobs_laism)
    call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_scale_veg)
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_scale_laisoilm)
    call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_descale_veg)
-
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_descale_laisoilm)
 
 ! Yeosang Yoon, SNODEP DA
 #if ( defined DA_OBS_SNODEP )
