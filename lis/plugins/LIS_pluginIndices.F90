@@ -275,6 +275,8 @@ module LIS_pluginIndices
         "MCD15A2H LAI"
    character*50, public,  parameter :: LIS_CGLSlaiobsId      = &
         "CGLS LAI"
+   character*50, public,  parameter :: LIS_CGLSlaismobsId      = &
+        "CGLS LAI with soil moisture update"
    character*50, public,  parameter :: LIS_VODCAlaiobsId      = &
         "VODCA LAI"
    character*50, public,  parameter :: LIS_GLASSalbedoobsId      = &

@@ -2738,45 +2738,67 @@ subroutine LIS_lsmda_plugin
    call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_MCD15A2HlaiobsId)//char(0),noahmp401_descale_veg)
 
+   ! CGLS LAI assimilation
    call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_dalaisoilm_init)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_daveg_init)
    call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getlaisoilm)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getvegvars)
    call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_setlaisoilm)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_setvegvars)
    call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_updatelaisoilm)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_updatevegvars)
    call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qclaisoilm)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qcveg)
 
    call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getlaipred_laism)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getLAIpred)
    call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qc_laiobs_laism)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qc_LAIobs)
    call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_scale_laisoilm)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_scale_veg)
    call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_descale_laisoilm)
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_descale_veg)
 
+   ! CGLS LAI assimilation with SM update
    call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_dalaisoilm_init)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_dalaisoilm_init)
    call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getlaisoilm)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_getlaisoilm)
    call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_setlaisoilm)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_setlaisoilm)
    call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_updatelaisoilm)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_updatelaisoilm)
    call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qclaisoilm)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_qclaisoilm)
 
    call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getlaipred_laism)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_getlaipred_laism)
    call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qc_laiobs_laism)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_qc_laiobs_laism)
    call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_scale_laisoilm)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_scale_laisoilm)
    call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_descale_laisoilm)
+        trim(LIS_CGLSlaismobsId)//char(0),noahmp401_descale_laisoilm)
+
+   call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_daveg_init)
+   call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getvegvars)
+   call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_setvegvars)
+   call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_updatevegvars)
+   call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qcveg)
+
+   call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getLAIpred)
+   call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qc_LAIobs)
+   call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_scale_veg)
+   call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_descale_veg)
 
 ! Yeosang Yoon, SNODEP DA
 #if ( defined DA_OBS_SNODEP )
