@@ -69,9 +69,6 @@ subroutine NoahMP401_updatelaisoilm(n, LSM_State, LSM_Incr_State)
   real                   :: laimean(LIS_rc%ngrid(n))
   integer                :: nlaimean(LIS_rc%ngrid(n))
 
-  call ESMF_StateGet(LSM_State,"LAI",laiField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: LAI failed in NoahMP401_updatelaisoilm")
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: Soil Moisture Layer 1 failed in NoahMP401_updatelaisoilm")
@@ -85,9 +82,6 @@ subroutine NoahMP401_updatelaisoilm(n, LSM_State, LSM_Incr_State)
   call LIS_verify(status,&
        "ESMF_StateGet: Soil Moisture Layer 4 failed in NoahMP401_updatelaisoilm")
 
-  call ESMF_FieldGet(laiField,localDE=0,farrayPtr=lai,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: LAI failed in NoahMP401_updatelaisoilm")
   call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in NoahMP401_updatelaisoilm")
@@ -101,9 +95,6 @@ subroutine NoahMP401_updatelaisoilm(n, LSM_State, LSM_Incr_State)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 4 failed in NoahMP401_updatelaisoilm")
 
-  call ESMF_StateGet(LSM_Incr_State,"LAI",laiIncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: LAI failed in NoahMP401_updatelaisoilm")
   call ESMF_StateGet(LSM_Incr_State,"Soil Moisture Layer 1",sm1IncrField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: Soil Moisture Layer 1 failed in NoahMP401_updatelaisoilm")
@@ -117,9 +108,6 @@ subroutine NoahMP401_updatelaisoilm(n, LSM_State, LSM_Incr_State)
   call LIS_verify(status,&
        "ESMF_StateGet: Soil Moisture Layer 4 failed in NoahMP401_updatelaisoilm")
 
-  call ESMF_FieldGet(laiIncrField,localDE=0,farrayPtr=laiincr,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: LAI failed in NoahMP401_updatelaisoilm")
   call ESMF_FieldGet(sm1IncrField,localDE=0,farrayPtr=soilmIncr1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in NoahMP401_updatelaisoilm")
@@ -132,6 +120,38 @@ subroutine NoahMP401_updatelaisoilm(n, LSM_State, LSM_Incr_State)
   call ESMF_FieldGet(sm4IncrField,localDE=0,farrayPtr=soilmIncr4,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 4 failed in NoahMP401_updatelaisoilm")
+
+
+  call ESMF_StateGet(LSM_State,"LAI",laiField,rc=status)
+  call LIS_verify(status,&
+       "ESMF_StateGet: LAI failed in NoahMP401_updatelaisoilm")
+
+  call ESMF_StateGet(LSM_Incr_State,"LAI",laiIncrField,rc=status)
+  call LIS_verify(status,&
+       "ESMF_StateGet: LAI failed in NoahMP401_updatelaisoilm")
+
+  call ESMF_FieldGet(laiField,localDE=0,farrayPtr=lai,rc=status)
+  call LIS_verify(status,&
+       "ESMF_FieldGet: LAI failed in NoahMP401_updatelaisoilm")
+
+  call ESMF_FieldGet(laiIncrField,localDE=0,farrayPtr=laiincr,rc=status)
+  call LIS_verify(status,&
+       "ESMF_FieldGet: LAI failed in NoahMP401_updatelaisoilm")
+
+  call ESMF_AttributeGet(laiField,"Max Value",laimax,rc=status)
+  call LIS_verify(status,&
+       "ESMF_AttributeGet: laiField Max Value failed in NoahMP401_updatelaisoilm")
+  call ESMF_AttributeGet(laiField,"Min Value",laimin,rc=status)
+  call LIS_verify(status,&
+       "ESMF_AttributeGet: laiField Min Value failed in NoahMP401_updatelaisoilm")
+
+  ! update soil moisture
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+     soilm1(t) = soilm1(t) + soilmIncr1(t)
+     soilm2(t) = soilm2(t) + soilmIncr2(t)
+     soilm3(t) = soilm3(t) + soilmIncr3(t)
+     soilm4(t) = soilm4(t) + soilmIncr4(t)
+  enddo
 
   ! update LAI
   update_flag    = .true.
@@ -208,12 +228,6 @@ subroutine NoahMP401_updatelaisoilm(n, LSM_State, LSM_Incr_State)
            lai(t) = lai(t) + laiincr(t)
         endif
      endif
-
-     ! update soil moisture
-     soilm1(t) = soilm1(t) + soilmIncr1(t)
-     soilm2(t) = soilm2(t) + soilmIncr2(t)
-     soilm3(t) = soilm3(t) + soilmIncr3(t)
-     soilm4(t) = soilm4(t) + soilmIncr4(t)
   enddo
 end subroutine NoahMP401_updatelaisoilm
 

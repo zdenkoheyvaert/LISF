@@ -49,7 +49,7 @@ subroutine NoahMP401_setlaisoilm(n, LSM_State)
 !
 ! !DESCRIPTION:
 !  
-!  This routine assigns the soil moisture prognostic variables to noah's
+!  This routine assigns the LAI and soil moisture prognostic variables to noah's
 !  model space. 
 ! 
 !EOP
@@ -131,13 +131,6 @@ subroutine NoahMP401_setlaisoilm(n, LSM_State)
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
 
-     ! update LAI
-     if(NOAHMP401_struc(n)%noahmp401(t)%param%sla.ne.0) then 
-        NOAHMP401_struc(n)%noahmp401(t)%lai = lai(t)
-        lfmass = lai(t)*1000.0/(NOAHMP401_struc(n)%noahmp401(t)%param%sla)
-        NOAHMP401_struc(n)%noahmp401(t)%lfmass = lfmass
-     endif
-  
  ! MN: NOTE: SMCMAX and SMCWLT are not stored in the data structure but we 
  !       can get module variables MAXSMC and WLTSMC from the module_sf_noahlsm_36    
  !       In NoahMP401 module variables MAXSMC and WLTSMC from module_sf_noahmpdrv_401      
@@ -512,6 +505,16 @@ subroutine NoahMP401_setlaisoilm(n, LSM_State)
               endif          
            end do
         endif        
+     endif
+  enddo
+
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+
+     ! update LAI
+     if(NOAHMP401_struc(n)%noahmp401(t)%param%sla.ne.0) then 
+        NOAHMP401_struc(n)%noahmp401(t)%lai = lai(t)
+        lfmass = lai(t)*1000.0/(NOAHMP401_struc(n)%noahmp401(t)%param%sla)
+        NOAHMP401_struc(n)%noahmp401(t)%lfmass = lfmass
      endif
   enddo
 

@@ -64,7 +64,19 @@ subroutine NoahMP401_qclaisoilm(n, LSM_State)
  
   integer                :: N_ens
   real                   :: state_tmp(LIS_rc%nensem(n)),state_mean
- 
+
+  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
+  call LIS_verify(status,&
+       "ESMF_StateGet for Soil Moisture Layer 1 failed in NoahMP401_qclaisoilm")
+  call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
+  call LIS_verify(status,&
+       "ESMF_FieldGet for Soil Moisture Layer 1 failed in NoahMP401_qclaisoilm")
+  call ESMF_AttributeGet(sm1Field,"Max Value",smmax1,rc=status)
+  call LIS_verify(status,&
+       "ESMF_AttributeGet: SSM Max Value failed in NoahMP401_qclaisoilm")
+  call ESMF_AttributeGet(sm1Field,"Min Value",smmin1,rc=status)
+  call LIS_verify(status,&
+       "ESMF_AttributeGet: SSM Min Value failed in NoahMP401_qclaisoilm")
   call ESMF_StateGet(LSM_State,"LAI",laiField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet for LAI failed in NoahMP401_qclaisoilm")
@@ -77,6 +89,14 @@ subroutine NoahMP401_qclaisoilm(n, LSM_State)
   call ESMF_AttributeGet(laiField,"Min Value",laimin,rc=status)
   call LIS_verify(status,&
        "ESMF_AttributeGet: LAI Min Value failed in NoahMP401_qclaisoilm")
+
+  ! SM QC
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+
+     if(soilm1(t).gt.smmax1) soilm1(t) = smmax1
+     if(soilm1(t).lt.smmin1) soilm1(t) = smmin1
+  enddo
+
 
   ! LAI QC
   update_flag    = .true.
@@ -155,25 +175,7 @@ subroutine NoahMP401_qclaisoilm(n, LSM_State)
   enddo
 
 
-  ! Soil moisture QC
-  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet for Soil Moisture Layer 1 failed in NoahMP401_qclaisoilm")
-  call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet for Soil Moisture Layer 1 failed in NoahMP401_qclaisoilm")
-  call ESMF_AttributeGet(sm1Field,"Max Value",smmax1,rc=status)
-  call LIS_verify(status,&
-       "ESMF_AttributeGet: SSM Max Value failed in NoahMP401_qclaisoilm")
-  call ESMF_AttributeGet(sm1Field,"Min Value",smmin1,rc=status)
-  call LIS_verify(status,&
-       "ESMF_AttributeGet: SSM Min Value failed in NoahMP401_qclaisoilm")
 
-  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
-
-     if(soilm1(t).gt.smmax1) soilm1(t) = smmax1
-     if(soilm1(t).lt.smmin1) soilm1(t) = smmin1
-  enddo
 
 end subroutine NoahMP401_qclaisoilm
 
