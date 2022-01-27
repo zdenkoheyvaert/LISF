@@ -7,14 +7,14 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
 ! 
-! !ROUTINE: write_CGLSlai_sm
-! \label{write_CGLSlai_sm}
+! !ROUTINE: write_MCD15A2Hlai
+! \label{write_MCD15A2Hlai}
 ! 
 ! !REVISION HISTORY: 
-!  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
+!  17 Jun 2020    Wanshu Nie; initial specification
 ! 
 ! !INTERFACE: 
-subroutine write_CGLSlai_sm(n, k, OBS_State)
+subroutine write_MCD15A2Hlai(n, k, OBS_State)
 ! !USES: 
   use ESMF
   use LIS_coreMod
@@ -34,7 +34,7 @@ subroutine write_CGLSlai_sm(n, k, OBS_State)
 ! !DESCRIPTION: 
 ! 
 ! writes the transformed (interpolated/upscaled/reprojected)  
-! CGLS LAI observations to a file
+! MCD15A2H LAI observations to a file
 ! 
 !EOP
   type(ESMF_Field)         :: laiField
@@ -59,7 +59,7 @@ subroutine write_CGLSlai_sm(n, k, OBS_State)
 
      if(LIS_masterproc) then 
         ftn = LIS_getNextUnitNumber()
-        call CGLS_lai_sm_obsname(n,k,obsname)        
+        call MCD15A2H_laiobsname(n,k,obsname)        
 
         call LIS_create_output_directory('DAOBS')
         open(ftn,file=trim(obsname), form='unformatted')
@@ -73,14 +73,14 @@ subroutine write_CGLSlai_sm(n, k, OBS_State)
 
   endif  
 
-end subroutine write_CGLSlai_sm
+end subroutine write_MCD15A2Hlai
 
 !BOP
-! !ROUTINE: CGLS_laiobsname
-! \label{CGLS_laiobsname}
+! !ROUTINE: MCD15A2H_laiobsname
+! \label{MCD15A2H_laiobsname}
 ! 
 ! !INTERFACE: 
-subroutine CGLS_lai_sm_obsname(n,k,obsname)
+subroutine MCD15A2H_laiobsname(n,k,obsname)
 ! !USES: 
   use LIS_coreMod, only : LIS_rc
 
@@ -119,4 +119,4 @@ subroutine CGLS_lai_sm_obsname(n,k,obsname)
        '/LISDAOBS_'//cdate1// &
        trim(cda)//trim(cdate)//'.1gs4r'
 
-end subroutine CGLS_lai_sm_obsname
+end subroutine MCD15A2H_laiobsname

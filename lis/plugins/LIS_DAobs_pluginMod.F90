@@ -266,11 +266,8 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_MCD15A2H_LAI )
     use MCD15A2HLAI_Mod,       only : MCD15A2Hlai_setup
 #endif
-#if ( defined DA_OBS_CGLS_LAI )
+#if ( defined DA_OBS_CGLS_LAI ) || ( defined DA_OBS_CGLS_LAI )
     use CGLSLAI_Mod,       only : CGLSlai_setup
-#endif
-#if ( defined DA_OBS_CGLS_LAI_SM )
-    use CGLSLAI_sm_Mod,       only : CGLSlai_sm_setup
 #endif
 #if ( defined DA_OBS_VODCA_LAI )
     use VODCALAI_Mod,       only : VODCAlai_setup
@@ -437,11 +434,8 @@ subroutine LIS_DAobs_plugin
     external read_MCD15A2Hlai, write_MCD15A2Hlai
 #endif
 
-#if ( defined DA_OBS_CGLS_LAI)
+#if ( defined DA_OBS_CGLS_LAI ) || ( defined DA_OBS_CGLS_LAI_SM )
     external read_CGLSlai, write_CGLSlai
-#endif
-#if ( defined DA_OBS_CGLS_LAI_SM)
-    external read_CGLSlai_sm, write_CGLSlai_sm
 #endif
 
 #if ( defined DA_OBS_VODCA_LAI)
@@ -837,7 +831,7 @@ subroutine LIS_DAobs_plugin
         write_MCD15A2Hlai)
 #endif
 
-#if ( defined DA_OBS_CGLS_LAI)
+#if ( defined DA_OBS_CGLS_LAI )
    call registerdaobsclass(trim(LIS_CGLSlaiobsId),"LSM")
    call registerdaobssetup(trim(LIS_CGLSlaiobsId)//char(0),&
         CGLSlai_setup)
@@ -850,11 +844,11 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_CGLS_LAI_SM)
    call registerdaobsclass(trim(LIS_CGLSlaismobsId),"LSM")
    call registerdaobssetup(trim(LIS_CGLSlaismobsId)//char(0),&
-        CGLSlai_sm_setup)
+        CGLSlai_setup)
    call registerreaddaobs(trim(LIS_CGLSlaismobsId)//char(0),&
-        read_CGLSlai_sm)
+        read_CGLSlai)
    call registerwritedaobs(trim(LIS_CGLSlaismobsId)//char(0),&
-        write_CGLSlai_sm)
+        write_CGLSlai)
 #endif
 
 #if ( defined DA_OBS_VODCA_LAI)
