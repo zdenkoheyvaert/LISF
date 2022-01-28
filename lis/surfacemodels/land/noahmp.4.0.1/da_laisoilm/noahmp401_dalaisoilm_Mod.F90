@@ -35,21 +35,21 @@ module noahmp401_dalaisoilm_Mod
 !-----------------------------------------------------------------------------
 ! !PUBLIC TYPES:
 !-----------------------------------------------------------------------------
-  public :: noahmp401_dalaism_struc
+  !public :: noahmp401_dalaism_struc
 !EOP
 
- type, public :: dalaism_dec
-     real,    allocatable       :: model_xrange(:,:,:)
-     real,    allocatable       :: model_cdf(:,:,:)
-     real,    allocatable       :: model_mu(:)
-
-     integer                :: nbins
-     integer                :: ntimes
-     integer                :: scal
-
-  end type dalaism_dec
-  
-  type(dalaism_dec), allocatable :: noahmp401_dalaism_struc(:)
+! type, public :: dalaism_dec
+!     real,    allocatable       :: model_xrange(:,:,:)
+!     real,    allocatable       :: model_cdf(:,:,:)
+!     real,    allocatable       :: model_mu(:)
+!
+!     integer                :: nbins
+!     integer                :: ntimes
+!     integer                :: scal
+!
+!  end type dalaism_dec
+!  
+!  type(dalaism_dec), allocatable :: noahmp401_dalaism_struc(:)
 
 contains
 !BOP
@@ -67,14 +67,14 @@ contains
 
     implicit none
     integer                :: k
-    integer                :: n 
-    character*100          :: modelcdffile(LIS_rc%nnest)
-    integer                :: status
-    integer                :: ngrid
-
-    if(.not.allocated(noahmp401_dalaism_struc)) then 
-       allocate(noahmp401_dalaism_struc(LIS_rc%nnest))
-    endif
+!    integer                :: n 
+!    character*100          :: modelcdffile(LIS_rc%nnest)
+!    integer                :: status
+!    integer                :: ngrid
+!
+!    if(.not.allocated(noahmp401_dalaism_struc)) then 
+!       allocate(noahmp401_dalaism_struc(LIS_rc%nnest))
+!    endif
 
   end subroutine noahmp401_dalaisoilm_init
 end module noahmp401_dalaisoilm_Mod
