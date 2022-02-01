@@ -76,6 +76,8 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     real                   :: timenow
     integer                :: prev_month
     real                   :: ndays
+    real                   :: days(12)
+    data days /31,28,31,30,31,30,31,31,30,31,30,31/  
 
 
     call ESMF_AttributeGet(OBS_State,"Data Directory",&
