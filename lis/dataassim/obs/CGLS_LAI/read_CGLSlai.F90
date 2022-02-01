@@ -74,6 +74,8 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     real                   :: laiobs(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     integer                :: fnd
     real                   :: timenow
+    integer                :: prev_month
+    real                   :: ndays
 
 
     call ESMF_AttributeGet(OBS_State,"Data Directory",&
@@ -126,6 +128,20 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
 
         call ESMF_FieldGet(laifield,localDE=0,farrayPtr=obsl,rc=status)
         call LIS_verify(status, 'Error: FieldGet')
+
+        if (LIS_rc%da == 1) then
+            ! set the data averaging factor for EnKS to the number of days
+            ! since the last observation
+            prev_month = mod((LIS_rc%mo - 1) + 1, 12) + 1
+            ndays = days(prev_month) - 20.0  ! update always on the 20th
+         else
+            ndays = 10.0
+         endif
+          call ESMF_AttributeSet(OBS_State,&
+               name="Data averaging factor",&
+               value=ndays,rc=status)
+          call LIS_verify(status)
+
 
         !-------------------------------------------------------------------------
         !  Transform data to the LSM climatology using a CDF-scaling approach
