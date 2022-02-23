@@ -19,6 +19,8 @@ module LIS_irrigationMod
 !
 !  11 Nov 2012: Sujay Kumar; Initial implementation
 !  29 May 2019; Jessica Erlingis; Incorporate Wanshu Nie's max/min GVF update
+!  23 Feb 2022; Sara Modanesi; Incorporate Growing season to avoid a double
+!  option (i.e., based on GVF and based on dyn LAI for Noah-MP.v.3.6)
 !
 ! !USES: 
   use ESMF
@@ -111,6 +113,14 @@ contains
        call LIS_verify(rc,"Irrigation threshold: not defined")
        write(LIS_logunit,*) "[INFO] and irrigation threshold:  ",&
                              LIS_rc%irrigation_thresh
+
+     ! SM Feb 2022 add double option for the start of growing season
+       call ESMF_ConfigGetAttribute(LIS_config,LIS_rc%growing_season,&
+            label="Growing season:",rc=rc)
+       call LIS_verify(rc,"Growing season: not defined")
+       write(LIS_logunit,*) "and growing season:  ",&
+                             LIS_rc%growing_season
+     !SM Feb 2022 end changes   
 
      ! Parameters to control the GVF threshold based on the range of GVF
      ! (shdmax-shdmin) for which sprinkler irrigation is triggered:(WN)
