@@ -2745,19 +2745,22 @@ subroutine LIS_lsmda_plugin
         trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getvegvars)
    call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_CGLSlaiobsId)//char(0),noahmp401_setvegvars)
-   call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_updatevegvars)
    call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qcveg)
+   call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_scale_veg)
+   call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_descale_veg)
+   call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_updatevegvars)
 
    call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_CGLSlaiobsId)//char(0),noahmp401_getLAIpred)
    call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_CGLSlaiobsId)//char(0),noahmp401_qc_LAIobs)
-   call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_scale_veg)
-   call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CGLSlaiobsId)//char(0),noahmp401_descale_veg)
+
+   call registerlsmdadiagnosevars(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_GRACEtwsobsId)//char(0),noahmp401_tws_DAlog)
 
    ! CGLS LAI assimilation with SM update
    call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
