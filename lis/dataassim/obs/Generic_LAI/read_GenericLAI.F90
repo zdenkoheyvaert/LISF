@@ -7,14 +7,14 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 #include "LIS_misc.h"
 !BOP
-! !ROUTINE: read_VODCAlai
-! \label{read_VODCAlai}
+! !ROUTINE: read_GenericLAI
+! \label{read_GenericLAI}
 !
 ! !REVISION HISTORY:
-!  18 Nov 2021    Samuel Scherrer; initial reader based on CGLS LAI reader
+!  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
 !
 ! !INTERFACE: 
-subroutine read_VODCAlai(n, k, OBS_State, OBS_Pert_State)
+subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     ! !USES: 
     use ESMF
     use LIS_mpiMod
@@ -25,7 +25,7 @@ subroutine read_VODCAlai(n, k, OBS_State, OBS_Pert_State)
     use LIS_DAobservationsMod
     use map_utils
     use LIS_pluginIndices
-    use VODCAlai_Mod, only : VODCAlai_struc
+    use GenericLAI_Mod, only : GenericLAI_struc
 
     implicit none
     ! !ARGUMENTS: 
@@ -36,7 +36,7 @@ subroutine read_VODCAlai(n, k, OBS_State, OBS_Pert_State)
     !
     ! !DESCRIPTION:
     !  
-    !  reads the VODCA LAI observations from NETCDF files.
+    !  reads the Generic LAI observations from NETCDF files.
 
     ! 
     !  The arguments are: 
@@ -81,18 +81,18 @@ subroutine read_VODCAlai(n, k, OBS_State, OBS_Pert_State)
 
     data_upd = .false. 
 
-    alarmCheck = LIS_isAlarmRinging(LIS_rc, "VODCA LAI read alarm")
+    alarmCheck = LIS_isAlarmRinging(LIS_rc, "Generic LAI read alarm")
 
-    if(alarmCheck.or.VODCAlai_struc(n)%startMode) then 
-        VODCAlai_struc(n)%startMode = .false.
+    if(alarmCheck.or.GenericLAI_struc(n)%startMode) then 
+        GenericLAI_struc(n)%startMode = .false.
 
-        call create_VODCAlai_filename(VODCAlai_struc(n)%nc_prefix,&
+        call create_GenericLAI_filename(GenericLAI_struc(n)%nc_prefix,&
              laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
         inquire(file=fname,exist=file_exists)          
         if(file_exists) then 
             write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
-            call read_VODCA_LAI_data(n,k, fname,laiobs)
+            call read_Generic_LAI_data(n,k, fname,laiobs)
             fnd = 1
         else
             fnd = 0 
@@ -184,15 +184,15 @@ subroutine read_VODCAlai(n, k, OBS_State, OBS_Pert_State)
              .false., rc=status)
         call LIS_verify(status)     
     endif
-end subroutine read_VODCAlai
+end subroutine read_GenericLAI
 
 !BOP
 ! 
-! !ROUTINE: read_VODCA_LAI_data
-! \label{read_VODCA_LAI_data}
+! !ROUTINE: read_Generic_LAI_data
+! \label{read_Generic_LAI_data}
 !
 ! !INTERFACE:
-subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
+subroutine read_Generic_LAI_data(n, k, fname, laiobs_ip)
     ! 
     ! !USES:   
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
@@ -201,7 +201,7 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     use LIS_coreMod,  only : LIS_rc, LIS_domain
     use LIS_logMod
     use LIS_timeMgrMod
-    use VODCAlai_Mod, only : VODCAlai_struc
+    use GenericLAI_Mod, only : GenericLAI_struc
 
     implicit none
     !
@@ -217,7 +217,7 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     !
     !
     ! !DESCRIPTION: 
-    !  This subroutine reads the VODCA LAI file and applies the data
+    !  This subroutine reads the Generic LAI file and applies the data
     !  quality flags to filter the data. 
     !
     !  The arguments are: 
@@ -225,17 +225,17 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     !  \item[n]            index of the nest
     !  \item[k]            number of observation state
     !  \item[k]            number of observation state
-    !  \item[fname]        name of the VODCA LAI file
-    !  \item[laiobs\_ip]   VODCA LAI data processed to the LIS domain
+    !  \item[fname]        name of the Generic LAI file
+    !  \item[laiobs\_ip]   Generic LAI data processed to the LIS domain
     !  \end{description}
     !
     !
     !EOP
 
     integer                 :: lat_offset, lon_offset
-    real                    :: lai(VODCAlai_struc(n)%nc,VODCAlai_struc(n)%nr)
-    real                    :: lai_in(VODCAlai_struc(n)%nc*VODCAlai_struc(n)%nr)
-    logical*1               :: lai_data_b(VODCAlai_struc(n)%nc*VODCAlai_struc(n)%nr)
+    real                    :: lai(GenericLAI_struc(n)%nc,GenericLAI_struc(n)%nr)
+    real                    :: lai_in(GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr)
+    logical*1               :: lai_data_b(GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr)
     logical*1               :: laiobs_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     integer                 :: c,r,t
     integer                 :: nid
@@ -251,10 +251,10 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
 
     !values
 
-    cornerlat(1)=VODCAlai_struc(n)%gridDesci(4)
-    cornerlon(1)=VODCAlai_struc(n)%gridDesci(5)
-    cornerlat(2)=VODCAlai_struc(n)%gridDesci(7)
-    cornerlon(2)=VODCAlai_struc(n)%gridDesci(8)
+    cornerlat(1)=GenericLAI_struc(n)%gridDesci(4)
+    cornerlon(1)=GenericLAI_struc(n)%gridDesci(5)
+    cornerlat(2)=GenericLAI_struc(n)%gridDesci(7)
+    cornerlon(2)=GenericLAI_struc(n)%gridDesci(8)
 
     lai_data_b = .false.
 
@@ -265,22 +265,22 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
     ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
     call LIS_verify(ios,'Error opening file '//trim(fname))
 
-    ios = nf90_inq_varid(nid, trim(VODCAlai_struc(n)%nc_varname), laiid)
-    call LIS_verify(ios, 'Error nf90_inq_varid: '//VODCAlai_struc(n)%nc_varname)
+    ios = nf90_inq_varid(nid, trim(GenericLAI_struc(n)%nc_varname), laiid)
+    call LIS_verify(ios, 'Error nf90_inq_varid: '//GenericLAI_struc(n)%nc_varname)
 
     ios = nf90_get_var(nid, laiid, lai, &
          start=(/lon_offset,lat_offset/), &
-         count=(/VODCAlai_struc(n)%nc,VODCAlai_struc(n)%nr/)) 
+         count=(/GenericLAI_struc(n)%nc,GenericLAI_struc(n)%nr/)) 
 
-    call LIS_verify(ios, 'Error nf90_get_var: '//VODCAlai_struc(n)%nc_varname)
+    call LIS_verify(ios, 'Error nf90_get_var: '//GenericLAI_struc(n)%nc_varname)
 
     ios = nf90_close(ncid=nid)
     call LIS_verify(ios,'Error closing file '//trim(fname))
 
     ! the data is already read into 'lai', but we have to replace
     ! NaNs/invalid values with LIS_rc%udef
-    do r=1, VODCAlai_struc(n)%nr
-        do c=1, VODCAlai_struc(n)%nc
+    do r=1, GenericLAI_struc(n)%nr
+        do c=1, GenericLAI_struc(n)%nc
             if (isnan(lai(c, r))) then
                 lai(c, r) = LIS_rc%udef
             else if (.not. (0.0 < lai(c, r) .and. lai(c, r) < 20.0)) then
@@ -291,54 +291,54 @@ subroutine read_VODCA_LAI_data(n, k, fname, laiobs_ip)
 
 
     ! fill lai_in and lai_data_b, which are required further on
-    do r=1, VODCAlai_struc(n)%nr
-        do c=1, VODCAlai_struc(n)%nc
-            lai_in(c+(r-1)*VODCAlai_struc(n)%nc) = lai(c,r)
+    do r=1, GenericLAI_struc(n)%nr
+        do c=1, GenericLAI_struc(n)%nc
+            lai_in(c+(r-1)*GenericLAI_struc(n)%nc) = lai(c,r)
             if(lai(c,r).ne.LIS_rc%udef) then
-                lai_data_b(c+(r-1)*VODCAlai_struc(n)%nc) = .true.
+                lai_data_b(c+(r-1)*GenericLAI_struc(n)%nc) = .true.
             else
-                lai_data_b(c+(r-1)*VODCAlai_struc(n)%nc) = .false.
+                lai_data_b(c+(r-1)*GenericLAI_struc(n)%nc) = .false.
             endif
         enddo
     enddo
 
-    if(LIS_rc%obs_gridDesc(k,10).lt.VODCAlai_struc(n)%dlon) then 
-        write(LIS_logunit,*) '[INFO] interpolating VODCA LAI',trim(fname)
+    if(LIS_rc%obs_gridDesc(k,10).lt.GenericLAI_struc(n)%dlon) then 
+        write(LIS_logunit,*) '[INFO] interpolating Generic LAI',trim(fname)
         !--------------------------------------------------------------------------
         ! Interpolate to the LIS running domain if model has finer resolution
         ! than observations
         !-------------------------------------------------------------------------- 
         call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
              lai_data_b, lai_in, laiobs_b_ip, laiobs_ip, &
-             VODCAlai_struc(n)%nc*VODCAlai_struc(n)%nr, &
+             GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr, &
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
-             VODCAlai_struc(n)%rlat,VODCAlai_struc(n)%rlon,&
-             VODCAlai_struc(n)%w11,VODCAlai_struc(n)%w12,&
-             VODCAlai_struc(n)%w21,VODCAlai_struc(n)%w22,&
-             VODCAlai_struc(n)%n11,VODCAlai_struc(n)%n12,&
-             VODCAlai_struc(n)%n21,VODCAlai_struc(n)%n22,LIS_rc%udef,ios)
+             GenericLAI_struc(n)%rlat,GenericLAI_struc(n)%rlon,&
+             GenericLAI_struc(n)%w11,GenericLAI_struc(n)%w12,&
+             GenericLAI_struc(n)%w21,GenericLAI_struc(n)%w22,&
+             GenericLAI_struc(n)%n11,GenericLAI_struc(n)%n12,&
+             GenericLAI_struc(n)%n21,GenericLAI_struc(n)%n22,LIS_rc%udef,ios)
      else
-        write(LIS_logunit,*) '[INFO] upscaling VODCA LAI',trim(fname)
+        write(LIS_logunit,*) '[INFO] upscaling Generic LAI',trim(fname)
         !--------------------------------------------------------------------------
         ! Upscale to the LIS running domain if model has coarser resolution
         ! than observations
         !-------------------------------------------------------------------------- 
-        call upscaleByAveraging(VODCAlai_struc(n)%nc*VODCAlai_struc(n)%nr,&
+        call upscaleByAveraging(GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr,&
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
-             LIS_rc%udef, VODCAlai_struc(n)%n11,&
+             LIS_rc%udef, GenericLAI_struc(n)%n11,&
              lai_data_b,lai_in, laiobs_b_ip, laiobs_ip)
     endif
 
 #endif
-end subroutine read_VODCA_LAI_data
+end subroutine read_Generic_LAI_data
 
 
 !BOP
-! !ROUTINE: create_VODCAlai_filename
-! \label{create_VODCAlai_filename}
+! !ROUTINE: create_GenericLAI_filename
+! \label{create_GenericLAI_filename}
 ! 
 ! !INTERFACE: 
-subroutine create_VODCAlai_filename(prefix, ndir, year, month, day, filename)
+subroutine create_GenericLAI_filename(prefix, ndir, year, month, day, filename)
     ! !USES:   
 
     implicit none
@@ -349,18 +349,18 @@ subroutine create_VODCAlai_filename(prefix, ndir, year, month, day, filename)
     character(len=*)                  :: filename
     ! 
     ! !DESCRIPTION: 
-    !  This subroutine creates the VODCA LAI filename
+    !  This subroutine creates the Generic LAI filename
     !  based on the time and date 
     ! 
     !  The arguments are: 
     !  \begin{description}
     !  \item[varname] variable name of the netCDF variable
-    !  \item[ndir] name of the VODCA LAI data directory
-    !  \item[version] version of the VODCA LAI data
+    !  \item[ndir] name of the Generic LAI data directory
+    !  \item[version] version of the Generic LAI data
     !  \item[year]  current year
     !  \item[month]  current month
     !  \item[day]  current day
-    !  \item[filename] Generated VODCA LAI filename
+    !  \item[filename] Generated Generic LAI filename
     !  \end{description}
     !
     !EOP
@@ -381,4 +381,4 @@ subroutine create_VODCAlai_filename(prefix, ndir, year, month, day, filename)
     filename = trim(ndir)//'/'//&
          trim(prefix)//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
 
-end subroutine create_VODCAlai_filename
+end subroutine create_GenericLAI_filename

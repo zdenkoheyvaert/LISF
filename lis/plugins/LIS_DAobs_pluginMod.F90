@@ -272,6 +272,9 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_VODCA_LAI )
     use VODCALAI_Mod,       only : VODCAlai_setup
 #endif
+#if ( defined DA_OBS_GENERIC_LAI )
+    use GenericLAI_Mod,       only : GenericLAI_setup
+#endif
 #if ( defined DA_OBS_NRT_SMAPSM )
     use SMAPNRTsm_Mod,           only : SMAPNRTsm_setup
 #endif
@@ -440,6 +443,10 @@ subroutine LIS_DAobs_plugin
 
 #if ( defined DA_OBS_VODCA_LAI)
     external read_VODCAlai, write_VODCAlai
+#endif
+
+#if ( defined DA_OBS_GENERIC_LAI)
+    external read_GenericLAI, write_GenericLAI
 #endif
 
 #if ( defined DA_OBS_GLASS_Albedo)
@@ -859,6 +866,16 @@ subroutine LIS_DAobs_plugin
         read_VODCAlai)
    call registerwritedaobs(trim(LIS_VODCAlaiobsId)//char(0),&
         write_VODCAlai)
+#endif
+
+#if ( defined DA_OBS_GENERIC_LAI)
+   call registerdaobsclass(trim(LIS_GenericLAIobsId),"LSM")
+   call registerdaobssetup(trim(LIS_GenericLAIobsId)//char(0),&
+        GenericLAI_setup)
+   call registerreaddaobs(trim(LIS_GenericLAIobsId)//char(0),&
+        read_GenericLAI)
+   call registerwritedaobs(trim(LIS_GenericLAIobsId)//char(0),&
+        write_GenericLAI)
 #endif
 
 #if ( defined DA_OBS_NRT_SMAPSM )

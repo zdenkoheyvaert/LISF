@@ -48,6 +48,7 @@ module VODCAlai_Mod
         real*8                 :: time1, time2
         integer                :: fnd
         character*20           :: nc_varname
+        character*100           :: nc_prefix
         real*8                 :: dlat, dlon
         real*8                 :: lat_lower_left, lon_lower_left
         real*8                 :: lat_upper_right, lon_upper_right
@@ -154,6 +155,14 @@ contains
             call ESMF_ConfigGetAttribute(LIS_config,VODCAlai_struc(n)%nc_varname,&
                  rc=status)
             call LIS_verify(status, 'VODCA LAI netCDF variable name: is missing')
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"VODCA LAI netCDF name prefix:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigGetAttribute(LIS_config,VODCAlai_struc(n)%nc_prefix,&
+                 rc=status)
+            call LIS_verify(status, 'VODCA LAI netCDF name prefix: is missing')
         enddo
 
         do n=1,LIS_rc%nnest
