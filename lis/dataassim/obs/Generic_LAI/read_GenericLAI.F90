@@ -25,7 +25,8 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     use LIS_DAobservationsMod
     use map_utils
     use LIS_pluginIndices
-    use GenericLAI_Mod, only : GenericLAI_struc
+    use GenericLAI_Mod, only : GenericLAI_struc,&
+                               GenericLAI_rescale_with_seasonal_scaling
 
     implicit none
     ! !ARGUMENTS: 
@@ -48,8 +49,8 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     !  \end{description}
     !
     !EOP
+    real,  parameter       :: MAX_LAI_VALUE=10.0, MIN_LAI_VALUE=0.0001
     integer                :: status
-    integer                :: grid_index
     character*100          :: laiobsdir
     character*300          :: fname
     integer                :: cyr, cmo, cda, chr,cmn,css,cdoy
@@ -58,9 +59,9 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     real                   :: cgmt
     real*8                 :: time
     logical                :: alarmCheck, file_exists,dataCheck
-    integer                :: t,c,r,i,j,p,jj
+    integer                :: c,r,i,j,p,t
     real,          pointer :: obsl(:)
-    type(ESMF_Field)       :: laifield, pertField
+    type(ESMF_Field)       :: laifield
     integer                :: gid(LIS_rc%obs_ngrid(k))
     integer                :: assimflag(LIS_rc%obs_ngrid(k))
     logical                :: data_update
@@ -70,6 +71,9 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     real                   :: laiobs(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     integer                :: fnd
     real                   :: timenow
+    real                   :: ssdev(LIS_rc%obs_ngrid(k))
+    type(ESMF_Field)       :: pertfield
+    integer                :: timeidx
 
 
     call ESMF_AttributeGet(OBS_State,"Data Directory",&
@@ -132,6 +136,50 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
             enddo
         enddo
 
+        !-------------------------------------------------------------------------
+        !  Transform data to the LSM climatology using a CDF-scaling approach
+        !-------------------------------------------------------------------------     
+        
+        if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then
+
+            call LIS_rescale_with_CDF_matching(     &
+                 n,k,                               & 
+                 GenericLAI_struc(n)%nbins,         & 
+                 GenericLAI_struc(n)%ntimes,        & 
+                 MAX_LAI_VALUE,                      & 
+                 MIN_LAI_VALUE,                      & 
+                 GenericLAI_struc(n)%model_xrange,  &
+                 GenericLAI_struc(n)%obs_xrange,    &
+                 GenericLAI_struc(n)%model_cdf,     &
+                 GenericLAI_struc(n)%obs_cdf,       &
+                 laiobs)
+        elseif (LIS_rc%dascaloption(k).eq."seasonal".and.fnd.ne.0) then
+
+            call GenericLAI_rescale_with_seasonal_scaling(&
+                 n,k,&
+                 LIS_rc%da,&
+                 GenericLAI_struc(n)%ntimes,        & 
+                 MAX_LAI_VALUE,                      & 
+                 MIN_LAI_VALUE,                      & 
+                 GenericLAI_struc(n)%mult_scaling, &
+                 GenericLAI_struc(n)%model_mu,  &
+                 GenericLAI_struc(n)%model_sigma,  &
+                 GenericLAI_struc(n)%obs_mu,  &
+                 GenericLAI_struc(n)%obs_sigma,  &
+                 laiobs)
+
+        endif
+
+        obsl = LIS_rc%udef 
+        do r=1, LIS_rc%obs_lnr(k)
+            do c=1, LIS_rc%obs_lnc(k)
+                if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
+                    obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
+                         laiobs(c+(r-1)*LIS_rc%obs_lnc(k))
+                endif
+            enddo
+        enddo
+
         if(fnd.eq.0) then 
             data_upd_flag_local = .false. 
         else
@@ -174,6 +222,37 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
 
             endif
 
+            if(LIS_rc%dascaloption(k).ne."none") then
+                call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
+                     rc=status)
+                call LIS_verify(status, 'Error: StateGet Observation01')
+
+                ssdev = GenericLAI_struc(n)%ssdev_inp 
+
+                if (LIS_rc%dascaloption(k).eq."CDF matching") then
+                    if(GenericLAI_struc(n)%ntimes.eq.1) then 
+                        timeidx = 1
+                    else
+                        timeidx = LIS_rc%mo
+                    endif
+                elseif(LIS_rc%dascaloption(k).eq."seasonal"&
+                     .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative") then
+                    timeidx = LIS_rc%da
+                endif
+
+                call GenericLAI_updateSsdev(k,&
+                     GenericLAI_struc(n)%obs_sigma(:, timeidx),&
+                     GenericLAI_struc(n)%model_sigma(:, timeidx),&
+                     ssdev)
+
+                if(LIS_rc%obs_ngrid(k).gt.0) then 
+                    call ESMF_AttributeSet(pertfield,"Standard Deviation",&
+                         ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                    call LIS_verify(status)
+                endif
+            endif
+
+
         else
             call ESMF_AttributeSet(OBS_State,"Data Update Status",&
                  .false., rc=status)
@@ -184,6 +263,7 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
              .false., rc=status)
         call LIS_verify(status)     
     endif
+
 end subroutine read_GenericLAI
 
 !BOP

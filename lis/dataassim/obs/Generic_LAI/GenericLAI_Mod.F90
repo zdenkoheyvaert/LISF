@@ -23,16 +23,19 @@
 !   Generic LAI netCDF name prefix:
 !       Prefix for the netCDF image file name. The image file names must follow
 !       the pattern <prefix>_YYYY_MM_DD.nc
-!   Generic LAI model CDF file: (optional, only required if scaling is applied)
-!       Path to the model LAI CDF file
-!   Generic LAI observation CDF file: (optional, only required if scaling is applied)
-!       Path to the observation LAI CDF file
-!   Generic LAI number of bins in the CDF: (optional, only required if scaling is applied)
-!       Number of bins in the CDFs.
-!   Generic LAI spatial resolution:
+!   Generic LAI spatial resolution
 !       Spatial resolution of the product. It is assumed that the grid starts
 !       at -180 + res/2 longitude and -90 + res/2 latitude.
-!   
+!
+!   Data assimilation scaling strategy:
+!       Options are "none", "CDF matching", "seasonal", "seasonal multiplicative"
+!   Generic LAI model scaling file:
+!       Path to the model LAI CDF/mean file (optional, only required if scaling is applied)
+!   Generic LAI observation scaling file:
+!       Path to the observation LAI CDF/mean file (optional, only required if scaling is applied)
+!   Generic LAI number of bins in the CDF: (optional, only required if CDF scaling is applied)
+!       Number of bins in the CDFs.
+!     
 ! 
 ! !REVISION HISTORY: 
 !  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
@@ -50,7 +53,7 @@ module GenericLAI_Mod
     !-----------------------------------------------------------------------------
     ! !PUBLIC MEMBER FUNCTIONS:
     !-----------------------------------------------------------------------------
-    public :: GenericLAI_setup
+    public :: GenericLAI_setup, GenericLAI_rescale_with_seasonal_scaling
     !-----------------------------------------------------------------------------
     ! !PUBLIC TYPES:
     !-----------------------------------------------------------------------------
@@ -66,6 +69,8 @@ module GenericLAI_Mod
         real                   :: gridDesci(50)    
         real*8                 :: time1, time2
         integer                :: fnd
+        integer                :: useSsdevScal
+        logical                :: mult_scaling
         character*20           :: nc_varname
         character*100          :: nc_prefix
         real*8                 :: spatialres
@@ -83,6 +88,7 @@ module GenericLAI_Mod
         real,    allocatable :: w21(:)
         real,    allocatable :: w22(:)
 
+        real                       :: ssdev_inp
         real,    allocatable       :: model_xrange(:,:,:)
         real,    allocatable       :: obs_xrange(:,:,:)
         real,    allocatable       :: model_cdf(:,:,:)
@@ -137,7 +143,7 @@ contains
         !    \item[OBS\_Pert\_State] observation perturbations state
         !   \end{description}
         !EOP
-        integer                ::  n,i,t,kk,jj
+        integer                ::  n,i
         integer                ::  ftn
         integer                ::  status
         type(ESMF_Field)       ::  obsField(LIS_rc%nnest)
@@ -146,14 +152,19 @@ contains
         type(ESMF_ArraySpec)   ::  pertArrSpec
         character*100          ::  laiobsdir
         character*100          ::  temp
-        real,  allocatable         ::  ssdev(:)
+        real, parameter        ::  minssdev =0.001
+        real,  allocatable     ::  ssdev(:)
         character*1            ::  vid(2)
         type(pert_dec_type)    ::  obs_pert
         real, pointer          ::  obs_temp(:,:)
         character*40, allocatable  ::  vname(:)
         real        , allocatable  ::  varmin(:)
         real        , allocatable  ::  varmax(:)
+        character*100          :: modelscalingfile(LIS_rc%nnest)
+        character*100          :: obsscalingfile(LIS_rc%nnest)
         integer                :: c,r
+        integer                :: ngrid
+        integer                :: timeidx
 
         allocate(GenericLAI_struc(LIS_rc%nnest))
 
@@ -203,31 +214,39 @@ contains
         call ESMF_ConfigFindLabel(LIS_config,"Generic LAI spatial resolution:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if (Genericlai_struc(n)%isresampled) then
-                call ESMF_ConfigGetAttribute(LIS_config,Genericlai_struc(n)%spatialres,&
+            call ESMF_ConfigGetAttribute(LIS_config,Genericlai_struc(n)%spatialres,&
+                 rc=status)
+            call LIS_verify(status, 'Generic LAI spatial resolution: is missing')
+        enddo
+
+        !------------------------------------------------------------
+        ! Options for scaling
+        !------------------------------------------------------------
+        call ESMF_ConfigFindLabel(LIS_config,"Generic LAI use scaled standard deviation model:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,GenericLAI_struc(n)%useSsdevScal, &
                      rc=status)
-                call LIS_verify(status, 'Generic LAI spatial resolution: is missing')
+                call LIS_verify(status, "Generic LAI use scaled standard deviation model: not defined")
             endif
         enddo
 
-        !------------------------------------------------------------
-        ! Options for CDF matching
-        !------------------------------------------------------------
-        call ESMF_ConfigFindLabel(LIS_config,"Generic LAI model CDF file:",&
+        call ESMF_ConfigFindLabel(LIS_config,"Generic LAI model scaling file:",&
              rc=status)
         do n=1,LIS_rc%nnest
             if(LIS_rc%dascaloption(k).ne."none") then 
-                call ESMF_ConfigGetAttribute(LIS_config,modelcdffile(n),rc=status)
-                call LIS_verify(status, 'Generic LAI model CDF file: not defined')
+                call ESMF_ConfigGetAttribute(LIS_config,modelscalingfile(n),rc=status)
+                call LIS_verify(status, 'Generic LAI model scaling file: not defined')
             endif
         enddo
 
-        call ESMF_ConfigFindLabel(LIS_config,"Generic LAI observation CDF file:",&
+        call ESMF_ConfigFindLabel(LIS_config,"Generic LAI observation scaling file:",&
              rc=status)
         do n=1,LIS_rc%nnest
             if(LIS_rc%dascaloption(k).ne."none") then 
-                call ESMF_ConfigGetAttribute(LIS_config,obscdffile(n),rc=status)
-                call LIS_verify(status, 'Generic LAI observation CDF file: not defined')
+                call ESMF_ConfigGetAttribute(LIS_config,obsscalingfile(n),rc=status)
+                call LIS_verify(status, 'Generic LAI observation scaling file: not defined')
             endif
         enddo
 
@@ -238,7 +257,6 @@ contains
                 call LIS_verify(status, "Generic LAI number of bins in the CDF: not defined")
             endif
         enddo
-
 
 
         do n=1,LIS_rc%nnest
@@ -369,13 +387,11 @@ contains
         enddo
 
         !------------------------------------------------------------
-        ! Initialize CDF scaling
+        ! Initialize scaling
         !------------------------------------------------------------
         do n=1,LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then 
 
-                call LIS_getCDFattributes(k,modelcdffile(n),&
-                     GenericLAI_struc(n)%ntimes, ngrid)
+            if(LIS_rc%dascaloption(k).ne."none") then
 
                 allocate(ssdev(LIS_rc%obs_ngrid(k)))
                 ssdev = obs_pert%ssdev(1)
@@ -388,77 +404,106 @@ contains
                      GenericLAI_struc(n)%ntimes))
                 allocate(GenericLAI_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
                      GenericLAI_struc(n)%ntimes))
-                allocate(GenericLAI_struc(n)%model_xrange(&
-                     LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, &
-                     GenericLAI_struc(n)%nbins))
-                allocate(GenericLAI_struc(n)%obs_xrange(&
-                     LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, &
-                     GenericLAI_struc(n)%nbins))
-                allocate(GenericLAI_struc(n)%model_cdf(&
-                     LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, &
-                     GenericLAI_struc(n)%nbins))
-                allocate(GenericLAI_struc(n)%obs_cdf(&
-                     LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, & 
-                     GenericLAI_struc(n)%nbins))
 
-                !----------------------------------------------------------------------------
-                ! Read the model and observation CDF data
-                !----------------------------------------------------------------------------
-                call LIS_readMeanSigmaData(n,k,&
-                     GenericLAI_struc(n)%ntimes, & 
-                     LIS_rc%obs_ngrid(k), &
-                     modelcdffile(n), &
-                     "LAI",&
-                     GenericLAI_struc(n)%model_mu,&
-                     GenericLAI_struc(n)%model_sigma)
+                if(LIS_rc%dascaloption(k).eq."CDF matching") then 
+                    !------------------------------------------------------------
+                    ! CDF matching
+                    !------------------------------------------------------------
 
-                call LIS_readMeanSigmaData(n,k,&
-                     GenericLAI_struc(n)%ntimes, & 
-                     LIS_rc%obs_ngrid(k), &
-                     obscdffile(n), &
-                     "LAI",&
-                     GenericLAI_struc(n)%obs_mu,&
-                     GenericLAI_struc(n)%obs_sigma)
+                    call LIS_getCDFattributes(k,modelscalingfile(n),&
+                         GenericLAI_struc(n)%ntimes, ngrid)
 
-                call LIS_readCDFdata(n,k,&
-                     GenericLAI_struc(n)%nbins,&
-                     GenericLAI_struc(n)%ntimes, & 
-                     LIS_rc%obs_ngrid(k), &
-                     modelcdffile(n), &
-                     "LAI",&
-                     GenericLAI_struc(n)%model_xrange,&
-                     GenericLAI_struc(n)%model_cdf)
-
-                call LIS_readCDFdata(n,k,&
-                     GenericLAI_struc(n)%nbins,&
-                     GenericLAI_struc(n)%ntimes, & 
-                     LIS_rc%obs_ngrid(k), &
-                     obscdffile(n), &
-                     "LAI",&
-                     GenericLAI_struc(n)%obs_xrange,&
-                     GenericLAI_struc(n)%obs_cdf)
-
-                if(GenericLAI_struc(n)%useSsdevScal.eq.1) then 
                     if(GenericLAI_struc(n)%ntimes.eq.1) then 
-                        jj = 1
+                        timeidx = 1
                     else
-                        jj = LIS_rc%mo
+                        timeidx = LIS_rc%mo
                     endif
-                    do t=1,LIS_rc%obs_ngrid(k)
-                        if(GenericLAI_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then 
-                            print*, ssdev(t),GenericLAI_struc(n)%model_sigma(t,jj),&
-                                 GenericLAI_struc(n)%obs_sigma(t,jj)
-                            if(GenericLAI_struc(n)%obs_sigma(t,jj).ne.0) then 
-                                ssdev(t) = ssdev(t)*GenericLAI_struc(n)%model_sigma(t,jj)/&
-                                     GenericLAI_struc(n)%obs_sigma(t,jj)
-                            endif
 
-                            if(ssdev(t).lt.minssdev) then 
-                                ssdev(t) = minssdev
-                            endif
-                        endif
-                    enddo
+                    allocate(GenericLAI_struc(n)%model_xrange(&
+                         LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, &
+                         GenericLAI_struc(n)%nbins))
+                    allocate(GenericLAI_struc(n)%obs_xrange(&
+                         LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, &
+                         GenericLAI_struc(n)%nbins))
+                    allocate(GenericLAI_struc(n)%model_cdf(&
+                         LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, &
+                         GenericLAI_struc(n)%nbins))
+                    allocate(GenericLAI_struc(n)%obs_cdf(&
+                         LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, & 
+                         GenericLAI_struc(n)%nbins))
+
+                    !----------------------------------------------------------------------------
+                    ! Read the model and observation CDF data
+                    !----------------------------------------------------------------------------
+
+                    ! model mean sigma
+                    call LIS_readMeanSigmaData(n,k,&
+                         GenericLAI_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         modelscalingfile(n), &
+                         "LAI",&
+                         GenericLAI_struc(n)%model_mu,&
+                         GenericLAI_struc(n)%model_sigma)
+
+                    ! observation mean sigma
+                    call LIS_readMeanSigmaData(n,k,&
+                         GenericLAI_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         obsscalingfile(n), &
+                         "LAI",&
+                         GenericLAI_struc(n)%obs_mu,&
+                         GenericLAI_struc(n)%obs_sigma)
+
+                    ! model CDF
+                    call LIS_readCDFdata(n,k,&
+                         GenericLAI_struc(n)%nbins,&
+                         GenericLAI_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         modelscalingfile(n), &
+                         "LAI",&
+                         GenericLAI_struc(n)%model_xrange,&
+                         GenericLAI_struc(n)%model_cdf)
+
+                    ! observation CDF
+                    call LIS_readCDFdata(n,k,&
+                         GenericLAI_struc(n)%nbins,&
+                         GenericLAI_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         obsscalingfile(n), &
+                         "LAI",&
+                         GenericLAI_struc(n)%obs_xrange,&
+                         GenericLAI_struc(n)%obs_cdf)
+
+                    !------------------------------------------------------------
+                    ! end CDF matching
+                    !------------------------------------------------------------
+
+                elseif (LIS_rc%dascaloption(k).eq."seasonal"&
+                     .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative") then
+
+                    !------------------------------------------------------------
+                    ! seasonal scaling
+                    !------------------------------------------------------------
+
+                    GenericLAI_struc(n)%mult_scaling = &
+                         LIS_rc%dascaloption(k).eq."seasonal multiplicative"
+
+                    GenericLAI_struc(n)%ntimes = 366
+                    timeidx = LIS_rc%da
+
+                    call GenericLAI_read_MeanData(n,k,&
+                         GenericLAI_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         modelscalingfile(n), &
+                         "LAI",&
+                         GenericLAI_struc(n)%model_mu,&
+                         GenericLAI_struc(n)%model_sigma)
                 endif
+
+                call GenericLAI_updateSsdev(k,&
+                     GenericLAI_struc(n)%obs_sigma(:, timeidx),&
+                     GenericLAI_struc(n)%model_sigma(:, timeidx),&
+                     ssdev)
 
                 if(LIS_rc%obs_ngrid(k).gt.0) then 
                     call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
@@ -560,4 +605,225 @@ contains
 
         enddo
     end subroutine GenericLAI_setup
+
+    !BOP
+    ! 
+    ! !ROUTINE: GenericLAI_rescale_with_seasonal_scaling
+    ! \label{GenericLAI_rescale_with_seasonal_scaling}
+    !
+    ! !INTERFACE:
+    subroutine GenericLAI_rescale_with_seasonal_scaling(&
+         n,             & 
+         k,             & 
+         timeidx,        & 
+         ntimes,         & 
+         max_obs_value, &
+         min_obs_value, &
+         multiplicative, &
+         model_mu,    &       
+         model_sigma,    &       
+         obs_mu,       &
+         obs_sigma,       &
+         obs_value) 
+
+        use LIS_coreMod, only: LIS_rc
+        use LIS_DAobservationsMod, only: LIS_obs_domain
+
+        implicit none
+        ! 
+        ! !ARGUMENTS: 
+        integer, intent(in)      :: n 
+        integer, intent(in)      :: k
+        integer, intent(in)      :: ntimes
+        integer, intent(in)      :: timeidx
+        real, intent(in)         :: max_obs_value
+        real, intent(in)         :: min_obs_value
+        logical, intent(in)      :: multiplicative
+        real, intent(in)         :: model_mu(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(in)         :: model_sigma(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(in)         :: obs_mu(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(in)         :: obs_sigma(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(inout)      :: obs_value(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+        !
+        ! !DESCRIPTION: 
+        ! 
+        !   This routine rescales the input observation data by subtracting the
+        !   observation mean for the given time index and adding the model mean
+        !   for the same time index
+
+        !  The arguments are: 
+        !  \begin{description}
+        !  \item[n]               index of the nest
+        !  \item[k]               index of observation state
+        !  \item[timeidx]         time index for mean value to use, .e.g. month
+        !                         or day
+        !  \item[ntimes]          number of times in the model and obs mean files
+        !  \item[max\_obs\_value] maximum allowable value of observation
+        !  \item[min\_obs\_value] minimum allowable value of observation
+        !  \item[model\_mu]       mean values of the model OL run
+        !  \item[model\_sigma]    std.dev. values of the model OL run
+        !  \item[obs\_mu]         mean values of the observations
+        !  \item[obs\_sigma]      std.dev. values of the observations
+        !  \item[obs\_value]      observation value to be rescaled. 
+        ! \end{description}
+        !EOP
+
+        integer             :: grididx,i
+        integer             :: binval
+        integer             :: col,row
+        real                :: cdf_obsval
+        real                :: obs_tmp
+
+        do grididx=1,LIS_rc%obs_ngrid(k)
+
+            col = LIS_obs_domain(n,k)%col(grididx)
+            row = LIS_obs_domain(n,k)%row(grididx)
+
+            if(obs_value(col,row).ne.-9999.0 &
+                 .and. obs_mu(grididx, timeidx).ne.-9999.0 &
+                 .and. obs_sigma(grididx, timeidx).gt.epsilon(0.0)) then 
+
+                if (multiplicative.and.obs_mu(grididx, timeidx).ne.epsilon(0.0)) then
+                    obs_tmp = obs_value(col, row) / obs_mu(grididx, timeidx)&
+                         * model_mu(grididx, timeidx)
+                else if ((.not.multiplicative)&
+                        .and. obs_sigma(grididx, timeidx).gt.(epsilon(0.0))) then
+                    obs_tmp = (obs_value(col,row) - obs_mu(grididx,timeidx)) &
+                         / obs_sigma(grididx,timeidx)
+                    obs_tmp = obs_tmp * model_sigma(grididx,timeidx)&
+                         + model_mu(grididx, timeidx)
+                else
+                    obs_tmp = LIS_rc%udef
+                endif
+
+                if (obs_tmp < min_obs_value .or. obs_tmp > max_obs_value) then
+                    obs_tmp = LIS_rc%udef
+                endif
+
+                obs_value(col, row) = obs_tmp
+            else
+                obs_value(col,row) = LIS_rc%udef
+            endif
+        enddo
+    end subroutine GenericLAI_rescale_with_seasonal_scaling
+
+    !BOP
+    ! !ROUTINE: GenericLAI_read_MeanData
+    ! \label{GenericLAI_read_MeanData}
+    !
+    ! !INTERFACE: 
+    subroutine GenericLAI_read_MeanData(n, k, ntimes, ngrid, filename, varname, mu, sigma)
+
+        use netcdf
+        use LIS_coreMod
+        use LIS_logMod, only: LIS_logunit
+
+        implicit none
+        ! !ARGUMENTS:      
+        integer,   intent(in)    :: n
+        integer,   intent(in)    :: k
+        integer,   intent(in)    :: ntimes
+        integer,   intent(in)    :: ngrid
+        character(len=*)         :: filename
+        character(len=*)         :: varname
+        real                     :: mu(ngrid, ntimes)
+        real                     :: sigma(ngrid, ntimes)
+        ! 
+        ! !DESCRIPTION: 
+        !  This routine reads the input seasonal mean file.
+        ! 
+        !  The arguments are: 
+        !  \begin{description}
+        !  \item[n]             index of the nest
+        !  \item[k]             index of observation state
+        !  \item[filename]      name of the CDF file
+        !  \item[varname]       name of the variable being extracted.
+        !  \item[mu]            mean values
+        ! \end{description}
+        !EOP
+        integer                  :: j
+        integer                  :: nlevsId, gId
+        integer                  :: ngrid_file, nlevs_file
+        integer                  :: muid, sigmaid
+        real, allocatable        :: mu_file(:,:,:), sigma_file(:,:,:)
+        integer                  :: nid
+
+        write(LIS_logunit,*) '[INFO] Reading mean from seasonal seasonal file ',trim(filename)
+        call LIS_verify(nf90_open(path=trim(filename),mode=NF90_NOWRITE,&
+             ncid=nid),'failed to open file '//trim(filename))
+
+        call LIS_verify(nf90_inq_dimid(nid,trim(varname)//"_levels",nlevsId), &
+             'nf90_inq_dimid failed for '//trim(varname)//"_levels")
+
+        call LIS_verify(nf90_inquire_dimension(nid,nlevsId, len=nlevs_file),&
+             'nf90_inquire_dimension failed for nlevsId')
+
+        call LIS_verify(nf90_inq_dimid(nid, 'ngrid',gId), &
+             'Error nf90_inq_dimid: ngrid')
+
+        call LIS_verify(nf90_inquire_dimension(nid, gId, len=ngrid_file), &
+             'Error nf90_inquire_dimension:ngrid') 
+
+        allocate(mu_file(ngrid_file,ntimes,nlevs_file))
+        allocate(sigma_file(ngrid_file,ntimes,nlevs_file))
+
+        call LIS_verify(nf90_inq_varid(nid,trim(varname)//'_mu',muid),&
+             'nf90_inq_varid failed for for '//trim(varname)//'_mu')
+
+        call LIS_verify(nf90_get_var(nid,muid,mu_file),&
+             'nf90_get_var failed for '//trim(varname)//'_mu')
+
+        call LIS_verify(nf90_inq_varid(nid,trim(varname)//'_sigma',sigmaid),&
+             'nf90_inq_varid failed for for '//trim(varname)//'_sigma')
+
+        call LIS_verify(nf90_get_var(nid,sigmaid,sigma_file),&
+             'nf90_get_var failed for '//trim(varname)//'_sigma')
+
+        if(LIS_rc%obs_ngrid(k).gt.0) then 
+            do j=1,ntimes
+                call LIS_convertObsVarToLocalSpace(n,k,mu_file(:,j,1), mu(:,j))
+                call LIS_convertObsVarToLocalSpace(n,k,sigma_file(:,j,1), sigma(:,j))
+            enddo
+        endif
+
+
+        deallocate(mu_file)
+        deallocate(sigma_file)
+
+        call LIS_verify(nf90_close(nid),&
+             'failed to close file '//trim(filename))
+        write(LIS_logunit,*)&
+             '[INFO] Successfully read mean and seasonal scaling file ',&
+             trim(filename)
+    end subroutine GenericLAI_read_MeanData
+
+    subroutine GenericLAI_updateSsdev(k, obs_sigma, model_sigma, ssdev)
+        use LIS_coreMod
+        implicit none
+
+        integer, intent(in)     :: k
+        real, intent(in)        :: obs_sigma(:), model_sigma(:)
+        real, intent(inout)     :: ssdev(:)
+
+        integer                 :: grididx
+        real, parameter         ::  minssdev =0.001
+
+
+        do grididx=1,LIS_rc%obs_ngrid(k)
+            if(obs_sigma(grididx).ne.LIS_rc%udef) then 
+                if(obs_sigma(grididx).ne.0) then 
+                    ssdev(grididx) = ssdev(grididx)&
+                         * model_sigma(grididx)&
+                         / obs_sigma(grididx)
+                endif
+
+                if(ssdev(grididx).lt.minssdev) then 
+                    ssdev(grididx) = minssdev
+                endif
+            endif
+        enddo
+
+    end subroutine GenericLAI_updateSsdev
+
+
 end module GenericLAI_Mod
