@@ -519,7 +519,8 @@ contains
                 if(LIS_rc%obs_ngrid(k).gt.0) then 
                     call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
                          ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
-                    call LIS_verify(status)
+                    call LIS_verify(status, &
+                         "updating perturbation standard deviation failed")
                 endif
 
                 deallocate(ssdev)
@@ -612,7 +613,7 @@ contains
             GenericLAI_struc(n)%startMode = .true. 
 
             call ESMF_StateAdd(OBS_State(n),(/obsField(n)/),rc=status)
-            call LIS_verify(status)
+            call LIS_verify(status, "Adding observation field failed")
 
         enddo
     end subroutine GenericLAI_setup
