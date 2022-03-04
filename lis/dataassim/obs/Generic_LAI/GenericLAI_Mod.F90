@@ -53,7 +53,8 @@ module GenericLAI_Mod
     !-----------------------------------------------------------------------------
     ! !PUBLIC MEMBER FUNCTIONS:
     !-----------------------------------------------------------------------------
-    public :: GenericLAI_setup, GenericLAI_rescale_with_seasonal_scaling
+    public :: GenericLAI_setup, GenericLAI_rescale_with_seasonal_scaling,&
+         GenericLAI_updateSsdev
     !-----------------------------------------------------------------------------
     ! !PUBLIC TYPES:
     !-----------------------------------------------------------------------------
@@ -491,7 +492,7 @@ contains
                     GenericLAI_struc(n)%ntimes = 366
                     timeidx = LIS_rc%da
 
-                    call GenericLAI_read_MeanData(n,k,&
+                    call GenericLAI_readSeasonalScalingData(n,k,&
                          GenericLAI_struc(n)%ntimes, & 
                          LIS_rc%obs_ngrid(k), &
                          modelscalingfile(n), &
@@ -708,15 +709,17 @@ contains
     end subroutine GenericLAI_rescale_with_seasonal_scaling
 
     !BOP
-    ! !ROUTINE: GenericLAI_read_MeanData
-    ! \label{GenericLAI_read_MeanData}
+    ! !ROUTINE: GenericLAI_readSeasonalScalingData
+    ! \label{GenericLAI_readSeasonalScalingData}
     !
     ! !INTERFACE: 
-    subroutine GenericLAI_read_MeanData(n, k, ntimes, ngrid, filename, varname, mu, sigma)
+    subroutine GenericLAI_readSeasonalScalingData(&
+         n, k, ntimes, ngrid, filename, varname, mu, sigma)
 
         use netcdf
-        use LIS_coreMod
-        use LIS_logMod, only: LIS_logunit
+        use LIS_coreMod, only: LIS_rc
+        use LIS_logMod, only: LIS_logunit, LIS_verify
+        use LIS_DAobservationsMod, only: LIS_convertObsVarToLocalSpace
 
         implicit none
         ! !ARGUMENTS:      
@@ -795,7 +798,7 @@ contains
         write(LIS_logunit,*)&
              '[INFO] Successfully read mean and seasonal scaling file ',&
              trim(filename)
-    end subroutine GenericLAI_read_MeanData
+    end subroutine GenericLAI_readSeasonalScalingData
 
     subroutine GenericLAI_updateSsdev(k, obs_sigma, model_sigma, ssdev)
         use LIS_coreMod

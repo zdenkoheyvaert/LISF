@@ -26,7 +26,8 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     use map_utils
     use LIS_pluginIndices
     use GenericLAI_Mod, only : GenericLAI_struc,&
-                               GenericLAI_rescale_with_seasonal_scaling
+                               GenericLAI_rescale_with_seasonal_scaling, &
+                               GenericLAI_updateSsdev
 
     implicit none
     ! !ARGUMENTS: 
