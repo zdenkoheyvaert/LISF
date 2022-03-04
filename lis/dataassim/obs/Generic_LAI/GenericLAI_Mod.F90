@@ -499,6 +499,16 @@ contains
                          "LAI",&
                          GenericLAI_struc(n)%model_mu,&
                          GenericLAI_struc(n)%model_sigma)
+
+                    if (GenericLAI_struc(n)%mult_scaling) then
+                        ! When doing the multiplicative scaling, the standard
+                        ! deviation in the file is not used, and the
+                        ! perturbation standard deviations should be corrected
+                        ! by the ratio of means instead of the ratio of sigmas.
+                        GenericLAI_struc(n)%model_sigma = GenericLAI_struc(n)%model_mu
+                        GenericLAI_struc(n)%obs_sigma = GenericLAI_struc(n)%obs_mu
+                    endif
+
                 endif
 
                 call GenericLAI_updateSsdev(k,&
