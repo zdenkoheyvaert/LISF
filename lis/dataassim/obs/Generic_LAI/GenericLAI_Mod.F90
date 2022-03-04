@@ -33,6 +33,14 @@
 !       Path to the model LAI CDF/mean file (optional, only required if scaling is applied)
 !   Generic LAI observation scaling file:
 !       Path to the observation LAI CDF/mean file (optional, only required if scaling is applied)
+!   Generic LAI varname in model scaling file:
+!       Prefix of the names of the variables in the model scaling files,
+!       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
+!       scaling is applied)
+!   Generic LAI varname in observation scaling file:
+!       Prefix of the names of the variables in the observation scaling files,
+!       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
+!       scaling is applied)
 !   Generic LAI number of bins in the CDF: (optional, only required if CDF scaling is applied)
 !       Number of bins in the CDFs.
 !     
@@ -163,6 +171,8 @@ contains
         real        , allocatable  ::  varmax(:)
         character*100          :: modelscalingfile(LIS_rc%nnest)
         character*100          :: obsscalingfile(LIS_rc%nnest)
+        character*100          :: modelscalingvarname(LIS_rc%nnest)
+        character*100          :: obsscalingvarname(LIS_rc%nnest)
         integer                :: c,r
         integer                :: ngrid
         integer                :: timeidx
@@ -248,6 +258,24 @@ contains
             if(LIS_rc%dascaloption(k).ne."none") then 
                 call ESMF_ConfigGetAttribute(LIS_config,obsscalingfile(n),rc=status)
                 call LIS_verify(status, 'Generic LAI observation scaling file: not defined')
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"Generic LAI varname in model scaling file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,modelscalingvarname(n),rc=status)
+                call LIS_verify(status, "Generic LAI varname in model scaling file: not defined")
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"Generic LAI varname in observation scaling file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,obsscalingvarname(n),rc=status)
+                call LIS_verify(status, "Generic LAI varname in observation scaling file: not defined")
             endif
         enddo
 
@@ -394,9 +422,6 @@ contains
 
             if(LIS_rc%dascaloption(k).ne."none") then
 
-                allocate(ssdev(LIS_rc%obs_ngrid(k)))
-                ssdev = obs_pert%ssdev(1)
-
                 allocate(GenericLAI_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
                      GenericLAI_struc(n)%ntimes))
                 allocate(GenericLAI_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
@@ -493,12 +518,20 @@ contains
                     timeidx = LIS_rc%da
 
                     call GenericLAI_readSeasonalScalingData(n,k,&
-                         GenericLAI_struc(n)%ntimes, & 
                          LIS_rc%obs_ngrid(k), &
+                         GenericLAI_struc(n)%ntimes, & 
                          modelscalingfile(n), &
                          "LAI",&
                          GenericLAI_struc(n)%model_mu,&
                          GenericLAI_struc(n)%model_sigma)
+
+                    call GenericLAI_readSeasonalScalingData(n,k,&
+                         LIS_rc%obs_ngrid(k), &
+                         GenericLAI_struc(n)%ntimes, & 
+                         obsscalingfile(n), &
+                         "LAI",&
+                         GenericLAI_struc(n)%obs_mu,&
+                         GenericLAI_struc(n)%obs_sigma)
 
                     if (GenericLAI_struc(n)%mult_scaling) then
                         ! When doing the multiplicative scaling, the standard
@@ -511,21 +544,26 @@ contains
 
                 endif
 
-                call GenericLAI_updateSsdev(k,&
-                     GenericLAI_struc(n)%obs_sigma(:, timeidx),&
-                     GenericLAI_struc(n)%model_sigma(:, timeidx),&
-                     ssdev)
+                if (GenericLAI_struc(n)%useSsdevScal) then
 
-                if(LIS_rc%obs_ngrid(k).gt.0) then 
-                    call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
-                         ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
-                    call LIS_verify(status, &
-                         "updating perturbation standard deviation failed")
+                    allocate(ssdev(LIS_rc%obs_ngrid(k)))
+                    ssdev = obs_pert%ssdev(1)
+
+                    call GenericLAI_updateSsdev(k,&
+                         GenericLAI_struc(n)%obs_sigma(:, timeidx),&
+                         GenericLAI_struc(n)%model_sigma(:, timeidx),&
+                         ssdev)
+
+                    if(LIS_rc%obs_ngrid(k).gt.0) then 
+                        call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
+                             ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                        call LIS_verify(status, &
+                             "updating perturbation standard deviation failed")
+                    endif
+
+                    deallocate(ssdev)
                 endif
-
-                deallocate(ssdev)
-
-            endif
+            endif ! dascaloption .ne. "none"
         enddo
 
         !------------------------------------------------------------
@@ -543,7 +581,7 @@ contains
                 GenericLAI_struc(n)%dlon = GenericLAI_struc(n)%spatialres
                 GenericLAI_struc(n)%nr = nint(180.0 / GenericLAI_struc(n)%spatialres)
                 GenericLAI_struc(n)%nc = 2 * GenericLAI_struc(n)%nr
-            elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
+            else
                 write(unit=error_unit, fmt=*) &
                      'The Generic_LAI module only works with latlon projection'
                 stop 1
@@ -725,23 +763,23 @@ contains
     !
     ! !INTERFACE: 
     subroutine GenericLAI_readSeasonalScalingData(&
-         n, k, ntimes, ngrid, filename, varname, mu, sigma)
+         n, k, ngrid, ntimes, filename, varname, mu, sigma)
 
         use netcdf
         use LIS_coreMod, only: LIS_rc
-        use LIS_logMod, only: LIS_logunit, LIS_verify
+        use LIS_logMod, only: LIS_logunit, LIS_verify, LIS_endrun
         use LIS_DAobservationsMod, only: LIS_convertObsVarToLocalSpace
 
         implicit none
         ! !ARGUMENTS:      
-        integer,   intent(in)    :: n
-        integer,   intent(in)    :: k
-        integer,   intent(in)    :: ntimes
-        integer,   intent(in)    :: ngrid
-        character(len=*)         :: filename
-        character(len=*)         :: varname
-        real                     :: mu(ngrid, ntimes)
-        real                     :: sigma(ngrid, ntimes)
+        integer,   intent(in)         :: n
+        integer,   intent(in)         :: k
+        integer,   intent(in)         :: ngrid
+        integer,   intent(in)         :: ntimes
+        character(len=*), intent(in)  :: filename
+        character(len=*), intent(in)  :: varname
+        real, intent(inout)           :: mu(ngrid, ntimes)
+        real, intent(inout)           :: sigma(ngrid, ntimes)
         ! 
         ! !DESCRIPTION: 
         !  This routine reads the input seasonal mean file.
@@ -750,9 +788,12 @@ contains
         !  \begin{description}
         !  \item[n]             index of the nest
         !  \item[k]             index of observation state
+        !  \item[ngrid]         length of ngrid dimension
+        !  \item[ntimes]        length of ntimes dimension
         !  \item[filename]      name of the CDF file
         !  \item[varname]       name of the variable being extracted.
         !  \item[mu]            mean values
+        !  \item[sigma]         std.dev values
         ! \end{description}
         !EOP
         integer                  :: j
@@ -762,36 +803,45 @@ contains
         real, allocatable        :: mu_file(:,:,:), sigma_file(:,:,:)
         integer                  :: nid
 
-        write(LIS_logunit,*) '[INFO] Reading mean from seasonal seasonal file ',trim(filename)
+        write(LIS_logunit,*) "[INFO] Reading mean from seasonal seasonal file ",trim(filename)
         call LIS_verify(nf90_open(path=trim(filename),mode=NF90_NOWRITE,&
-             ncid=nid),'failed to open file '//trim(filename))
+             ncid=nid),"failed to open file "//trim(filename))
 
         call LIS_verify(nf90_inq_dimid(nid,trim(varname)//"_levels",nlevsId), &
-             'nf90_inq_dimid failed for '//trim(varname)//"_levels")
+             "nf90_inq_dimid failed for "//trim(varname)//"_levels")
 
         call LIS_verify(nf90_inquire_dimension(nid,nlevsId, len=nlevs_file),&
-             'nf90_inquire_dimension failed for nlevsId')
+             "nf90_inquire_dimension failed for nlevsId")
 
-        call LIS_verify(nf90_inq_dimid(nid, 'ngrid',gId), &
-             'Error nf90_inq_dimid: ngrid')
+        call LIS_verify(nf90_inq_dimid(nid, "ngrid",gId), &
+             "Error nf90_inq_dimid: ngrid")
 
         call LIS_verify(nf90_inquire_dimension(nid, gId, len=ngrid_file), &
-             'Error nf90_inquire_dimension:ngrid') 
+             "Error nf90_inquire_dimension:ngrid") 
 
+        if (ngrid_file /= ngrid) then
+            write(LIS_logunit, *) "[ERR] ngrid in "//trim(filename)//"not consistent "&
+                 "with expected ngrid: ", ngrid_file," instead of ",ngrid
+            call LIS_endrun
+        endif
+
+        ! dimension order is flipped compared to netCDF, because in Fortran the
+        ! first dimension changes fastest
         allocate(mu_file(ngrid_file,ntimes,nlevs_file))
         allocate(sigma_file(ngrid_file,ntimes,nlevs_file))
 
-        call LIS_verify(nf90_inq_varid(nid,trim(varname)//'_mu',muid),&
-             'nf90_inq_varid failed for for '//trim(varname)//'_mu')
+        call LIS_verify(nf90_inq_varid(nid,trim(varname)//"_mu",muid),&
+             "nf90_inq_varid failed for for "//trim(varname)//"_mu")
 
         call LIS_verify(nf90_get_var(nid,muid,mu_file),&
-             'nf90_get_var failed for '//trim(varname)//'_mu')
+             "nf90_get_var failed for "//trim(varname)//"_mu")
 
-        call LIS_verify(nf90_inq_varid(nid,trim(varname)//'_sigma',sigmaid),&
-             'nf90_inq_varid failed for for '//trim(varname)//'_sigma')
+        call LIS_verify(nf90_inq_varid(nid,trim(varname)//"_sigma",sigmaid),&
+             "nf90_inq_varid failed for for "//trim(varname)//"_sigma")
 
         call LIS_verify(nf90_get_var(nid,sigmaid,sigma_file),&
-             'nf90_get_var failed for '//trim(varname)//'_sigma')
+             "nf90_get_var failed for "//trim(varname)//"_sigma")
+
 
         if(LIS_rc%obs_ngrid(k).gt.0) then 
             do j=1,ntimes
@@ -800,14 +850,13 @@ contains
             enddo
         endif
 
-
         deallocate(mu_file)
         deallocate(sigma_file)
 
         call LIS_verify(nf90_close(nid),&
-             'failed to close file '//trim(filename))
+             "failed to close file "//trim(filename))
         write(LIS_logunit,*)&
-             '[INFO] Successfully read mean and seasonal scaling file ',&
+             "[INFO] Successfully read mean and seasonal scaling file ",&
              trim(filename)
     end subroutine GenericLAI_readSeasonalScalingData
 
