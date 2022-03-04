@@ -253,7 +253,7 @@ contains
 
         call ESMF_ConfigFindLabel(LIS_config, "Generic LAI number of bins in the CDF:", rc=status)
         do n=1, LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then 
+            if(LIS_rc%dascaloption(k).eq."CDF matching") then 
                 call ESMF_ConfigGetAttribute(LIS_config,Genericlai_struc(n)%nbins, rc=status)
                 call LIS_verify(status, "Generic LAI number of bins in the CDF: not defined")
             endif
