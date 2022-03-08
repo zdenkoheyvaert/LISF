@@ -515,7 +515,7 @@ contains
                          LIS_rc%dascaloption(k).eq."seasonal multiplicative"
 
                     GenericLAI_struc(n)%ntimes = 366
-                    timeidx = LIS_get_curr_calday(LIS_rc, 0)
+                    timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
 
                     allocate(GenericLAI_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
                          GenericLAI_struc(n)%ntimes))

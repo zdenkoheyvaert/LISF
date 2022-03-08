@@ -240,7 +240,7 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
                     endif
                 elseif(LIS_rc%dascaloption(k).eq."seasonal"&
                      .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative") then
-                    timeidx = LIS_rc%da
+                    timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
                 endif
 
                 call GenericLAI_updateSsdev(k,&
