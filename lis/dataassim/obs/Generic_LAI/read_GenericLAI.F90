@@ -154,7 +154,7 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
                  GenericLAI_struc(n)%model_cdf,     &
                  GenericLAI_struc(n)%obs_cdf,       &
                  laiobs)
-        elseif ((LIS_rc%dascaloption(k).eq."seasonal"
+        elseif ((LIS_rc%dascaloption(k).eq."seasonal"&
                  .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
              .and.fnd.ne.0) then
 
