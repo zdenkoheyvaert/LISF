@@ -154,11 +154,13 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
                  GenericLAI_struc(n)%model_cdf,     &
                  GenericLAI_struc(n)%obs_cdf,       &
                  laiobs)
-        elseif (LIS_rc%dascaloption(k).eq."seasonal".and.fnd.ne.0) then
+        elseif ((LIS_rc%dascaloption(k).eq."seasonal"
+                 .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
+             .and.fnd.ne.0) then
 
             call GenericLAI_rescale_with_seasonal_scaling(&
                  n,k,&
-                 LIS_rc%da,&
+                 nint(LIS_get_curr_calday(LIS_rc, 0)), &
                  GenericLAI_struc(n)%ntimes,        & 
                  MAX_LAI_VALUE,                      & 
                  MIN_LAI_VALUE,                      & 
