@@ -422,15 +422,6 @@ contains
 
             if(LIS_rc%dascaloption(k).ne."none") then
 
-                allocate(GenericLAI_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
-                     GenericLAI_struc(n)%ntimes))
-                allocate(GenericLAI_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
-                     GenericLAI_struc(n)%ntimes))
-                allocate(GenericLAI_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
-                     GenericLAI_struc(n)%ntimes))
-                allocate(GenericLAI_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
-                     GenericLAI_struc(n)%ntimes))
-
                 if(LIS_rc%dascaloption(k).eq."CDF matching") then 
                     !------------------------------------------------------------
                     ! CDF matching
@@ -444,6 +435,15 @@ contains
                     else
                         timeidx = LIS_rc%mo
                     endif
+
+                    allocate(GenericLAI_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
+                    allocate(GenericLAI_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
+                    allocate(GenericLAI_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
+                    allocate(GenericLAI_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
 
                     allocate(GenericLAI_struc(n)%model_xrange(&
                          LIS_rc%obs_ngrid(k), GenericLAI_struc(n)%ntimes, &
@@ -467,7 +467,7 @@ contains
                          GenericLAI_struc(n)%ntimes, & 
                          LIS_rc%obs_ngrid(k), &
                          modelscalingfile(n), &
-                         "LAI",&
+                         modelscalingvarname(n),&
                          GenericLAI_struc(n)%model_mu,&
                          GenericLAI_struc(n)%model_sigma)
 
@@ -476,7 +476,7 @@ contains
                          GenericLAI_struc(n)%ntimes, & 
                          LIS_rc%obs_ngrid(k), &
                          obsscalingfile(n), &
-                         "LAI",&
+                         obsscalingvarname(n),&
                          GenericLAI_struc(n)%obs_mu,&
                          GenericLAI_struc(n)%obs_sigma)
 
@@ -486,7 +486,7 @@ contains
                          GenericLAI_struc(n)%ntimes, & 
                          LIS_rc%obs_ngrid(k), &
                          modelscalingfile(n), &
-                         "LAI",&
+                         modelscalingvarname(n),&
                          GenericLAI_struc(n)%model_xrange,&
                          GenericLAI_struc(n)%model_cdf)
 
@@ -496,7 +496,7 @@ contains
                          GenericLAI_struc(n)%ntimes, & 
                          LIS_rc%obs_ngrid(k), &
                          obsscalingfile(n), &
-                         "LAI",&
+                         obsscalingvarname(n),&
                          GenericLAI_struc(n)%obs_xrange,&
                          GenericLAI_struc(n)%obs_cdf)
 
@@ -517,19 +517,26 @@ contains
                     GenericLAI_struc(n)%ntimes = 366
                     timeidx = LIS_rc%da
 
+                    allocate(GenericLAI_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
+                    allocate(GenericLAI_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
+                    allocate(GenericLAI_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
+                    allocate(GenericLAI_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
+                         GenericLAI_struc(n)%ntimes))
+
                     call GenericLAI_readSeasonalScalingData(n,k,&
-                         LIS_rc%obs_ngrid(k), &
                          GenericLAI_struc(n)%ntimes, & 
                          modelscalingfile(n), &
-                         "LAI",&
+                         modelscalingvarname(n),&
                          GenericLAI_struc(n)%model_mu,&
                          GenericLAI_struc(n)%model_sigma)
 
                     call GenericLAI_readSeasonalScalingData(n,k,&
-                         LIS_rc%obs_ngrid(k), &
                          GenericLAI_struc(n)%ntimes, & 
                          obsscalingfile(n), &
-                         "LAI",&
+                         obsscalingvarname(n),&
                          GenericLAI_struc(n)%obs_mu,&
                          GenericLAI_struc(n)%obs_sigma)
 
@@ -763,7 +770,7 @@ contains
     !
     ! !INTERFACE: 
     subroutine GenericLAI_readSeasonalScalingData(&
-         n, k, ngrid, ntimes, filename, varname, mu, sigma)
+         n, k, ntimes, filename, varname, mu, sigma)
 
         use netcdf
         use LIS_coreMod, only: LIS_rc
@@ -774,12 +781,11 @@ contains
         ! !ARGUMENTS:      
         integer,   intent(in)         :: n
         integer,   intent(in)         :: k
-        integer,   intent(in)         :: ngrid
         integer,   intent(in)         :: ntimes
         character(len=*), intent(in)  :: filename
         character(len=*), intent(in)  :: varname
-        real, intent(inout)           :: mu(ngrid, ntimes)
-        real, intent(inout)           :: sigma(ngrid, ntimes)
+        real, intent(inout)           :: mu(:,:)
+        real, intent(inout)           :: sigma(:,:)
         ! 
         ! !DESCRIPTION: 
         !  This routine reads the input seasonal mean file.
@@ -819,9 +825,10 @@ contains
         call LIS_verify(nf90_inquire_dimension(nid, gId, len=ngrid_file), &
              "Error nf90_inquire_dimension:ngrid") 
 
-        if (ngrid_file /= ngrid) then
-            write(LIS_logunit, *) "[ERR] ngrid in "//trim(filename)//"not consistent "&
-                 "with expected ngrid: ", ngrid_file," instead of ",ngrid
+        if (ngrid_file /= LIS_rc%obs_glbngrid_red(k)) then
+            write(LIS_logunit, *) "[ERR] ngrid in "//trim(filename)//" not consistent "//&
+                 "with expected ngrid: ", ngrid_file,&
+                 " instead of ",LIS_rc%obs_glbngrid_red(k)
             call LIS_endrun
         endif
 
