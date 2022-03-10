@@ -238,6 +238,7 @@ module LIS_pluginIndices
    character*50, public,  parameter :: LIS_S1_sigmaVVSMLAI_obsId      = "S1 backscatter VVSMLAI"
    character*50, public,  parameter :: LIS_S1_sigmaVHSM_obsId      = "S1 backscatter VHSM"
    character*50, public,  parameter :: LIS_S1_sigmaVHSMLAI_obsId      = "S1 backscatter VHSMLAI"
+   character*50, public,  parameter :: LIS_S1_sigmaVVVHSMLAI_obsId      = "S1 backscatter VVVHSMLAI"
    character*50, public,  parameter :: LIS_SSMISNWDsnowobsId   = "SSMI snow depth"
    character*50, public,  parameter :: LIS_AMSREsweobsId       = "AMSR-E SWE"
 !   character*50, public,  parameter :: LIS_AMSREsnowobsId      = "AMSR-E snow" !yliu
