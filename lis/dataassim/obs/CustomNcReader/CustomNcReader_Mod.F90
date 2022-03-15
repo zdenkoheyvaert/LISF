@@ -66,7 +66,7 @@ module CustomNcReader_Mod
     ! !PUBLIC MEMBER FUNCTIONS:
     !-----------------------------------------------------------------------------
     public :: CustomNcReader_setup, CustomNcReader_rescale_with_seasonal_scaling,&
-         CustomNcReader_updateSsdev
+         CustomNcReader_updateSsdev, read_CustomNetCDF, write_CustomNetCDF
     !-----------------------------------------------------------------------------
     ! !PUBLIC TYPES:
     !-----------------------------------------------------------------------------
@@ -179,6 +179,10 @@ contains
         integer                :: c,r
         integer                :: ngrid
         integer                :: timeidx
+        character*100          :: varname
+
+        ! varname is the same for all nests
+        varname = reader_struc(1)%varname
 
         call ESMF_ArraySpecSet(intarrspec,rank=1,typekind=ESMF_TYPEKIND_I4,&
              rc=status)
@@ -232,7 +236,7 @@ contains
         call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" spatial resolution:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            call ESMF_ConfigGetAttribute(LIS_config,Customlai_struc(n)%spatialres,&
+            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%spatialres,&
                  rc=status)
             call LIS_verify(status, 'Custom "//trim(varname)//" spatial resolution: is missing')
         enddo
@@ -300,7 +304,7 @@ contains
              "Custom "//trim(varname)//" number of bins in the CDF:", rc=status)
         do n=1, LIS_rc%nnest
             if(LIS_rc%dascaloption(k).eq."CDF matching") then 
-                call ESMF_ConfigGetAttribute(LIS_config,Customlai_struc(n)%nbins, rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%nbins, rc=status)
                 call LIS_verify(status, &
                      "Custom "//trim(varname)//" number of bins in the CDF: not defined")
             endif
@@ -696,9 +700,6 @@ contains
         use LIS_DAobservationsMod
         use map_utils
         use LIS_pluginIndices
-        use CustomNcReader_Mod, only:&
-             CustomNcReader_rescale_with_seasonal_scaling, &
-             CustomNcReader_updateSsdev
 
         implicit none
         ! !ARGUMENTS: 
@@ -706,6 +707,7 @@ contains
         integer, intent(in) :: k
         type(ESMF_State)    :: OBS_State
         type(ESMF_State)    :: OBS_Pert_State
+        type(CustomNcReader_dec) :: reader_struc(LIS_rc%nnest)
         !
         ! !DESCRIPTION:
         !  
@@ -757,7 +759,7 @@ contains
         data_upd = .false. 
 
         alarmCheck = LIS_isAlarmRinging(LIS_rc, "Custom "&
-             //trim(reader_struc(n)%varname//" read alarm")
+             //trim(reader_struc(n)%varname)//" read alarm")
 
         if(alarmCheck) then 
             call create_CustomNetCDF_filename(reader_struc(n)%nc_prefix,&
@@ -766,7 +768,8 @@ contains
             inquire(file=fname,exist=file_exists)          
             if(file_exists) then 
                 write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
-                call read_CustomNetCDF_data(n,k, fname,observations)
+                call read_CustomNetCDF_data(n,k, fname,observations,&
+                    reader_struc)
                 fnd = 1
             else
                 fnd = 0 
@@ -858,11 +861,11 @@ contains
                 data_upd_flag_local = .true. 
             endif
 
-    #if (defined SPMD)
+#if (defined SPMD)
             call MPI_ALLGATHER(data_upd_flag_local,1, &
                  MPI_LOGICAL, data_upd_flag(:),&
                  1, MPI_LOGICAL, LIS_mpi_comm, status)
-    #endif
+#endif
             data_upd = .false.
             do p=1,LIS_npes
                 data_upd = data_upd.or.data_upd_flag(p)
@@ -947,9 +950,9 @@ contains
     subroutine read_CustomNetCDF_data(n, k, fname, observations_ip, reader_struc)
         ! 
         ! !USES:   
-    #if(defined USE_NETCDF3 || defined USE_NETCDF4)
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
         use netcdf
-    #endif
+#endif
         use LIS_coreMod,  only : LIS_rc, LIS_domain
         use LIS_logMod
         use LIS_timeMgrMod
@@ -962,7 +965,8 @@ contains
         integer                       :: k
         character (len=*)             :: fname
         real                          :: observations_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
-        real*8                        :: cornerlat(2), cornerlon(2)
+        type(CustomNcReader_dec)      :: reader_struc(LIS_rc%nnest)
+
 
         ! !OUTPUT PARAMETERS:
         !
@@ -993,11 +997,11 @@ contains
         integer                 :: obsid, flagid
         integer                 :: ios
         integer                 :: numvalidobs
+        real*8                  :: cornerlat(2), cornerlon(2)
 
-        integer, dimension(nf90_max_var_dims) :: dimIDs
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
+        integer, dimension(nf90_max_var_dims)  :: dimIDs
         integer                                :: numLons, numLats
-
-    #if(defined USE_NETCDF3 || defined USE_NETCDF4)
 
         !values
 
@@ -1084,7 +1088,7 @@ contains
                  obs_data_b,obs_in, observations_b_ip, observations_ip)
         endif
 
-    #endif
+#endif
     end subroutine read_CustomNetCDF_data
 
 
