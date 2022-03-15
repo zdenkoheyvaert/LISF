@@ -1,0 +1,1488 @@
+!-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
+! NASA Goddard Space Flight Center Land Information System (LIS) v7.2
+!
+! Copyright (c) 2015 United States Government as represented by the
+! Administrator of the National Aeronautics and Space Administration.
+! All Rights Reserved.
+!-------------------------END NOTICE -- DO NOT EDIT-----------------------
+!BOP
+!
+! !MODULE: CustomNcReader_Mod
+! 
+! !DESCRIPTION: 
+!   This module contains a custom reader for global netCDF products on a
+!   regular latitude longitude grid stored in netCDF files, with all necessary
+!   flags already applied beforehand during preprocessing.
+!
+!   Generators for readers for a specific variable can be created by providing
+!   a suitable setup routine that calls CustomNcReader_setup. See
+!   CustomLAI_setup below for more info.
+!
+!   The custom reader provides the following options for lis.config:
+!
+!   Custom <varname> data directory:
+!       Path to directory that contains image netCDF files.
+!   Custom <varname> netCDF variable name:
+!       Name of the variable in the netCDF files.
+!   Custom <varname> netCDF name prefix:
+!       Prefix for the netCDF image file name. The image file names must follow
+!       the pattern <prefix>_YYYY_MM_DD.nc
+!   Custom <varname> spatial resolution
+!       Spatial resolution of the product. It is assumed that the grid starts
+!       at -180 + res/2 longitude and -90 + res/2 latitude.
+!   Data assimilation scaling strategy:
+!       Options are "none", "CDF matching", "seasonal", "seasonal multiplicative"
+!   Custom <varname> model scaling file:
+!       Path to the model CDF/mean file (optional, only required if scaling is applied)
+!   Custom <varname> observation scaling file:
+!       Path to the observation CDF/mean file (optional, only required if scaling is applied)
+!   Custom <varname> varname in model scaling file:
+!       Prefix of the names of the variables in the model scaling files,
+!       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
+!       scaling is applied)
+!   Custom <varname> varname in observation scaling file:
+!       Prefix of the names of the variables in the observation scaling files,
+!       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
+!       scaling is applied)
+!   Custom <varname> number of bins in the CDF: (optional, only required if CDF scaling is applied)
+!       Number of bins in the CDFs.
+!     
+!   
+! 
+! !REVISION HISTORY: 
+!  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
+! 
+module CustomNcReader_Mod
+    ! !USES: 
+    use ESMF
+    use map_utils
+    use, intrinsic :: iso_fortran_env, only: error_unit
+
+    implicit none
+
+    PRIVATE
+
+    !-----------------------------------------------------------------------------
+    ! !PUBLIC MEMBER FUNCTIONS:
+    !-----------------------------------------------------------------------------
+    public :: CustomNcReader_setup, CustomNcReader_rescale_with_seasonal_scaling,&
+         CustomNcReader_updateSsdev
+    !-----------------------------------------------------------------------------
+    ! !PUBLIC TYPES:
+    !-----------------------------------------------------------------------------
+    !EOP
+    type, public:: CustomNcReader_dec
+
+        character*100          :: varname
+        real                   :: max_value
+        real                   :: min_value
+        integer                :: nc
+        integer                :: nr
+        integer                :: mi
+        real                   :: gridDesci(50)    
+        real*8                 :: time1, time2
+        integer                :: fnd
+        integer                :: useSsdevScal
+        logical                :: mult_scaling
+        character*100          :: nc_varname
+        character*100          :: nc_prefix
+        real*8                 :: spatialres
+        real*8                 :: dlat, dlon
+        real*8                 :: lat_lower_left, lon_lower_left
+        real*8                 :: lat_upper_right, lon_upper_right
+        real,    allocatable :: rlat(:)
+        real,    allocatable :: rlon(:)
+        integer, allocatable :: n11(:)
+        integer, allocatable :: n12(:)
+        integer, allocatable :: n21(:)
+        integer, allocatable :: n22(:)
+        real,    allocatable :: w11(:)
+        real,    allocatable :: w12(:)
+        real,    allocatable :: w21(:)
+        real,    allocatable :: w22(:)
+
+        real                       :: ssdev_inp
+        real,    allocatable       :: model_xrange(:,:,:)
+        real,    allocatable       :: obs_xrange(:,:,:)
+        real,    allocatable       :: model_cdf(:,:,:)
+        real,    allocatable       :: obs_cdf(:,:,:)
+        real,    allocatable       :: model_mu(:,:)
+        real,    allocatable       :: obs_mu(:,:)
+        real,    allocatable       :: model_sigma(:,:)
+        real,    allocatable       :: obs_sigma(:,:)
+
+        integer                :: nbins
+        integer                :: ntimes
+
+    end type CustomNcReader_dec
+
+contains
+
+    !BOP
+    ! 
+    ! !ROUTINE: CustomNcReader_setup
+    ! \label{CustomNcReader_setup}
+    ! 
+    ! !INTERFACE: 
+    subroutine CustomNcReader_setup(k, OBS_State, OBS_Pert_State, reader_struc)
+        ! !USES: 
+        use ESMF
+        use LIS_coreMod
+        use LIS_timeMgrMod
+        use LIS_historyMod
+        use LIS_dataAssimMod
+        use LIS_perturbMod
+        use LIS_DAobservationsMod
+        use LIS_logmod
+
+        implicit none 
+
+        ! !ARGUMENTS: 
+        integer                   :: k
+        type(ESMF_State)          :: OBS_State(LIS_rc%nnest)
+        type(ESMF_State)          :: OBS_Pert_State(LIS_rc%nnest)
+        type(CustomNcReader_dec)  :: reader_struc(LIS_rc%nnest)
+        ! 
+        ! !DESCRIPTION: 
+        !   
+        !   This routine completes the runtime initializations and 
+        !   creation of data structures required for handling Custom NcReader data.
+        !  
+        !   The arguments are: 
+        !   \begin{description}
+        !    \item[k] number of observation state 
+        !    \item[OBS\_State]   observation state 
+        !    \item[OBS\_Pert\_State] observation perturbations state
+        !   \end{description}
+        !EOP
+        integer                :: n,i
+        integer                :: ftn
+        integer                :: status
+        type(ESMF_Field)       :: obsField(LIS_rc%nnest)
+        type(ESMF_Field)       :: pertField(LIS_rc%nnest)
+        type(ESMF_ArraySpec)   :: intarrspec, realarrspec
+        type(ESMF_ArraySpec)   :: pertArrSpec
+        character*100          :: laiobsdir
+        character*100          :: temp
+        real, parameter        :: minssdev =0.001
+        real,  allocatable     :: ssdev(:)
+        character*1            :: vid(2)
+        type(pert_dec_type)    :: obs_pert
+        real, pointer          :: obs_temp(:,:)
+        character*40, allocatable  ::  vname(:)
+        real        , allocatable  ::  varmin(:)
+        real        , allocatable  ::  varmax(:)
+        character*100          :: modelscalingfile(LIS_rc%nnest)
+        character*100          :: obsscalingfile(LIS_rc%nnest)
+        character*100          :: modelscalingvarname(LIS_rc%nnest)
+        character*100          :: obsscalingvarname(LIS_rc%nnest)
+        integer                :: c,r
+        integer                :: ngrid
+        integer                :: timeidx
+
+        call ESMF_ArraySpecSet(intarrspec,rank=1,typekind=ESMF_TYPEKIND_I4,&
+             rc=status)
+        call LIS_verify(status)
+
+        call ESMF_ArraySpecSet(realarrspec,rank=1,typekind=ESMF_TYPEKIND_R4,&
+             rc=status)
+        call LIS_verify(status)
+
+        call ESMF_ArraySpecSet(pertArrSpec,rank=2,typekind=ESMF_TYPEKIND_R4,&
+             rc=status)
+        call LIS_verify(status)
+
+        !------------------------------------------------------------
+        ! File options
+        !------------------------------------------------------------
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" data directory:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigGetAttribute(LIS_config,laiobsdir,&
+                 rc=status)
+            call LIS_verify(status, &
+                 "Custom "//trim(varname)//" data directory: is missing")
+
+            call ESMF_AttributeSet(OBS_State(n),"Data Directory",&
+                 laiobsdir, rc=status)
+            call LIS_verify(status)
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" netCDF variable name:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%nc_varname,&
+                 rc=status)
+            call LIS_verify(status,&
+                 "Custom "//trim(varname)//" netCDF variable name: is missing")
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" netCDF name prefix:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%nc_prefix,&
+                 rc=status)
+            call LIS_verify(status, &
+                 "Custom "//trim(varname)//" netCDF name prefix: is missing")
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" spatial resolution:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigGetAttribute(LIS_config,Customlai_struc(n)%spatialres,&
+                 rc=status)
+            call LIS_verify(status, 'Custom "//trim(varname)//" spatial resolution: is missing')
+        enddo
+
+        !------------------------------------------------------------
+        ! Options for scaling
+        !------------------------------------------------------------
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" use scaled standard deviation model:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%useSsdevScal, &
+                     rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" use scaled standard deviation model: not defined")
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" model scaling file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,modelscalingfile(n),rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" model scaling file: not defined")
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" observation scaling file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,obsscalingfile(n),rc=status)
+                call LIS_verify(status,&
+                     "Custom "//trim(varname)//" observation scaling file: not defined")
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" varname in model scaling file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,modelscalingvarname(n),rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" varname in model scaling file: not defined")
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" varname in observation scaling file:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).ne."none") then 
+                call ESMF_ConfigGetAttribute(LIS_config,obsscalingvarname(n),rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" varname in observation scaling file: not defined")
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config, &
+             "Custom "//trim(varname)//" number of bins in the CDF:", rc=status)
+        do n=1, LIS_rc%nnest
+            if(LIS_rc%dascaloption(k).eq."CDF matching") then 
+                call ESMF_ConfigGetAttribute(LIS_config,Customlai_struc(n)%nbins, rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" number of bins in the CDF: not defined")
+            endif
+        enddo
+
+
+        do n=1,LIS_rc%nnest
+            call ESMF_AttributeSet(OBS_State(n),"Data Update Status",&
+                 .false., rc=status)
+            call LIS_verify(status)
+
+            call ESMF_AttributeSet(OBS_State(n),"Data Update Time",&
+                 -99.0, rc=status)
+            call LIS_verify(status)
+
+            call ESMF_AttributeSet(OBS_State(n),"Data Assimilate Status",&
+                 .false., rc=status)
+            call LIS_verify(status)
+
+            call ESMF_AttributeSet(OBS_State(n),"Number Of Observations",&
+                 LIS_rc%obs_ngrid(k),rc=status)
+            call LIS_verify(status)
+
+        enddo
+
+        write(LIS_logunit,*)&
+             '[INFO] read Custom "//trim(varname)//" data specifications'       
+
+        !------------------------------------------------------------
+        ! Read perturbation settings
+        !------------------------------------------------------------
+        do n=1,LIS_rc%nnest
+
+            write(unit=temp,fmt='(i2.2)') 1
+            read(unit=temp,fmt='(2a1)') vid
+
+            obsField(n) = ESMF_FieldCreate(arrayspec=realarrspec,&
+                 grid=LIS_obsVecGrid(n,k),&
+                 name="Observation"//vid(1)//vid(2), rc=status)
+            call LIS_verify(status)
+
+            !Perturbations State
+            write(LIS_logunit,*) '[INFO] Opening attributes for observations ',&
+                 trim(LIS_rc%obsattribfile(k))
+            ftn = LIS_getNextUnitNumber()
+            open(ftn,file=trim(LIS_rc%obsattribfile(k)),status='old')
+            read(ftn,*)
+            read(ftn,*) LIS_rc%nobtypes(k)
+            read(ftn,*)
+
+            allocate(vname(LIS_rc%nobtypes(k)))
+            allocate(varmax(LIS_rc%nobtypes(k)))
+            allocate(varmin(LIS_rc%nobtypes(k)))
+
+            do i=1,LIS_rc%nobtypes(k)
+                read(ftn,fmt='(a40)') vname(i)
+                read(ftn,*) varmin(i),varmax(i)
+                write(LIS_logunit,*) '[INFO] ',vname(i),varmin(i),varmax(i)
+            enddo
+            call LIS_releaseUnitNumber(ftn)   
+
+            allocate(ssdev(LIS_rc%obs_ngrid(k)))
+
+            if(trim(LIS_rc%perturb_obs(k)).ne."none") then 
+                allocate(obs_pert%vname(1))
+                allocate(obs_pert%perttype(1))
+                allocate(obs_pert%ssdev(1))
+                allocate(obs_pert%stdmax(1))
+                allocate(obs_pert%zeromean(1))
+                allocate(obs_pert%tcorr(1))
+                allocate(obs_pert%xcorr(1))
+                allocate(obs_pert%ycorr(1))
+                allocate(obs_pert%ccorr(1,1))
+
+                call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
+                     obs_pert)
+
+                ! Set obs err to be uniform (will be rescaled later for each grid point). 
+                ssdev = obs_pert%ssdev(1)
+
+                pertField(n) = ESMF_FieldCreate(arrayspec=pertArrSpec,&
+                     grid=LIS_obsEnsOnGrid(n,k),name="Observation"//vid(1)//vid(2),&
+                     rc=status)
+                call LIS_verify(status)
+
+                ! initializing the perturbations to be zero 
+                call ESMF_FieldGet(pertField(n),localDE=0,farrayPtr=obs_temp,rc=status)
+                call LIS_verify(status)
+                obs_temp(:,:) = 0 
+
+                call ESMF_AttributeSet(pertField(n),"Perturbation Type",&
+                     obs_pert%perttype(1), rc=status)
+                call LIS_verify(status)
+
+                if(LIS_rc%obs_ngrid(k).gt.0) then 
+                    call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
+                         ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                    call LIS_verify(status)
+                endif
+
+                call ESMF_AttributeSet(pertField(n),"Std Normal Max",&
+                     obs_pert%stdmax(1), rc=status)
+                call LIS_verify(status)
+
+                call ESMF_AttributeSet(pertField(n),"Ensure Zero Mean",&
+                     obs_pert%zeromean(1),rc=status)
+                call LIS_verify(status)
+
+                call ESMF_AttributeSet(pertField(n),"Temporal Correlation Scale",&
+                     obs_pert%tcorr(1),rc=status)
+                call LIS_verify(status)
+
+                call ESMF_AttributeSet(pertField(n),"X Correlation Scale",&
+                     obs_pert%xcorr(1),rc=status)
+
+                call ESMF_AttributeSet(pertField(n),"Y Correlation Scale",&
+                     obs_pert%ycorr(1),rc=status)
+
+                call ESMF_AttributeSet(pertField(n),"Cross Correlation Strength",&
+                     obs_pert%ccorr(1,:),itemCount=1,rc=status)
+
+                call ESMF_StateAdd(OBS_Pert_State(n),(/pertField(n)/),rc=status)
+                call LIS_verify(status)         
+
+            endif
+
+            deallocate(vname)
+            deallocate(varmax)
+            deallocate(varmin)
+            deallocate(ssdev)   
+
+        enddo
+
+        !------------------------------------------------------------
+        ! Initialize scaling
+        !------------------------------------------------------------
+        do n=1,LIS_rc%nnest
+
+            if(LIS_rc%dascaloption(k).ne."none") then
+
+                if(LIS_rc%dascaloption(k).eq."CDF matching") then 
+                    !------------------------------------------------------------
+                    ! CDF matching
+                    !------------------------------------------------------------
+
+                    call LIS_getCDFattributes(k,modelscalingfile(n),&
+                         reader_struc(n)%ntimes, ngrid)
+
+                    if(reader_struc(n)%ntimes.eq.1) then 
+                        timeidx = 1
+                    else
+                        timeidx = LIS_rc%mo
+                    endif
+
+                    allocate(reader_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+                    allocate(reader_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+                    allocate(reader_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+                    allocate(reader_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+
+                    allocate(reader_struc(n)%model_xrange(&
+                         LIS_rc%obs_ngrid(k), reader_struc(n)%ntimes, &
+                         reader_struc(n)%nbins))
+                    allocate(reader_struc(n)%obs_xrange(&
+                         LIS_rc%obs_ngrid(k), reader_struc(n)%ntimes, &
+                         reader_struc(n)%nbins))
+                    allocate(reader_struc(n)%model_cdf(&
+                         LIS_rc%obs_ngrid(k), reader_struc(n)%ntimes, &
+                         reader_struc(n)%nbins))
+                    allocate(reader_struc(n)%obs_cdf(&
+                         LIS_rc%obs_ngrid(k), reader_struc(n)%ntimes, & 
+                         reader_struc(n)%nbins))
+
+                    !----------------------------------------------------------------------------
+                    ! Read the model and observation CDF data
+                    !----------------------------------------------------------------------------
+
+                    ! model mean sigma
+                    call LIS_readMeanSigmaData(n,k,&
+                         reader_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         modelscalingfile(n), &
+                         modelscalingvarname(n),&
+                         reader_struc(n)%model_mu,&
+                         reader_struc(n)%model_sigma)
+
+                    ! observation mean sigma
+                    call LIS_readMeanSigmaData(n,k,&
+                         reader_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         obsscalingfile(n), &
+                         obsscalingvarname(n),&
+                         reader_struc(n)%obs_mu,&
+                         reader_struc(n)%obs_sigma)
+
+                    ! model CDF
+                    call LIS_readCDFdata(n,k,&
+                         reader_struc(n)%nbins,&
+                         reader_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         modelscalingfile(n), &
+                         modelscalingvarname(n),&
+                         reader_struc(n)%model_xrange,&
+                         reader_struc(n)%model_cdf)
+
+                    ! observation CDF
+                    call LIS_readCDFdata(n,k,&
+                         reader_struc(n)%nbins,&
+                         reader_struc(n)%ntimes, & 
+                         LIS_rc%obs_ngrid(k), &
+                         obsscalingfile(n), &
+                         obsscalingvarname(n),&
+                         reader_struc(n)%obs_xrange,&
+                         reader_struc(n)%obs_cdf)
+
+                    !------------------------------------------------------------
+                    ! end CDF matching
+                    !------------------------------------------------------------
+
+                elseif (LIS_rc%dascaloption(k).eq."seasonal"&
+                     .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative") then
+
+                    !------------------------------------------------------------
+                    ! seasonal scaling
+                    !------------------------------------------------------------
+
+                    reader_struc(n)%mult_scaling = &
+                         LIS_rc%dascaloption(k).eq."seasonal multiplicative"
+
+                    reader_struc(n)%ntimes = 366
+                    timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
+
+                    allocate(reader_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+                    allocate(reader_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+                    allocate(reader_struc(n)%obs_mu(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+                    allocate(reader_struc(n)%obs_sigma(LIS_rc%obs_ngrid(k),&
+                         reader_struc(n)%ntimes))
+
+                    call CustomNcReader_readSeasonalScalingData(n,k,&
+                         reader_struc(n)%ntimes, & 
+                         modelscalingfile(n), &
+                         modelscalingvarname(n),&
+                         reader_struc(n)%model_mu,&
+                         reader_struc(n)%model_sigma)
+
+                    call CustomNcReader_readSeasonalScalingData(n,k,&
+                         reader_struc(n)%ntimes, & 
+                         obsscalingfile(n), &
+                         obsscalingvarname(n),&
+                         reader_struc(n)%obs_mu,&
+                         reader_struc(n)%obs_sigma)
+
+                    if (reader_struc(n)%mult_scaling) then
+                        ! When doing the multiplicative scaling, the standard
+                        ! deviation in the file is not used, and the
+                        ! perturbation standard deviations should be corrected
+                        ! by the ratio of means instead of the ratio of sigmas.
+                        reader_struc(n)%model_sigma = reader_struc(n)%model_mu
+                        reader_struc(n)%obs_sigma = reader_struc(n)%obs_mu
+                    endif
+
+                endif
+
+                if (reader_struc(n)%useSsdevScal) then
+
+                    allocate(ssdev(LIS_rc%obs_ngrid(k)))
+                    ssdev = obs_pert%ssdev(1)
+
+                    call CustomNcReader_updateSsdev(k,&
+                         reader_struc(n)%obs_sigma(:, timeidx),&
+                         reader_struc(n)%model_sigma(:, timeidx),&
+                         ssdev)
+
+                    if(LIS_rc%obs_ngrid(k).gt.0) then 
+                        call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
+                             ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                        call LIS_verify(status, &
+                             "updating perturbation standard deviation failed")
+                    endif
+
+                    deallocate(ssdev)
+                endif
+            endif ! dascaloption .ne. "none"
+        enddo
+
+        !------------------------------------------------------------
+        ! Read grid information and resample
+        !------------------------------------------------------------
+        do n=1,LIS_rc%nnest
+
+            if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
+                reader_struc(n)%lat_lower_left = 90 - 0.5 * reader_struc(n)%spatialres
+                reader_struc(n)%lat_upper_right = -90 + 0.5 * reader_struc(n)%spatialres
+                reader_struc(n)%lon_lower_left = -180 + 0.5 * reader_struc(n)%spatialres
+                reader_struc(n)%lon_upper_right = 180 - 0.5 * reader_struc(n)%spatialres
+                ! dlat is positive since LIS will figure out that latitude is decreasing
+                reader_struc(n)%dlat = reader_struc(n)%spatialres
+                reader_struc(n)%dlon = reader_struc(n)%spatialres
+                reader_struc(n)%nr = nint(180.0 / reader_struc(n)%spatialres)
+                reader_struc(n)%nc = 2 * reader_struc(n)%nr
+            else
+                write(unit=error_unit, fmt=*) &
+                     'The Custom_NcReader module only works with latlon projection'
+                stop 1
+            endif
+
+            reader_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
+            reader_struc(n)%gridDesci(2) = reader_struc(n)%nc
+            reader_struc(n)%gridDesci(3) = reader_struc(n)%nr 
+            reader_struc(n)%gridDesci(4) = reader_struc(n)%lat_lower_left
+            reader_struc(n)%gridDesci(5) = reader_struc(n)%lon_lower_left
+            reader_struc(n)%gridDesci(6) = 128
+            reader_struc(n)%gridDesci(7) = reader_struc(n)%lat_upper_right
+            reader_struc(n)%gridDesci(8) = reader_struc(n)%lon_upper_right
+            reader_struc(n)%gridDesci(9) = reader_struc(n)%dlat
+            reader_struc(n)%gridDesci(10) = reader_struc(n)%dlon
+            reader_struc(n)%gridDesci(20) = 64
+
+            reader_struc(n)%mi = reader_struc(n)%nc*reader_struc(n)%nr
+
+            !-----------------------------------------------------------------------------
+            !   Use interpolation if LIS is running finer than native resolution. 
+            !-----------------------------------------------------------------------------
+            if(LIS_rc%obs_gridDesc(k,10).lt.reader_struc(n)%dlon) then
+
+                allocate(reader_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%n11(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%n12(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%n21(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%n22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%w11(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%w12(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%w21(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+                allocate(reader_struc(n)%w22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+
+                write(LIS_logunit,*)&
+                     '[INFO] create interpolation input for Custom "//trim(varname)//"'       
+
+                call bilinear_interp_input_withgrid(reader_struc(n)%gridDesci(:), &
+                     LIS_rc%obs_gridDesc(k,:),&
+                     LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k),&
+                     reader_struc(n)%rlat, reader_struc(n)%rlon,&
+                     reader_struc(n)%n11, reader_struc(n)%n12, &
+                     reader_struc(n)%n21, reader_struc(n)%n22, &
+                     reader_struc(n)%w11, reader_struc(n)%w12, &
+                     reader_struc(n)%w21, reader_struc(n)%w22)
+            else
+
+                allocate(reader_struc(n)%n11(&
+                     reader_struc(n)%nc*reader_struc(n)%nr))
+
+                write(LIS_logunit,*)&
+                     '[INFO] create upscaling input for Custom "//trim(varname)//"'       
+
+                call upscaleByAveraging_input(reader_struc(n)%gridDesci(:),&
+                     LIS_rc%obs_gridDesc(k,:),&
+                     reader_struc(n)%nc*reader_struc(n)%nr, &
+                     LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), reader_struc(n)%n11)
+
+                write(LIS_logunit,*)&
+                     '[INFO] finished creating upscaling input for Custom "//trim(varname)//"'       
+            endif
+
+            call LIS_registerAlarm("Custom "//trim(varname)//" read alarm",&
+                 86400.0, 86400.0)
+
+            call ESMF_StateAdd(OBS_State(n),(/obsField(n)/),rc=status)
+            call LIS_verify(status, "Adding observation field failed")
+
+        enddo
+    end subroutine CustomNcReader_setup
+
+    !BOP
+    ! !ROUTINE: read_CustomNetCDF
+    ! \label{read_CustomNetCDF}
+    !
+    ! !INTERFACE: 
+    subroutine read_CustomNetCDF(n, k, OBS_State, OBS_Pert_State, reader_struc)
+        ! !USES: 
+        use ESMF
+        use LIS_mpiMod
+        use LIS_coreMod
+        use LIS_logMod
+        use LIS_timeMgrMod
+        use LIS_dataAssimMod
+        use LIS_DAobservationsMod
+        use map_utils
+        use LIS_pluginIndices
+        use CustomNcReader_Mod, only:&
+             CustomNcReader_rescale_with_seasonal_scaling, &
+             CustomNcReader_updateSsdev
+
+        implicit none
+        ! !ARGUMENTS: 
+        integer, intent(in) :: n 
+        integer, intent(in) :: k
+        type(ESMF_State)    :: OBS_State
+        type(ESMF_State)    :: OBS_Pert_State
+        !
+        ! !DESCRIPTION:
+        !  
+        !  reads the Custom observations from NETCDF files.
+
+        ! 
+        !  The arguments are: 
+        !  \begin{description}
+        !  \item[n] index of the nest
+        !  \item[k] number of observation state
+        !  \item[OBS\_State] observations state
+        !  \item[OBS\_Pert\_State] observation perturbations state
+        !  \end{description}
+        !
+        !EOP
+        integer                :: status
+        character*100          :: obsdir
+        character*300          :: fname
+        integer                :: cyr, cmo, cda, chr,cmn,css,cdoy
+        real                   :: wt1, wt2,ts
+        integer                :: count
+        real                   :: cgmt
+        real*8                 :: time
+        logical                :: alarmCheck, file_exists,dataCheck
+        integer                :: c,r,i,j,p,t
+        real,          pointer :: obsl(:)
+        type(ESMF_Field)       :: varfield
+        integer                :: gid(LIS_rc%obs_ngrid(k))
+        integer                :: assimflag(LIS_rc%obs_ngrid(k))
+        logical                :: data_update
+        logical                :: data_upd_flag(LIS_npes)
+        logical                :: data_upd_flag_local
+        logical                :: data_upd
+        real                   :: observations(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        integer                :: fnd
+        real                   :: timenow
+        real                   :: ssdev(LIS_rc%obs_ngrid(k))
+        type(ESMF_Field)       :: pertfield
+        integer                :: timeidx
+
+
+        call ESMF_AttributeGet(OBS_State,"Data Directory",&
+             obsdir, rc=status)
+        call LIS_verify(status)
+        call ESMF_AttributeGet(OBS_State,"Data Update Status",&
+             data_update, rc=status)
+        call LIS_verify(status)
+
+        data_upd = .false. 
+
+        alarmCheck = LIS_isAlarmRinging(LIS_rc, "Custom "&
+             //trim(reader_struc(n)%varname//" read alarm")
+
+        if(alarmCheck) then 
+            call create_CustomNetCDF_filename(reader_struc(n)%nc_prefix,&
+                 obsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
+
+            inquire(file=fname,exist=file_exists)          
+            if(file_exists) then 
+                write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
+                call read_CustomNetCDF_data(n,k, fname,observations)
+                fnd = 1
+            else
+                fnd = 0 
+                write(LIS_logunit,*) '[WARN] Missing observation file: ',trim(fname)
+            endif
+        else
+            fnd = 0 
+            observations = LIS_rc%udef
+        endif
+
+        dataCheck = .false.
+        if(alarmCheck) then 
+            if(fnd.eq.1) then 
+                dataCheck = .true. 
+            endif
+        else
+            fnd = 0 
+            dataCheck = .false.
+        endif
+
+        if(dataCheck) then 
+
+            call ESMF_StateGet(OBS_State,"Observation01",varfield,&
+                 rc=status)
+            call LIS_verify(status, 'Error: StateGet Observation01')
+
+            call ESMF_FieldGet(varfield,localDE=0,farrayPtr=obsl,rc=status)
+            call LIS_verify(status, 'Error: FieldGet')
+
+            obsl = LIS_rc%udef 
+            do r=1, LIS_rc%obs_lnr(k)
+                do c=1, LIS_rc%obs_lnc(k)
+                    if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
+                        obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
+                             observations(c+(r-1)*LIS_rc%obs_lnc(k))
+                    endif
+                enddo
+            enddo
+
+            !-------------------------------------------------------------------------
+            !  Transform data to the LSM climatology using a CDF-scaling approach
+            !-------------------------------------------------------------------------     
+
+            if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then
+
+                call LIS_rescale_with_CDF_matching(     &
+                     n,k,                               & 
+                     reader_struc(n)%nbins,         & 
+                     reader_struc(n)%ntimes,        & 
+                     reader_struc(n)%max_value, &
+                     reader_struc(n)%min_value, &
+                     reader_struc(n)%model_xrange,  &
+                     reader_struc(n)%obs_xrange,    &
+                     reader_struc(n)%model_cdf,     &
+                     reader_struc(n)%obs_cdf,       &
+                     observations)
+            elseif ((LIS_rc%dascaloption(k).eq."seasonal"&
+                     .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
+                 .and.fnd.ne.0) then
+
+                call CustomNcReader_rescale_with_seasonal_scaling(&
+                     n,k,&
+                     nint(LIS_get_curr_calday(LIS_rc, 0)), &
+                     reader_struc(n)%ntimes,        & 
+                     reader_struc(n)%max_value, &
+                     reader_struc(n)%min_value, &
+                     reader_struc(n)%mult_scaling, &
+                     reader_struc(n)%model_mu,  &
+                     reader_struc(n)%model_sigma,  &
+                     reader_struc(n)%obs_mu,  &
+                     reader_struc(n)%obs_sigma,  &
+                     observations)
+
+            endif
+
+            obsl = LIS_rc%udef 
+            do r=1, LIS_rc%obs_lnr(k)
+                do c=1, LIS_rc%obs_lnc(k)
+                    if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
+                        obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
+                             observations(c+(r-1)*LIS_rc%obs_lnc(k))
+                    endif
+                enddo
+            enddo
+
+            if(fnd.eq.0) then 
+                data_upd_flag_local = .false. 
+            else
+                data_upd_flag_local = .true. 
+            endif
+
+    #if (defined SPMD)
+            call MPI_ALLGATHER(data_upd_flag_local,1, &
+                 MPI_LOGICAL, data_upd_flag(:),&
+                 1, MPI_LOGICAL, LIS_mpi_comm, status)
+    #endif
+            data_upd = .false.
+            do p=1,LIS_npes
+                data_upd = data_upd.or.data_upd_flag(p)
+            enddo
+
+            if(data_upd) then 
+
+                do t=1,LIS_rc%obs_ngrid(k)
+                    gid(t) = t
+                    if(obsl(t).ne.-9999.0) then 
+                        assimflag(t) = 1
+                    else
+                        assimflag(t) = 0
+                    endif
+                enddo
+
+                call ESMF_AttributeSet(OBS_State,"Data Update Status",&
+                     .true. , rc=status)
+                call LIS_verify(status)
+
+                if(LIS_rc%obs_ngrid(k).gt.0) then 
+                    call ESMF_AttributeSet(varfield,"Grid Number",&
+                         gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                    call LIS_verify(status)
+
+                    call ESMF_AttributeSet(varfield,"Assimilation Flag",&
+                         assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                    call LIS_verify(status)
+
+                endif
+
+                if(LIS_rc%dascaloption(k).ne."none") then
+                    call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
+                         rc=status)
+                    call LIS_verify(status, 'Error: StateGet Observation01')
+
+                    ssdev = reader_struc(n)%ssdev_inp 
+
+                    if (LIS_rc%dascaloption(k).eq."CDF matching") then
+                        if(reader_struc(n)%ntimes.eq.1) then 
+                            timeidx = 1
+                        else
+                            timeidx = LIS_rc%mo
+                        endif
+                    elseif(LIS_rc%dascaloption(k).eq."seasonal"&
+                         .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative") then
+                        timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
+                    endif
+
+                    call CustomNcReader_updateSsdev(k,&
+                         reader_struc(n)%obs_sigma(:, timeidx),&
+                         reader_struc(n)%model_sigma(:, timeidx),&
+                         ssdev)
+
+                    if(LIS_rc%obs_ngrid(k).gt.0) then 
+                        call ESMF_AttributeSet(pertfield,"Standard Deviation",&
+                             ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                        call LIS_verify(status)
+                    endif
+                endif
+
+
+            else
+                call ESMF_AttributeSet(OBS_State,"Data Update Status",&
+                     .false., rc=status)
+                call LIS_verify(status)     
+            endif
+        else
+            call ESMF_AttributeSet(OBS_State,"Data Update Status",&
+                 .false., rc=status)
+            call LIS_verify(status)     
+        endif
+
+    end subroutine read_CustomNetCDF
+
+    !BOP
+    ! 
+    ! !ROUTINE: read_CustomNetCDF_data
+    ! \label{read_CustomNetCDF_data}
+    !
+    ! !INTERFACE:
+    subroutine read_CustomNetCDF_data(n, k, fname, observations_ip, reader_struc)
+        ! 
+        ! !USES:   
+    #if(defined USE_NETCDF3 || defined USE_NETCDF4)
+        use netcdf
+    #endif
+        use LIS_coreMod,  only : LIS_rc, LIS_domain
+        use LIS_logMod
+        use LIS_timeMgrMod
+
+        implicit none
+        !
+        ! !INPUT PARAMETERS: 
+        ! 
+        integer                       :: n 
+        integer                       :: k
+        character (len=*)             :: fname
+        real                          :: observations_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real*8                        :: cornerlat(2), cornerlon(2)
+
+        ! !OUTPUT PARAMETERS:
+        !
+        !
+        ! !DESCRIPTION: 
+        !  This subroutine reads the Custom netCDF file and applies the data
+        !  quality flags to filter the data. 
+        !
+        !  The arguments are: 
+        !  \begin{description}
+        !  \item[n]            index of the nest
+        !  \item[k]            number of observation state
+        !  \item[k]            number of observation state
+        !  \item[fname]        name of the netCDF file
+        !  \item[observations\_ip]   Observation data processed to the LIS domain
+        !  \end{description}
+        !
+        !
+        !EOP
+
+        integer                 :: lat_offset, lon_offset
+        real                    :: observation(reader_struc(n)%nc,reader_struc(n)%nr)
+        real                    :: obs_in(reader_struc(n)%nc*reader_struc(n)%nr)
+        logical*1               :: obs_data_b(reader_struc(n)%nc*reader_struc(n)%nr)
+        logical*1               :: observations_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        integer                 :: c,r,t
+        integer                 :: nid
+        integer                 :: obsid, flagid
+        integer                 :: ios
+        integer                 :: numvalidobs
+
+        integer, dimension(nf90_max_var_dims) :: dimIDs
+        integer                                :: numLons, numLats
+
+    #if(defined USE_NETCDF3 || defined USE_NETCDF4)
+
+        !values
+
+        cornerlat(1)=reader_struc(n)%gridDesci(4)
+        cornerlon(1)=reader_struc(n)%gridDesci(5)
+        cornerlat(2)=reader_struc(n)%gridDesci(7)
+        cornerlon(2)=reader_struc(n)%gridDesci(8)
+
+        obs_data_b = .false.
+
+        lat_offset = 1  ! no offset
+        lon_offset = 1
+
+
+        ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
+        call LIS_verify(ios,'Error opening file '//trim(fname))
+
+        ios = nf90_inq_varid(nid, trim(reader_struc(n)%nc_varname), obsid)
+        call LIS_verify(ios, 'Error nf90_inq_varid: '//reader_struc(n)%nc_varname)
+
+        ios = nf90_get_var(nid, obsid, observation, &
+             start=(/lon_offset,lat_offset/), &
+             count=(/reader_struc(n)%nc,reader_struc(n)%nr/)) 
+
+        call LIS_verify(ios, 'Error nf90_get_var: '//reader_struc(n)%nc_varname)
+
+        ios = nf90_close(ncid=nid)
+        call LIS_verify(ios,'Error closing file '//trim(fname))
+
+        ! the data is already read into 'observation', but we have to replace
+        ! NaNs/invalid values with LIS_rc%udef
+        do r=1, reader_struc(n)%nr
+            do c=1, reader_struc(n)%nc
+                if (isnan(observation(c, r))) then
+                    observation(c, r) = LIS_rc%udef
+                else if (.not. (reader_struc(n)%min_value < observation(c, r) &
+                     .and. observation(c, r) < reader_struc(n)%max_value)) then
+                    observation(c, r) = LIS_rc%udef
+                endif
+            end do
+        end do
+
+
+        ! fill obs_in and obs_data_b, which are required further on
+        do r=1, reader_struc(n)%nr
+            do c=1, reader_struc(n)%nc
+                obs_in(c+(r-1)*reader_struc(n)%nc) = observation(c,r)
+                if(observation(c,r).ne.LIS_rc%udef) then
+                    obs_data_b(c+(r-1)*reader_struc(n)%nc) = .true.
+                else
+                    obs_data_b(c+(r-1)*reader_struc(n)%nc) = .false.
+                endif
+            enddo
+        enddo
+
+        if(LIS_rc%obs_gridDesc(k,10).lt.reader_struc(n)%dlon) then 
+            write(LIS_logunit,*) '[INFO] interpolating Custom',&
+                 trim(reader_struc(n)%varname),&
+                 trim(fname)
+            !--------------------------------------------------------------------------
+            ! Interpolate to the LIS running domain if model has finer resolution
+            ! than observations
+            !-------------------------------------------------------------------------- 
+            call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
+                 obs_data_b, obs_in, observations_b_ip, observations_ip, &
+                 reader_struc(n)%nc*reader_struc(n)%nr, &
+                 LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
+                 reader_struc(n)%rlat,reader_struc(n)%rlon,&
+                 reader_struc(n)%w11,reader_struc(n)%w12,&
+                 reader_struc(n)%w21,reader_struc(n)%w22,&
+                 reader_struc(n)%n11,reader_struc(n)%n12,&
+                 reader_struc(n)%n21,reader_struc(n)%n22,LIS_rc%udef,ios)
+         else
+            write(LIS_logunit,*) '[INFO] upscaling Custom',&
+                 trim(reader_struc(n)%varname),&
+                 trim(fname)
+            !--------------------------------------------------------------------------
+            ! Upscale to the LIS running domain if model has coarser resolution
+            ! than observations
+            !-------------------------------------------------------------------------- 
+            call upscaleByAveraging(reader_struc(n)%nc*reader_struc(n)%nr,&
+                 LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
+                 LIS_rc%udef, reader_struc(n)%n11,&
+                 obs_data_b,obs_in, observations_b_ip, observations_ip)
+        endif
+
+    #endif
+    end subroutine read_CustomNetCDF_data
+
+
+    !BOP
+    ! !ROUTINE: create_CustomNetCDF_filename
+    ! \label{create_CustomNetCDF_filename}
+    ! 
+    ! !INTERFACE: 
+    subroutine create_CustomNetCDF_filename(prefix, ndir, year, month, day, filename)
+        ! !USES:   
+
+        implicit none
+        ! !ARGUMENTS: 
+        character (len=*), intent(in)     :: prefix
+        character (len=*), intent(in)     :: ndir
+        integer, intent(in)               :: year, month, day
+        character(len=*), intent(out)     :: filename
+        ! 
+        ! !DESCRIPTION: 
+        !  This subroutine creates the netCDF filename
+        !  based on the time and date 
+        ! 
+        !  The arguments are: 
+        !  \begin{description}
+        !  \item[varname] variable name of the netCDF variable
+        !  \item[ndir] name of the data directory
+        !  \item[year]  current year
+        !  \item[month]  current month
+        !  \item[day]  current day
+        !  \item[filename] Generated filename
+        !  \end{description}
+        !
+        !EOP
+
+        !  The naming scheme is
+        !    <varname>_<year>_<month>_<day>.nc
+
+
+        character(len=4) :: yearstr
+        character(len=2) :: monthstr
+        character(len=2) :: daystr
+
+        write(unit=yearstr, fmt='(i4.4)') year
+        write(unit=monthstr, fmt='(i2.2)') month
+        write(unit=daystr, fmt='(i2.2)') day
+
+
+        filename = trim(ndir)//'/'//&
+             trim(prefix)//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
+
+    end subroutine create_CustomNetCDF_filename
+
+    ! !ROUTINE: write_CustomNetCDF
+    ! \label{write_CustomNetCDF}
+    ! 
+    ! !INTERFACE: 
+    subroutine write_CustomNetCDF(n, k, OBS_State)
+    ! !USES: 
+      use ESMF
+      use LIS_coreMod
+      use LIS_logMod
+      use LIS_fileIOMod
+      use LIS_historyMod
+      use LIS_DAobservationsMod
+
+      implicit none
+
+    ! !ARGUMENTS: 
+
+      integer,     intent(in)  :: n 
+      integer,     intent(in)  :: k
+      type(ESMF_State)         :: OBS_State
+    !
+    ! !DESCRIPTION: 
+    ! 
+    ! writes the transformed (interpolated/upscaled/reprojected)  
+    ! observations to a file
+    ! 
+    !EOP
+      type(ESMF_Field)         :: obsField
+      logical                  :: data_update
+      real, pointer            :: observations(:)
+      character*100            :: obsname
+      integer                  :: ftn
+      integer                  :: status
+
+      call ESMF_AttributeGet(OBS_State, "Data Update Status", & 
+           data_update, rc=status)
+      call LIS_verify(status)
+
+      if(data_update) then 
+
+         call ESMF_StateGet(OBS_State, "Observation01",obsField, &
+              rc=status)
+         call LIS_verify(status)
+
+         call ESMF_FieldGet(obsField, localDE=0, farrayPtr=observations, rc=status)
+         call LIS_verify(status)
+
+         if(LIS_masterproc) then 
+            ftn = LIS_getNextUnitNumber()
+            call Custom_obsname(n,k,obsname)        
+
+            call LIS_create_output_directory('DAOBS')
+            open(ftn,file=trim(obsname), form='unformatted')
+         endif
+
+         call LIS_writevar_gridded_obs(ftn,n,k,observations)
+
+         if(LIS_masterproc) then 
+            call LIS_releaseUnitNumber(ftn)
+         endif
+
+      endif  
+
+    end subroutine write_CustomNetCDF
+
+    !BOP
+    ! !ROUTINE: Custom_obsname
+    ! \label{Custom_obsname}
+    ! 
+    ! !INTERFACE: 
+    subroutine Custom_obsname(n,k,obsname)
+    ! !USES: 
+      use LIS_coreMod, only : LIS_rc
+
+    ! !ARGUMENTS: 
+      integer               :: n
+      integer               :: k
+      character(len=*)      :: obsname
+    ! 
+    ! !DESCRIPTION: 
+    !
+    !  writes the assimilated observation to a file.
+
+    !
+    !  The arguments are:
+    !  \begin{description}
+    !  \item[n] index of the nest
+    !  \item[k] number of observation state
+    !  \item[obsname] name of the observation
+    !  \end{description}
+    !
+
+    !EOP
+
+      character(len=12) :: cdate1
+      character(len=12) :: cdate
+      character(len=10) :: cda
+
+      write(unit=cdate1, fmt='(i4.4, i2.2, i2.2, i2.2, i2.2)') &
+           LIS_rc%yr, LIS_rc%mo, &
+           LIS_rc%da, LIS_rc%hr,LIS_rc%mn
+
+      write(unit=cda, fmt='(a2,i2.2)') '.a',k
+      write(unit=cdate, fmt='(a2,i2.2)') '.d',n
+
+      obsname = trim(LIS_rc%odir)//'/DAOBS/'//cdate1(1:6)//&
+           '/LISDAOBS_'//cdate1// &
+           trim(cda)//trim(cdate)//'.1gs4r'
+
+    end subroutine Custom_obsname
+
+
+
+
+    !BOP
+    ! 
+    ! !ROUTINE: CustomNcReader_rescale_with_seasonal_scaling
+    ! \label{CustomNcReader_rescale_with_seasonal_scaling}
+    !
+    ! !INTERFACE:
+    subroutine CustomNcReader_rescale_with_seasonal_scaling(&
+         n,             & 
+         k,             & 
+         timeidx,        & 
+         ntimes,         & 
+         max_obs_value, &
+         min_obs_value, &
+         multiplicative, &
+         model_mu,    &       
+         model_sigma,    &       
+         obs_mu,       &
+         obs_sigma,       &
+         obs_value) 
+
+        use LIS_coreMod, only: LIS_rc
+        use LIS_DAobservationsMod, only: LIS_obs_domain
+
+        implicit none
+        ! 
+        ! !ARGUMENTS: 
+        integer, intent(in)      :: n 
+        integer, intent(in)      :: k
+        integer, intent(in)      :: ntimes
+        integer, intent(in)      :: timeidx
+        real, intent(in)         :: max_obs_value
+        real, intent(in)         :: min_obs_value
+        logical, intent(in)      :: multiplicative
+        real, intent(in)         :: model_mu(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(in)         :: model_sigma(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(in)         :: obs_mu(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(in)         :: obs_sigma(LIS_rc%obs_ngrid(k),ntimes)
+        real, intent(inout)      :: obs_value(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+        !
+        ! !DESCRIPTION: 
+        ! 
+        !   This routine rescales the input observation data by subtracting the
+        !   observation mean for the given time index and adding the model mean
+        !   for the same time index
+
+        !  The arguments are: 
+        !  \begin{description}
+        !  \item[n]               index of the nest
+        !  \item[k]               index of observation state
+        !  \item[timeidx]         time index for mean value to use, .e.g. month
+        !                         or day
+        !  \item[ntimes]          number of times in the model and obs mean files
+        !  \item[max\_obs\_value] maximum allowable value of observation
+        !  \item[min\_obs\_value] minimum allowable value of observation
+        !  \item[model\_mu]       mean values of the model OL run
+        !  \item[model\_sigma]    std.dev. values of the model OL run
+        !  \item[obs\_mu]         mean values of the observations
+        !  \item[obs\_sigma]      std.dev. values of the observations
+        !  \item[obs\_value]      observation value to be rescaled. 
+        ! \end{description}
+        !EOP
+
+        integer             :: grididx,i
+        integer             :: binval
+        integer             :: col,row
+        real                :: cdf_obsval
+        real                :: obs_tmp
+
+        do grididx=1,LIS_rc%obs_ngrid(k)
+
+            col = LIS_obs_domain(n,k)%col(grididx)
+            row = LIS_obs_domain(n,k)%row(grididx)
+
+            if(obs_value(col,row).ne.-9999.0 &
+                 .and. obs_mu(grididx, timeidx).ne.-9999.0 &
+                 .and. obs_sigma(grididx, timeidx).gt.epsilon(0.0)) then 
+
+                if (multiplicative.and.obs_mu(grididx, timeidx).ne.epsilon(0.0)) then
+                    obs_tmp = obs_value(col, row) / obs_mu(grididx, timeidx)&
+                         * model_mu(grididx, timeidx)
+                else if ((.not.multiplicative)&
+                        .and. obs_sigma(grididx, timeidx).gt.(epsilon(0.0))) then
+                    ! transform to z-score
+                    obs_tmp = (obs_value(col,row) - obs_mu(grididx,timeidx)) &
+                         / obs_sigma(grididx,timeidx)
+                    ! transform z-score to model space
+                    obs_tmp = obs_tmp * model_sigma(grididx,timeidx)&
+                         + model_mu(grididx, timeidx)
+                else
+                    obs_tmp = LIS_rc%udef
+                endif
+
+                if (obs_tmp < min_obs_value .or. obs_tmp > max_obs_value) then
+                    obs_tmp = LIS_rc%udef
+                endif
+
+                obs_value(col, row) = obs_tmp
+            else
+                obs_value(col,row) = LIS_rc%udef
+            endif
+        enddo
+    end subroutine CustomNcReader_rescale_with_seasonal_scaling
+
+    !BOP
+    ! !ROUTINE: CustomNcReader_readSeasonalScalingData
+    ! \label{CustomNcReader_readSeasonalScalingData}
+    !
+    ! !INTERFACE: 
+    subroutine CustomNcReader_readSeasonalScalingData(&
+         n, k, ntimes, filename, varname, mu, sigma)
+
+        use netcdf
+        use LIS_coreMod, only: LIS_rc
+        use LIS_logMod, only: LIS_logunit, LIS_verify, LIS_endrun
+        use LIS_DAobservationsMod, only: LIS_convertObsVarToLocalSpace
+
+        implicit none
+        ! !ARGUMENTS:      
+        integer,   intent(in)         :: n
+        integer,   intent(in)         :: k
+        integer,   intent(in)         :: ntimes
+        character(len=*), intent(in)  :: filename
+        character(len=*), intent(in)  :: varname
+        real, intent(inout)           :: mu(:,:)
+        real, intent(inout)           :: sigma(:,:)
+        ! 
+        ! !DESCRIPTION: 
+        !  This routine reads the input seasonal mean file.
+        ! 
+        !  The arguments are: 
+        !  \begin{description}
+        !  \item[n]             index of the nest
+        !  \item[k]             index of observation state
+        !  \item[ngrid]         length of ngrid dimension
+        !  \item[ntimes]        length of ntimes dimension
+        !  \item[filename]      name of the CDF file
+        !  \item[varname]       name of the variable being extracted.
+        !  \item[mu]            mean values
+        !  \item[sigma]         std.dev values
+        ! \end{description}
+        !EOP
+        integer                  :: j
+        integer                  :: nlevsId, gId
+        integer                  :: ngrid_file, nlevs_file
+        integer                  :: muid, sigmaid
+        real, allocatable        :: mu_file(:,:,:), sigma_file(:,:,:)
+        integer                  :: nid
+
+        write(LIS_logunit,*) "[INFO] Reading mean from seasonal seasonal file ",trim(filename)
+        call LIS_verify(nf90_open(path=trim(filename),mode=NF90_NOWRITE,&
+             ncid=nid),"failed to open file "//trim(filename))
+
+        call LIS_verify(nf90_inq_dimid(nid,trim(varname)//"_levels",nlevsId), &
+             "nf90_inq_dimid failed for "//trim(varname)//"_levels")
+
+        call LIS_verify(nf90_inquire_dimension(nid,nlevsId, len=nlevs_file),&
+             "nf90_inquire_dimension failed for nlevsId")
+
+        call LIS_verify(nf90_inq_dimid(nid, "ngrid",gId), &
+             "Error nf90_inq_dimid: ngrid")
+
+        call LIS_verify(nf90_inquire_dimension(nid, gId, len=ngrid_file), &
+             "Error nf90_inquire_dimension:ngrid") 
+
+        if (ngrid_file /= LIS_rc%obs_glbngrid_red(k)) then
+            write(LIS_logunit, *) "[ERR] ngrid in "//trim(filename)//" not consistent "//&
+                 "with expected ngrid: ", ngrid_file,&
+                 " instead of ",LIS_rc%obs_glbngrid_red(k)
+            call LIS_endrun
+        endif
+
+        ! dimension order is flipped compared to netCDF, because in Fortran the
+        ! first dimension changes fastest
+        allocate(mu_file(ngrid_file,ntimes,nlevs_file))
+        allocate(sigma_file(ngrid_file,ntimes,nlevs_file))
+
+        call LIS_verify(nf90_inq_varid(nid,trim(varname)//"_mu",muid),&
+             "nf90_inq_varid failed for for "//trim(varname)//"_mu")
+
+        call LIS_verify(nf90_get_var(nid,muid,mu_file),&
+             "nf90_get_var failed for "//trim(varname)//"_mu")
+
+        call LIS_verify(nf90_inq_varid(nid,trim(varname)//"_sigma",sigmaid),&
+             "nf90_inq_varid failed for for "//trim(varname)//"_sigma")
+
+        call LIS_verify(nf90_get_var(nid,sigmaid,sigma_file),&
+             "nf90_get_var failed for "//trim(varname)//"_sigma")
+
+
+        if(LIS_rc%obs_ngrid(k).gt.0) then 
+            do j=1,ntimes
+                call LIS_convertObsVarToLocalSpace(n,k,mu_file(:,j,1), mu(:,j))
+                call LIS_convertObsVarToLocalSpace(n,k,sigma_file(:,j,1), sigma(:,j))
+            enddo
+        endif
+
+        deallocate(mu_file)
+        deallocate(sigma_file)
+
+        call LIS_verify(nf90_close(nid),&
+             "failed to close file "//trim(filename))
+        write(LIS_logunit,*)&
+             "[INFO] Successfully read mean and seasonal scaling file ",&
+             trim(filename)
+    end subroutine CustomNcReader_readSeasonalScalingData
+
+    subroutine CustomNcReader_updateSsdev(k, obs_sigma, model_sigma, ssdev)
+        use LIS_coreMod
+        implicit none
+
+        integer, intent(in)     :: k
+        real, intent(in)        :: obs_sigma(:), model_sigma(:)
+        real, intent(inout)     :: ssdev(:)
+
+        integer                 :: grididx
+        real, parameter         ::  minssdev =0.001
+
+
+        do grididx=1,LIS_rc%obs_ngrid(k)
+            if(obs_sigma(grididx).ne.LIS_rc%udef) then 
+                if(obs_sigma(grididx).ne.0) then 
+                    ssdev(grididx) = ssdev(grididx)&
+                         * model_sigma(grididx)&
+                         / obs_sigma(grididx)
+                endif
+
+                if(ssdev(grididx).lt.minssdev) then 
+                    ssdev(grididx) = minssdev
+                endif
+            endif
+        enddo
+
+    end subroutine CustomNcReader_updateSsdev
+
+end module CustomNcReader_Mod

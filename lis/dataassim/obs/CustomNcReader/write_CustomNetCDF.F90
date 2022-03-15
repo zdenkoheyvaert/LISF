@@ -7,14 +7,14 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
 ! 
-! !ROUTINE: write_GenericLAI
-! \label{write_GenericLAI}
+! !ROUTINE: write_CustomNetCDF
+! \label{write_CustomNetCDF}
 ! 
 ! !REVISION HISTORY: 
 !  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
 ! 
 ! !INTERFACE: 
-subroutine write_GenericLAI(n, k, OBS_State)
+subroutine write_CustomNetCDF(n, k, OBS_State)
 ! !USES: 
   use ESMF
   use LIS_coreMod
@@ -34,12 +34,12 @@ subroutine write_GenericLAI(n, k, OBS_State)
 ! !DESCRIPTION: 
 ! 
 ! writes the transformed (interpolated/upscaled/reprojected)  
-! Generic LAI observations to a file
+! observations to a file
 ! 
 !EOP
-  type(ESMF_Field)         :: laiField
+  type(ESMF_Field)         :: obsField
   logical                  :: data_update
-  real, pointer            :: laiobs(:)
+  real, pointer            :: observations(:)
   character*100            :: obsname
   integer                  :: ftn
   integer                  :: status
@@ -50,22 +50,22 @@ subroutine write_GenericLAI(n, k, OBS_State)
 
   if(data_update) then 
      
-     call ESMF_StateGet(OBS_State, "Observation01",laiField, &
+     call ESMF_StateGet(OBS_State, "Observation01",obsField, &
           rc=status)
      call LIS_verify(status)
      
-     call ESMF_FieldGet(laiField, localDE=0, farrayPtr=laiobs, rc=status)
+     call ESMF_FieldGet(obsField, localDE=0, farrayPtr=observations, rc=status)
      call LIS_verify(status)
 
      if(LIS_masterproc) then 
         ftn = LIS_getNextUnitNumber()
-        call Generic_laiobsname(n,k,obsname)        
+        call Custom_obsname(n,k,obsname)        
 
         call LIS_create_output_directory('DAOBS')
         open(ftn,file=trim(obsname), form='unformatted')
      endif
 
-     call LIS_writevar_gridded_obs(ftn,n,k,laiobs)
+     call LIS_writevar_gridded_obs(ftn,n,k,observations)
      
      if(LIS_masterproc) then 
         call LIS_releaseUnitNumber(ftn)
@@ -73,14 +73,14 @@ subroutine write_GenericLAI(n, k, OBS_State)
 
   endif  
 
-end subroutine write_GenericLAI
+end subroutine write_CustomNetCDF
 
 !BOP
-! !ROUTINE: Generic_laiobsname
-! \label{Generic_laiobsname}
+! !ROUTINE: Custom_obsname
+! \label{Custom_obsname}
 ! 
 ! !INTERFACE: 
-subroutine Generic_laiobsname(n,k,obsname)
+subroutine Custom_obsname(n,k,obsname)
 ! !USES: 
   use LIS_coreMod, only : LIS_rc
 
@@ -119,4 +119,4 @@ subroutine Generic_laiobsname(n,k,obsname)
        '/LISDAOBS_'//cdate1// &
        trim(cda)//trim(cdate)//'.1gs4r'
 
-end subroutine Generic_laiobsname
+end subroutine Custom_obsname

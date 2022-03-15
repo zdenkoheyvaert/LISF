@@ -7,14 +7,14 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 #include "LIS_misc.h"
 !BOP
-! !ROUTINE: read_GenericLAI
-! \label{read_GenericLAI}
+! !ROUTINE: read_CustomNetCDF
+! \label{read_CustomNetCDF}
 !
 ! !REVISION HISTORY:
 !  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
 !
 ! !INTERFACE: 
-subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
+subroutine read_CustomNetCDF(n, k, OBS_State, OBS_Pert_State, reader_struc)
     ! !USES: 
     use ESMF
     use LIS_mpiMod
@@ -25,9 +25,9 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     use LIS_DAobservationsMod
     use map_utils
     use LIS_pluginIndices
-    use GenericLAI_Mod, only : GenericLAI_struc,&
-                               GenericLAI_rescale_with_seasonal_scaling, &
-                               GenericLAI_updateSsdev
+    use CustomNcReader_Mod, only:&
+         CustomNcReader_rescale_with_seasonal_scaling, &
+         CustomNcReader_updateSsdev
 
     implicit none
     ! !ARGUMENTS: 
@@ -38,7 +38,7 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     !
     ! !DESCRIPTION:
     !  
-    !  reads the Generic LAI observations from NETCDF files.
+    !  reads the Custom observations from NETCDF files.
 
     ! 
     !  The arguments are: 
@@ -50,9 +50,8 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     !  \end{description}
     !
     !EOP
-    real,  parameter       :: MAX_LAI_VALUE=10.0, MIN_LAI_VALUE=0.0001
     integer                :: status
-    character*100          :: laiobsdir
+    character*100          :: obsdir
     character*300          :: fname
     integer                :: cyr, cmo, cda, chr,cmn,css,cdoy
     real                   :: wt1, wt2,ts
@@ -62,14 +61,14 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
     logical                :: alarmCheck, file_exists,dataCheck
     integer                :: c,r,i,j,p,t
     real,          pointer :: obsl(:)
-    type(ESMF_Field)       :: laifield
+    type(ESMF_Field)       :: varfield
     integer                :: gid(LIS_rc%obs_ngrid(k))
     integer                :: assimflag(LIS_rc%obs_ngrid(k))
     logical                :: data_update
     logical                :: data_upd_flag(LIS_npes)
     logical                :: data_upd_flag_local
     logical                :: data_upd
-    real                   :: laiobs(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+    real                   :: observations(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     integer                :: fnd
     real                   :: timenow
     real                   :: ssdev(LIS_rc%obs_ngrid(k))
@@ -78,7 +77,7 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
 
 
     call ESMF_AttributeGet(OBS_State,"Data Directory",&
-         laiobsdir, rc=status)
+         obsdir, rc=status)
     call LIS_verify(status)
     call ESMF_AttributeGet(OBS_State,"Data Update Status",&
          data_update, rc=status)
@@ -86,26 +85,25 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
 
     data_upd = .false. 
 
-    alarmCheck = LIS_isAlarmRinging(LIS_rc, "Generic LAI read alarm")
+    alarmCheck = LIS_isAlarmRinging(LIS_rc, "Custom "&
+         //trim(reader_struc(n)%varname//" read alarm")
 
-    if(alarmCheck.or.GenericLAI_struc(n)%startMode) then 
-        GenericLAI_struc(n)%startMode = .false.
-
-        call create_GenericLAI_filename(GenericLAI_struc(n)%nc_prefix,&
-             laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
+    if(alarmCheck) then 
+        call create_CustomNetCDF_filename(reader_struc(n)%nc_prefix,&
+             obsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
         inquire(file=fname,exist=file_exists)          
         if(file_exists) then 
             write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
-            call read_Generic_LAI_data(n,k, fname,laiobs)
+            call read_CustomNetCDF_data(n,k, fname,observations)
             fnd = 1
         else
             fnd = 0 
-            write(LIS_logunit,*) '[WARN] Missing LAI file: ',trim(fname)
+            write(LIS_logunit,*) '[WARN] Missing observation file: ',trim(fname)
         endif
     else
         fnd = 0 
-        laiobs = LIS_rc%udef
+        observations = LIS_rc%udef
     endif
 
     dataCheck = .false.
@@ -120,11 +118,11 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
 
     if(dataCheck) then 
 
-        call ESMF_StateGet(OBS_State,"Observation01",laifield,&
+        call ESMF_StateGet(OBS_State,"Observation01",varfield,&
              rc=status)
         call LIS_verify(status, 'Error: StateGet Observation01')
 
-        call ESMF_FieldGet(laifield,localDE=0,farrayPtr=obsl,rc=status)
+        call ESMF_FieldGet(varfield,localDE=0,farrayPtr=obsl,rc=status)
         call LIS_verify(status, 'Error: FieldGet')
 
         obsl = LIS_rc%udef 
@@ -132,7 +130,7 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
             do c=1, LIS_rc%obs_lnc(k)
                 if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
                     obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
-                         laiobs(c+(r-1)*LIS_rc%obs_lnc(k))
+                         observations(c+(r-1)*LIS_rc%obs_lnc(k))
                 endif
             enddo
         enddo
@@ -145,31 +143,31 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
 
             call LIS_rescale_with_CDF_matching(     &
                  n,k,                               & 
-                 GenericLAI_struc(n)%nbins,         & 
-                 GenericLAI_struc(n)%ntimes,        & 
-                 MAX_LAI_VALUE,                      & 
-                 MIN_LAI_VALUE,                      & 
-                 GenericLAI_struc(n)%model_xrange,  &
-                 GenericLAI_struc(n)%obs_xrange,    &
-                 GenericLAI_struc(n)%model_cdf,     &
-                 GenericLAI_struc(n)%obs_cdf,       &
-                 laiobs)
+                 reader_struc(n)%nbins,         & 
+                 reader_struc(n)%ntimes,        & 
+                 reader_struc(n)%max_value, &
+                 reader_struc(n)%min_value, &
+                 reader_struc(n)%model_xrange,  &
+                 reader_struc(n)%obs_xrange,    &
+                 reader_struc(n)%model_cdf,     &
+                 reader_struc(n)%obs_cdf,       &
+                 observations)
         elseif ((LIS_rc%dascaloption(k).eq."seasonal"&
                  .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
              .and.fnd.ne.0) then
 
-            call GenericLAI_rescale_with_seasonal_scaling(&
+            call CustomNcReader_rescale_with_seasonal_scaling(&
                  n,k,&
                  nint(LIS_get_curr_calday(LIS_rc, 0)), &
-                 GenericLAI_struc(n)%ntimes,        & 
-                 MAX_LAI_VALUE,                      & 
-                 MIN_LAI_VALUE,                      & 
-                 GenericLAI_struc(n)%mult_scaling, &
-                 GenericLAI_struc(n)%model_mu,  &
-                 GenericLAI_struc(n)%model_sigma,  &
-                 GenericLAI_struc(n)%obs_mu,  &
-                 GenericLAI_struc(n)%obs_sigma,  &
-                 laiobs)
+                 reader_struc(n)%ntimes,        & 
+                 reader_struc(n)%max_value, &
+                 reader_struc(n)%min_value, &
+                 reader_struc(n)%mult_scaling, &
+                 reader_struc(n)%model_mu,  &
+                 reader_struc(n)%model_sigma,  &
+                 reader_struc(n)%obs_mu,  &
+                 reader_struc(n)%obs_sigma,  &
+                 observations)
 
         endif
 
@@ -178,7 +176,7 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
             do c=1, LIS_rc%obs_lnc(k)
                 if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
                     obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
-                         laiobs(c+(r-1)*LIS_rc%obs_lnc(k))
+                         observations(c+(r-1)*LIS_rc%obs_lnc(k))
                 endif
             enddo
         enddo
@@ -215,11 +213,11 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
             call LIS_verify(status)
 
             if(LIS_rc%obs_ngrid(k).gt.0) then 
-                call ESMF_AttributeSet(laifield,"Grid Number",&
+                call ESMF_AttributeSet(varfield,"Grid Number",&
                      gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                 call LIS_verify(status)
 
-                call ESMF_AttributeSet(laifield,"Assimilation Flag",&
+                call ESMF_AttributeSet(varfield,"Assimilation Flag",&
                      assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                 call LIS_verify(status)
 
@@ -230,10 +228,10 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
                      rc=status)
                 call LIS_verify(status, 'Error: StateGet Observation01')
 
-                ssdev = GenericLAI_struc(n)%ssdev_inp 
+                ssdev = reader_struc(n)%ssdev_inp 
 
                 if (LIS_rc%dascaloption(k).eq."CDF matching") then
-                    if(GenericLAI_struc(n)%ntimes.eq.1) then 
+                    if(reader_struc(n)%ntimes.eq.1) then 
                         timeidx = 1
                     else
                         timeidx = LIS_rc%mo
@@ -243,9 +241,9 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
                     timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
                 endif
 
-                call GenericLAI_updateSsdev(k,&
-                     GenericLAI_struc(n)%obs_sigma(:, timeidx),&
-                     GenericLAI_struc(n)%model_sigma(:, timeidx),&
+                call CustomNcReader_updateSsdev(k,&
+                     reader_struc(n)%obs_sigma(:, timeidx),&
+                     reader_struc(n)%model_sigma(:, timeidx),&
                      ssdev)
 
                 if(LIS_rc%obs_ngrid(k).gt.0) then 
@@ -267,15 +265,15 @@ subroutine read_GenericLAI(n, k, OBS_State, OBS_Pert_State)
         call LIS_verify(status)     
     endif
 
-end subroutine read_GenericLAI
+end subroutine read_CustomNetCDF
 
 !BOP
 ! 
-! !ROUTINE: read_Generic_LAI_data
-! \label{read_Generic_LAI_data}
+! !ROUTINE: read_CustomNetCDF_data
+! \label{read_CustomNetCDF_data}
 !
 ! !INTERFACE:
-subroutine read_Generic_LAI_data(n, k, fname, laiobs_ip)
+subroutine read_CustomNetCDF_data(n, k, fname, observations_ip, reader_struc)
     ! 
     ! !USES:   
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
@@ -284,7 +282,6 @@ subroutine read_Generic_LAI_data(n, k, fname, laiobs_ip)
     use LIS_coreMod,  only : LIS_rc, LIS_domain
     use LIS_logMod
     use LIS_timeMgrMod
-    use GenericLAI_Mod, only : GenericLAI_struc
 
     implicit none
     !
@@ -293,14 +290,14 @@ subroutine read_Generic_LAI_data(n, k, fname, laiobs_ip)
     integer                       :: n 
     integer                       :: k
     character (len=*)             :: fname
-    real                          :: laiobs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+    real                          :: observations_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     real*8                        :: cornerlat(2), cornerlon(2)
 
     ! !OUTPUT PARAMETERS:
     !
     !
     ! !DESCRIPTION: 
-    !  This subroutine reads the Generic LAI file and applies the data
+    !  This subroutine reads the Custom netCDF file and applies the data
     !  quality flags to filter the data. 
     !
     !  The arguments are: 
@@ -308,23 +305,22 @@ subroutine read_Generic_LAI_data(n, k, fname, laiobs_ip)
     !  \item[n]            index of the nest
     !  \item[k]            number of observation state
     !  \item[k]            number of observation state
-    !  \item[fname]        name of the Generic LAI file
-    !  \item[laiobs\_ip]   Generic LAI data processed to the LIS domain
+    !  \item[fname]        name of the netCDF file
+    !  \item[observations\_ip]   Observation data processed to the LIS domain
     !  \end{description}
     !
     !
     !EOP
 
     integer                 :: lat_offset, lon_offset
-    real                    :: lai(GenericLAI_struc(n)%nc,GenericLAI_struc(n)%nr)
-    real                    :: lai_in(GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr)
-    logical*1               :: lai_data_b(GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr)
-    logical*1               :: laiobs_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+    real                    :: observation(reader_struc(n)%nc,reader_struc(n)%nr)
+    real                    :: obs_in(reader_struc(n)%nc*reader_struc(n)%nr)
+    logical*1               :: obs_data_b(reader_struc(n)%nc*reader_struc(n)%nr)
+    logical*1               :: observations_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     integer                 :: c,r,t
     integer                 :: nid
-    integer                 :: laiid, flagid
+    integer                 :: obsid, flagid
     integer                 :: ios
-    character(len=20)       :: lai_name
     integer                 :: numvalidobs
 
     integer, dimension(nf90_max_var_dims) :: dimIDs
@@ -334,12 +330,12 @@ subroutine read_Generic_LAI_data(n, k, fname, laiobs_ip)
 
     !values
 
-    cornerlat(1)=GenericLAI_struc(n)%gridDesci(4)
-    cornerlon(1)=GenericLAI_struc(n)%gridDesci(5)
-    cornerlat(2)=GenericLAI_struc(n)%gridDesci(7)
-    cornerlon(2)=GenericLAI_struc(n)%gridDesci(8)
+    cornerlat(1)=reader_struc(n)%gridDesci(4)
+    cornerlon(1)=reader_struc(n)%gridDesci(5)
+    cornerlat(2)=reader_struc(n)%gridDesci(7)
+    cornerlon(2)=reader_struc(n)%gridDesci(8)
 
-    lai_data_b = .false.
+    obs_data_b = .false.
 
     lat_offset = 1  ! no offset
     lon_offset = 1
@@ -348,102 +344,106 @@ subroutine read_Generic_LAI_data(n, k, fname, laiobs_ip)
     ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
     call LIS_verify(ios,'Error opening file '//trim(fname))
 
-    ios = nf90_inq_varid(nid, trim(GenericLAI_struc(n)%nc_varname), laiid)
-    call LIS_verify(ios, 'Error nf90_inq_varid: '//GenericLAI_struc(n)%nc_varname)
+    ios = nf90_inq_varid(nid, trim(reader_struc(n)%nc_varname), obsid)
+    call LIS_verify(ios, 'Error nf90_inq_varid: '//reader_struc(n)%nc_varname)
 
-    ios = nf90_get_var(nid, laiid, lai, &
+    ios = nf90_get_var(nid, obsid, observation, &
          start=(/lon_offset,lat_offset/), &
-         count=(/GenericLAI_struc(n)%nc,GenericLAI_struc(n)%nr/)) 
+         count=(/reader_struc(n)%nc,reader_struc(n)%nr/)) 
 
-    call LIS_verify(ios, 'Error nf90_get_var: '//GenericLAI_struc(n)%nc_varname)
+    call LIS_verify(ios, 'Error nf90_get_var: '//reader_struc(n)%nc_varname)
 
     ios = nf90_close(ncid=nid)
     call LIS_verify(ios,'Error closing file '//trim(fname))
 
-    ! the data is already read into 'lai', but we have to replace
+    ! the data is already read into 'observation', but we have to replace
     ! NaNs/invalid values with LIS_rc%udef
-    do r=1, GenericLAI_struc(n)%nr
-        do c=1, GenericLAI_struc(n)%nc
-            if (isnan(lai(c, r))) then
-                lai(c, r) = LIS_rc%udef
-            else if (.not. (0.0 < lai(c, r) .and. lai(c, r) < 20.0)) then
-                lai(c, r) = LIS_rc%udef
+    do r=1, reader_struc(n)%nr
+        do c=1, reader_struc(n)%nc
+            if (isnan(observation(c, r))) then
+                observation(c, r) = LIS_rc%udef
+            else if (.not. (reader_struc(n)%min_value < observation(c, r) &
+                 .and. observation(c, r) < reader_struc(n)%max_value)) then
+                observation(c, r) = LIS_rc%udef
             endif
         end do
     end do
 
 
-    ! fill lai_in and lai_data_b, which are required further on
-    do r=1, GenericLAI_struc(n)%nr
-        do c=1, GenericLAI_struc(n)%nc
-            lai_in(c+(r-1)*GenericLAI_struc(n)%nc) = lai(c,r)
-            if(lai(c,r).ne.LIS_rc%udef) then
-                lai_data_b(c+(r-1)*GenericLAI_struc(n)%nc) = .true.
+    ! fill obs_in and obs_data_b, which are required further on
+    do r=1, reader_struc(n)%nr
+        do c=1, reader_struc(n)%nc
+            obs_in(c+(r-1)*reader_struc(n)%nc) = observation(c,r)
+            if(observation(c,r).ne.LIS_rc%udef) then
+                obs_data_b(c+(r-1)*reader_struc(n)%nc) = .true.
             else
-                lai_data_b(c+(r-1)*GenericLAI_struc(n)%nc) = .false.
+                obs_data_b(c+(r-1)*reader_struc(n)%nc) = .false.
             endif
         enddo
     enddo
 
-    if(LIS_rc%obs_gridDesc(k,10).lt.GenericLAI_struc(n)%dlon) then 
-        write(LIS_logunit,*) '[INFO] interpolating Generic LAI',trim(fname)
+    if(LIS_rc%obs_gridDesc(k,10).lt.reader_struc(n)%dlon) then 
+        write(LIS_logunit,*) '[INFO] interpolating Custom',&
+             trim(reader_struc(n)%varname),&
+             trim(fname)
         !--------------------------------------------------------------------------
         ! Interpolate to the LIS running domain if model has finer resolution
         ! than observations
         !-------------------------------------------------------------------------- 
         call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
-             lai_data_b, lai_in, laiobs_b_ip, laiobs_ip, &
-             GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr, &
+             obs_data_b, obs_in, observations_b_ip, observations_ip, &
+             reader_struc(n)%nc*reader_struc(n)%nr, &
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
-             GenericLAI_struc(n)%rlat,GenericLAI_struc(n)%rlon,&
-             GenericLAI_struc(n)%w11,GenericLAI_struc(n)%w12,&
-             GenericLAI_struc(n)%w21,GenericLAI_struc(n)%w22,&
-             GenericLAI_struc(n)%n11,GenericLAI_struc(n)%n12,&
-             GenericLAI_struc(n)%n21,GenericLAI_struc(n)%n22,LIS_rc%udef,ios)
+             reader_struc(n)%rlat,reader_struc(n)%rlon,&
+             reader_struc(n)%w11,reader_struc(n)%w12,&
+             reader_struc(n)%w21,reader_struc(n)%w22,&
+             reader_struc(n)%n11,reader_struc(n)%n12,&
+             reader_struc(n)%n21,reader_struc(n)%n22,LIS_rc%udef,ios)
      else
-        write(LIS_logunit,*) '[INFO] upscaling Generic LAI',trim(fname)
+        write(LIS_logunit,*) '[INFO] upscaling Custom',&
+             trim(reader_struc(n)%varname),&
+             trim(fname)
         !--------------------------------------------------------------------------
         ! Upscale to the LIS running domain if model has coarser resolution
         ! than observations
         !-------------------------------------------------------------------------- 
-        call upscaleByAveraging(GenericLAI_struc(n)%nc*GenericLAI_struc(n)%nr,&
+        call upscaleByAveraging(reader_struc(n)%nc*reader_struc(n)%nr,&
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
-             LIS_rc%udef, GenericLAI_struc(n)%n11,&
-             lai_data_b,lai_in, laiobs_b_ip, laiobs_ip)
+             LIS_rc%udef, reader_struc(n)%n11,&
+             obs_data_b,obs_in, observations_b_ip, observations_ip)
     endif
 
 #endif
-end subroutine read_Generic_LAI_data
+end subroutine read_CustomNetCDF_data
 
 
 !BOP
-! !ROUTINE: create_GenericLAI_filename
-! \label{create_GenericLAI_filename}
+! !ROUTINE: create_CustomNetCDF_filename
+! \label{create_CustomNetCDF_filename}
 ! 
 ! !INTERFACE: 
-subroutine create_GenericLAI_filename(prefix, ndir, year, month, day, filename)
+subroutine create_CustomNetCDF_filename(prefix, ndir, year, month, day, filename)
     ! !USES:   
 
     implicit none
     ! !ARGUMENTS: 
     character (len=*), intent(in)     :: prefix
-    character (len=*)                 :: ndir
-    integer, value                    :: year, month, day
-    character(len=*)                  :: filename
+    character (len=*), intent(in)     :: ndir
+    integer, intent(in)               :: year, month, day
+    character(len=*), intent(out)     :: filename
     ! 
     ! !DESCRIPTION: 
-    !  This subroutine creates the Generic LAI filename
+    !  This subroutine creates the netCDF filename
     !  based on the time and date 
     ! 
     !  The arguments are: 
     !  \begin{description}
     !  \item[varname] variable name of the netCDF variable
-    !  \item[ndir] name of the Generic LAI data directory
-    !  \item[version] version of the Generic LAI data
+    !  \item[ndir] name of the data directory
     !  \item[year]  current year
     !  \item[month]  current month
     !  \item[day]  current day
-    !  \item[filename] Generated Generic LAI filename
+    !  \item[filename] Generated filename
     !  \end{description}
     !
     !EOP
@@ -464,4 +464,4 @@ subroutine create_GenericLAI_filename(prefix, ndir, year, month, day, filename)
     filename = trim(ndir)//'/'//&
          trim(prefix)//'_'//yearstr//'_'//monthstr//'_'//daystr//'.nc'
 
-end subroutine create_GenericLAI_filename
+end subroutine create_CustomNetCDF_filename
