@@ -77,7 +77,7 @@ contains
         allocate(CustomLAI_struc(LIS_rc%nnest))
         do n=1,LIS_rc%nnest
             CustomLAI_struc(n)%varname = "LAI"
-            CustomLAI_struc(n)%min_value = 0.0
+            CustomLAI_struc(n)%min_value = 0.0001
             CustomLAI_struc(n)%max_value = 20.0
         enddo
 

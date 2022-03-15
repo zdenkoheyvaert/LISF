@@ -815,6 +815,7 @@ contains
 
             if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then
 
+                write(LIS_logunit,*) '[INFO] perform CDF matching'
                 call LIS_rescale_with_CDF_matching(     &
                      n,k,                               & 
                      reader_struc(n)%nbins,         & 
@@ -830,6 +831,7 @@ contains
                      .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
                  .and.fnd.ne.0) then
 
+                write(LIS_logunit,*) '[INFO] perform seasonal rescaling'
                 call CustomNcReader_rescale_with_seasonal_scaling(&
                      n,k,&
                      nint(LIS_get_curr_calday(LIS_rc, 0)), &
