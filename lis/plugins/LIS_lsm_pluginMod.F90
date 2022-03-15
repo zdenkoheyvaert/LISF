@@ -237,7 +237,7 @@ subroutine LIS_lsm_plugin
 #endif
 
 #if ( defined SM_AC_7_0 )
-   use ac70_lsmMod, only : ac70_lsm_ini
+   use ac70_lsmMod, only : ac70_ini
 #endif
 
 #if ( defined SM_LSM_TEMPLATE )
@@ -972,14 +972,20 @@ subroutine LIS_lsm_plugin
 #endif
 
 #if ( defined SM_AC_7_0 )
-   call registerlsminit(trim(LIS_ac70Id)//char(0),ac70_lsm_ini)
+   call registerlsminit(trim(LIS_ac70Id)//char(0),ac70_ini)
    call registerlsmsetup(trim(LIS_ac70Id)//char(0),ac70_setup)
-   call registerlsmf2t(trim(LIS_ac70Id)//"+"&
-        //trim(LIS_retroId)//char(0),ac70_f2t)
-   call registerlsmf2t(trim(LIS_ac70Id)//"+"&
-        //trim(LIS_nuopccplId)//char(0),ac70_f2t)
+   call registerlsmf2t(trim(LIS_ac70Id)//"+"//trim(LIS_retroId)//char(0),&
+        ac70_f2t)
+   call registerlsmf2t(trim(LIS_ac70Id)//"+"//trim(LIS_nuopccplId)//char(0),&
+        ac70_f2t)
+   ! ------------wanshu----add registry for smootherDA for NoahMP-----------------
+   call registerlsmf2t(trim(LIS_ac70Id)//"+"//&
+        trim(LIS_smootherDAId)//char(0), ac70_f2t)
+   ! -----------------------------------------------------------------------------
    call registerlsmf2t(trim(LIS_ac70Id)//"+"//&
         trim(LIS_agrmetrunId)//char(0),ac70_f2t)
+   call registerlsmf2t(trim(LIS_ac70Id)//"+"//&
+        trim(LIS_forecastrunId)//char(0),ac70_f2t)
    call registerlsmrun(trim(LIS_ac70Id)//char(0),ac70_main)
    call registerlsmrestart(trim(LIS_ac70Id)//char(0),ac70_readrst)
    call registerlsmdynsetup(trim(LIS_ac70Id)//char(0),ac70_dynsetup)

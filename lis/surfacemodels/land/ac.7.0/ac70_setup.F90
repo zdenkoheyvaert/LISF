@@ -7,46 +7,428 @@
 ! Administrator of the National Aeronautics and Space Administration.
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
+#include "LIS_misc.h"
 !BOP
 !
-! !ROUTINE: noah33_setup
-! \label{noah33_setup}
+! !ROUTINE: Ac70_setup
+! \label{Ac70_setup}
 !
 ! !REVISION HISTORY:
-!  28 Apr 2002: Sujay Kumar; Initial version
-!   8 May 2009: Sujay Kumar; additions for Noah3.1
-!  27 Oct 2010: David Mocko, changes for Noah3.1 in LIS6.1
-!   7 Nov 2010: David Mocko, changes for Noah3.2 in LIS6.1
-!   9 Sep 2011: David Mocko, changes for Noah3.3 in LIS6.1
-! 
-! !INTERFACE:
-subroutine noah33_setup()
-! !USES:
-  use LIS_coreMod,    only : LIS_rc
-  use noah33_lsmMod
+!  This subroutine is generated with the Model Implementation Toolkit developed
+!  by Shugong Wang for the NASA Land Information System Version 7. The initial 
+!  specification of the subroutine is defined by Sujay Kumar. 
+!   9/4/14: Shugong Wang; initial implementation for LIS 7 and Ac70
+!   2/7/18: Soni Yatheendradas; code added for OPTUE to work 
 !
-! !DESCRIPTION: 
-! 
+! !INTERFACE:
+subroutine Ac70_setup()
+! !USES:
+    use LIS_logMod,    only: LIS_logunit, LIS_verify, LIS_endrun
+    use LIS_fileIOMod, only: LIS_read_param
+    use LIS_coreMod,   only: LIS_rc, LIS_surface
+    !use AC_VEG_PARAMETERS_70, only: read_mp_veg_parameters
+    !use MODULE_SF_ACLSM_70, only: read_mp_veg_parameters
+    use MODULE_SF_ACLSM_70, only: read_mp_veg_parameters, &
+           SLCATS, LUCATS, CSOIL_DATA, BB, SATDK, SATDW, &
+           SATPSI, QTZ, MAXSMC, REFSMC, WLTSMC, &
+           CZIL_DATA, FRZK_DATA, REFDK_DATA, REFKDT_DATA, SLOPE_DATA, &
+           TOPT_DATA, RGLTBL, RSMAX_DATA, RSTBL, HSTBL, NROTBL, &
+           CH2OP, DLEAF, Z0MVT, HVT, HVB, RC, RHOL, RHOS, TAUL, TAUS, &
+           XL, CWPVT, C3PSN, KC25, AKC, KO25, AKO, AVCMX, AQE, &         
+           LTOVRC,  DILEFC,  DILEFW,  RMF25,  SLA,  FRAGR,  TMIN, &
+           VCMX25,  TDLEF,  BP, MP, QE25, RMS25, RMR25, ARM, &
+           FOLNMX, WDPOOL, WRRAT, MRP, DRYSMC ! SY: adding 
+           ! calibratable parameters + DVEG to this list for OPTUE to work by 
+           ! updating further below the corresponding values in Ac70_module 
+           ! after call to subroutine SOIL_VEG_GEN_PARM_70   
+           ! SY: Not used by Ac70 from REDPRM:  F11, DRYSMC            
+           ! SY: Not used by Ac70 from read_mp_veg_parameters : AQE and 
+           !     SLAREA (since subroutine BVOCFLUX not used), DEN
+           ! SY: Also added DRYSMC used as constraint by OPTUE
+ 
+
+    use Ac70_lsmMod
+
+!
+! !DESCRIPTION:
+!
 !  This routine is the entry point to set up the parameters
-!  required for Noah3.3 LSM.  These include the soils, greenness,
-!  albedo, bottom temperature and the initialization of state
-!  variables in Noah3.3.
-!  
-! The routines invoked are: 
-! \begin{description}
-! \item[noah33\_setvegparms](\ref{noah33_setvegparms}) \newline
-!   initializes the vegetation-related parameters in Noah3.3
-! \item[noah33\_settbot](\ref{noah33_settbot}) \newline
-!   initializes the bottom temperature fields
-! \item[noah33\_setsoils](\ref{noah33_setsoils}) \newline
-!   initializes the soil parameters
-! \end{description}
+!  required for Ac70.  These include: 
+!    vegetype     - land cover type index [-]
+!    soiltype     - soil type index [-]
+!    slopetype    - slope type for Noah baseflow [-]
+!    tbot         - deep-layer soil temperature [K]
+!    pblh         - planetary boundary layer height [m]
+! 
+!  The routines invoked are:
+!  \begin{description}
+!  \item[LIS\_read\_param](\ref{LIS_read_param}) \newline
+!    retrieves LIS parameter data from NetCDF file
+!  \item[AC70\_read\_MULTILEVEL\_param](\ref{AC70_read_MULTILEVEL_param}) \newline
+!    retrieves MULTILEVEL spatial parameter from NetCDF file
+!  \end{description}
 !EOP
+    implicit none
+    integer           :: mtype
+    integer           :: t, k, n
+    integer           :: col, row
+    real, allocatable :: placeholder(:,:)
+    
+    mtype = LIS_rc%lsm_index
+    
+    do n=1, LIS_rc%nnest
+        ! allocate memory for place holder for #n nest
+        allocate(placeholder(LIS_rc%lnc(n), LIS_rc%lnr(n)))
+        
+        !------------------------------------!
+        ! reading spatial spatial parameters !
+        !------------------------------------!
+        ! vegetype takes value from the LIS built-in parameter vegt
+        !TODO: convert vegetation data source into vegetation types
+        if(LIS_rc%uselcmap(n) .ne. 'none') then
+            write(LIS_logunit,*) "Ac70: retrieve parameter VEGETYPE from LIS"
+            do t=1, LIS_rc%npatch(n, mtype)
+                AC70_struc(n)%ac70(t)%vegetype= LIS_surface(n, mtype)%tile(t)%vegt
+            enddo
+        else 
+            ! read: vegetype
+            write(LIS_logunit,*) "Ac70: reading parameter VEGETYPE from ", trim(LIS_rc%paramfile(n))
+            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_vegetype), placeholder)
+            do t = 1, LIS_rc%npatch(n, mtype)
+                col = LIS_surface(n, mtype)%tile(t)%col
+                row = LIS_surface(n, mtype)%tile(t)%row
+                AC70_struc(n)%ac70(t)%vegetype = placeholder(col, row)
+            enddo 
+        endif
+        ! read: soiltype
+        !write(LIS_logunit,*) "Ac70: reading parameter SOILTYPE from ", trim(LIS_rc%paramfile(n))
+        !call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_soiltype), placeholder)
+        !do t = 1, LIS_rc%npatch(n, mtype)
+        !    col = LIS_surface(n, mtype)%tile(t)%col
+        !    row = LIS_surface(n, mtype)%tile(t)%row
+        !    AC70_struc(n)%ac70(t)%soiltype = placeholder(col, row)
+        !enddo 
 
-  implicit none
+        ! soiltype takes value from the LIS built-in parameter soilt
+        !TODO: convert soil texture into soil types according to scheme
+        if(LIS_rc%usetexturemap(n) .ne. 'none') then
+            write(LIS_logunit,*) "Ac70: retrieve parameter SOILTYPE from LIS"
+            do t=1, LIS_rc%npatch(n, mtype)
+                AC70_struc(n)%ac70(t)%soiltype= LIS_surface(n, mtype)%tile(t)%soilt
+            enddo
+        else 
+            ! read: soiltype
+            write(LIS_logunit,*) "Ac70: reading parameter SOILTYPE from ", trim(LIS_rc%paramfile(n))
+            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_soiltype), placeholder)
+            do t = 1, LIS_rc%npatch(n, mtype)
+                col = LIS_surface(n, mtype)%tile(t)%col
+                row = LIS_surface(n, mtype)%tile(t)%row
+                AC70_struc(n)%ac70(t)%soiltype = placeholder(col, row)
+            enddo 
+        endif
 
-  call noah33_setvegparms(LIS_rc%lsm_index)
-  call noah33_settbot(LIS_rc%lsm_index)
-  call noah33_setsoils(LIS_rc%lsm_index)
+        ! read: slopetype
+        write(LIS_logunit,*) "Ac70: reading parameter SLOPETYPE from ", trim(LIS_rc%paramfile(n))
+        call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_slopetype), placeholder)
+        do t = 1, LIS_rc%npatch(n, mtype)
+            col = LIS_surface(n, mtype)%tile(t)%col
+            row = LIS_surface(n, mtype)%tile(t)%row
+            AC70_struc(n)%ac70(t)%slopetype = placeholder(col, row)
+        enddo 
 
-end subroutine noah33_setup
+        ! read: tbot
+        write(LIS_logunit,*) "Ac70: reading parameter TBOT from ", trim(LIS_rc%paramfile(n))
+        call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_tbot), placeholder)
+        do t = 1, LIS_rc%npatch(n, mtype)
+            col = LIS_surface(n, mtype)%tile(t)%col
+            row = LIS_surface(n, mtype)%tile(t)%row
+            AC70_struc(n)%ac70(t)%tbot = placeholder(col, row)
+        enddo 
+
+        ! read: pblh
+        write(LIS_logunit,*) "Ac70: reading parameter PBLH from ", trim(LIS_rc%paramfile(n))
+        call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_pblh), placeholder)
+        do t = 1, LIS_rc%npatch(n, mtype)
+            col = LIS_surface(n, mtype)%tile(t)%col
+            row = LIS_surface(n, mtype)%tile(t)%row
+            AC70_struc(n)%ac70(t)%pblh = placeholder(col, row)
+        enddo 
+
+        !----------------------------------------------!
+        ! MULTILEVEL reading spatial spatial parameters !
+        !----------------------------------------------!
+        ! read: shdfac_monthly
+        write(LIS_logunit,*) "Ac70: reading parameter SHDFAC_MONTHLY from ", trim(LIS_rc%paramfile(n))
+        do k = 1, 12
+            call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_shdfac_monthly, k, placeholder)
+            do t = 1, LIS_rc%npatch(n, mtype)
+                col = LIS_surface(n, mtype)%tile(t)%col
+                row = LIS_surface(n, mtype)%tile(t)%row
+                AC70_struc(n)%ac70(t)%shdfac_monthly(k) = placeholder(col, row)
+            enddo 
+        enddo 
+
+        ! read: smceq for (opt_run=5)  Miguez-Macho & Fan groundwater with equilibrium water table
+        if(AC70_struc(n)%run_opt .eq. 5) then
+            write(LIS_logunit,*) "Ac70: reading parameter SMCEQ from ", trim(LIS_rc%paramfile(n))
+            do k = 1, AC70_struc(n)%nsoil
+                call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_smceq, k, placeholder)
+                do t = 1, LIS_rc%npatch(n, mtype)
+                    col = LIS_surface(n, mtype)%tile(t)%col
+                    row = LIS_surface(n, mtype)%tile(t)%row
+                    AC70_struc(n)%ac70(t)%smceq(k) = placeholder(col, row)
+                enddo 
+            enddo 
+        endif
+
+        deallocate(placeholder)
+        call SOIL_VEG_GEN_PARM_70(AC70_struc(n)%landuse_tbl_name,   & 
+                                  AC70_struc(n)%soil_tbl_name,      &
+                                  AC70_struc(n)%gen_tbl_name,       &
+                                  AC70_struc(n)%landuse_scheme_name,& 
+                                  AC70_struc(n)%soil_scheme_name)
+        ! SY: Begin for enabling OPTUE 
+        do t = 1, LIS_rc%npatch(n, mtype)
+            
+            col = LIS_surface(n, mtype)%tile(t)%col
+            row = LIS_surface(n, mtype)%tile(t)%row
+
+            ! SY: Begin lines following those in REDPRM
+
+            ! SY: Begin SOIL PARAMETERS
+            IF (AC70_struc(n)%ac70(t)%soiltype .gt. SLCATS) THEN
+               write(LIS_logunit, *) 'SOILTYP must be less than SLCATS:'
+               write(LIS_logunit, '("t = ", I6, "; SOILTYP = ", I6, ";    SLCATS = ", I6)') &
+                         t, AC70_struc(n)%ac70(t)%soiltype, SLCATS
+               write(LIS_logunit, *) 'Ac70_setup: Error: too many input soil types'
+               write(LIS_logunit, *) 'program stopping ...'
+               call LIS_endrun
+            END IF
+            AC70_struc(n)%ac70(t)%csoil = CSOIL_DATA
+            AC70_struc(n)%ac70(t)%bexp = BB(AC70_struc(n)%ac70(t)%soiltype)
+            AC70_struc(n)%ac70(t)%dksat = SATDK(AC70_struc(n)%ac70(t)%soiltype)
+            AC70_struc(n)%ac70(t)%dwsat = SATDW(AC70_struc(n)%ac70(t)%soiltype)
+            AC70_struc(n)%ac70(t)%psisat = SATPSI(AC70_struc(n)%ac70(t)%soiltype)
+            AC70_struc(n)%ac70(t)%quartz = QTZ(AC70_struc(n)%ac70(t)%soiltype)
+            AC70_struc(n)%ac70(t)%smcmax = MAXSMC(AC70_struc(n)%ac70(t)%soiltype)
+            AC70_struc(n)%ac70(t)%smcref = REFSMC(AC70_struc(n)%ac70(t)%soiltype)
+            AC70_struc(n)%ac70(t)%smcwlt = WLTSMC(AC70_struc(n)%ac70(t)%soiltype)
+            ! SY: End SOIL PARAMETERS
+
+            ! SY: Begin SOIL PARAMETER CONSTRAINT
+            AC70_struc(n)%ac70(t)%smcdry = DRYSMC(AC70_struc(n)%ac70(t)%soiltype)
+            ! SY: End SOIL PARAMETER CONSTRAINT
+
+            ! SY: Begin UNIVERSAL PARAMETERS
+            AC70_struc(n)%ac70(t)%czil = CZIL_DATA
+            AC70_struc(n)%ac70(t)%frzk = FRZK_DATA
+            AC70_struc(n)%ac70(t)%refdk = REFDK_DATA
+            AC70_struc(n)%ac70(t)%refkdt = REFKDT_DATA
+            AC70_struc(n)%ac70(t)%slope = SLOPE_DATA(AC70_struc(n)%ac70(t)%slopetype)
+            ! SY: End UNIVERSAL PARAMETERS
+
+            ! SY: Begin VEGETATION PARAMETERS
+            IF (AC70_struc(n)%ac70(t)%vegetype .gt. LUCATS) THEN
+               write(LIS_logunit, *) 'VEGTYP must be less than LUCATS:'
+               write(LIS_logunit, '("t = ", I6, "; VEGTYP = ", I6, ";    LUCATS = ", I6)') &
+                         t, AC70_struc(n)%ac70(t)%vegetype, LUCATS
+               write(LIS_logunit, *) 'Ac70_setup: Error: too many input landuse types'
+               write(LIS_logunit, *) 'program stopping ...'
+               call LIS_endrun
+            END IF
+            AC70_struc(n)%ac70(t)%topt = TOPT_DATA
+            AC70_struc(n)%ac70(t)%rgl = RGLTBL(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%rsmax = RSMAX_DATA
+            AC70_struc(n)%ac70(t)%rsmin = RSTBL(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%hs = HSTBL(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%nroot = & 
+                 NROTBL(AC70_struc(n)%ac70(t)%vegetype)
+
+            IF (NROTBL(AC70_struc(n)%ac70(t)%vegetype) .gt. &
+                AC70_struc(n)%nsoil) THEN
+               WRITE (LIS_logunit,*) 'Warning: too many root layers'
+               write (LIS_logunit,*) 'NROOT = ', NROTBL(AC70_struc(n)%ac70(t)%vegetype)
+               write (LIS_logunit,*) 'NSOIL = ', AC70_struc(n)%nsoil
+               write(LIS_logunit, *) 'program stopping ...'
+               call LIS_endrun
+            END IF
+            ! SY: End VEGETATION PARAMETERS
+
+            ! SY: End lines following those in REDPRM
+
+        enddo ! do t = 1, LIS_rc%npatch(n, mtype)
+        ! SY: End for enabling OPTUE 
+
+        call read_mp_veg_parameters(trim(AC70_struc(n)%ac_tbl_name), &
+                                    trim(AC70_struc(n)%landuse_scheme_name))
+
+        ! SY: Begin for enabling OPTUE 
+        do t = 1, LIS_rc%npatch(n, mtype)
+            
+            col = LIS_surface(n, mtype)%tile(t)%col
+            row = LIS_surface(n, mtype)%tile(t)%row
+
+            ! SY: Begin lines following those in read_mp_veg_parameters
+            AC70_struc(n)%ac70(t)%CH2OP = CH2OP(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%DLEAF = DLEAF(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%Z0MVT = Z0MVT(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%HVT = HVT(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%HVB = HVB(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%RC = RC(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%RHOL1 = RHOL(AC70_struc(n)%ac70(t)%vegetype,1)
+            AC70_struc(n)%ac70(t)%RHOL2 = RHOL(AC70_struc(n)%ac70(t)%vegetype,2)
+            AC70_struc(n)%ac70(t)%RHOS1 = RHOS(AC70_struc(n)%ac70(t)%vegetype,1)
+            AC70_struc(n)%ac70(t)%RHOS2 = RHOS(AC70_struc(n)%ac70(t)%vegetype,2)
+            AC70_struc(n)%ac70(t)%TAUL1 = TAUL(AC70_struc(n)%ac70(t)%vegetype,1)
+            AC70_struc(n)%ac70(t)%TAUL2 = TAUL(AC70_struc(n)%ac70(t)%vegetype,2)
+            AC70_struc(n)%ac70(t)%TAUS1 = TAUS(AC70_struc(n)%ac70(t)%vegetype,1)
+            AC70_struc(n)%ac70(t)%TAUS2 = TAUS(AC70_struc(n)%ac70(t)%vegetype,2)
+            AC70_struc(n)%ac70(t)%XL = XL(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%CWPVT = CWPVT(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%C3PSN = C3PSN(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%KC25 = KC25(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%AKC = AKC(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%KO25 = KO25(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%AKO = AKO(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%AVCMX = AVCMX(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%AQE = AQE(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%LTOVRC = LTOVRC(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%DILEFC = DILEFC(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%DILEFW = DILEFW(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%RMF25 = RMF25(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%SLA = SLA(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%FRAGR = FRAGR(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%TMIN = TMIN(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%VCMX25 = VCMX25(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%TDLEF = TDLEF(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%BP = BP(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%MP = MP(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%QE25 = QE25(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%RMS25 = RMS25(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%RMR25 = RMR25(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%ARM = ARM(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%FOLNMX = FOLNMX(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%WDPOOL = WDPOOL(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%WRRAT = WRRAT(AC70_struc(n)%ac70(t)%vegetype)
+            AC70_struc(n)%ac70(t)%MRP = MRP(AC70_struc(n)%ac70(t)%vegetype)
+            ! SY: End lines following those in read_mp_veg_parameters
+
+        enddo ! do t = 1, LIS_rc%npatch(n, mtype)
+        ! SY: End for enabling OPTUE 
+    enddo
+
+end subroutine Ac70_setup
+
+!BOP
+!
+! !ROUTINE: AC70_read_MULTILEVEL_param
+!  \label{AC70_read_MULTILEVEL_param}
+!
+! !REVISION HISTORY:
+!  03 Sept 2004: Sujay Kumar; Initial Specification for read_laiclimo
+!  30 Oct  2013: Shugong Wang; Generalization for reading MULTILEVEL spatial parameter
+!
+! !INTERFACE:
+subroutine AC70_read_MULTILEVEL_param(n, ncvar_name, level, placeholder)
+! !USES:
+    use netcdf
+    use LIS_coreMod, only : LIS_rc, LIS_domain, LIS_localPet,   &   
+                            LIS_ews_halo_ind, LIS_ewe_halo_ind, &
+                            LIS_nss_halo_ind, LIS_nse_halo_ind   
+    use LIS_logMod,  only : LIS_logunit, LIS_verify, LIS_endrun
+    use LIS_fileIOMod, only: LIS_read_param
+    implicit none
+! !ARGUMENTS: 
+    integer, intent(in)          :: n
+    integer, intent(in)          :: level
+    character(len=*), intent(in) :: ncvar_name 
+    real, intent(out)            :: placeholder(LIS_rc%lnc(n), LIS_rc%lnr(n))
+! !DESCRIPTION:
+!  This subroutine reads MULTILEVEL parameters from the LIS
+!  NetCDF parameter data file
+!  
+!  The arguments are:
+!  \begin{description}
+!   \item[n]
+!    index of n
+!   \item[level]
+!    level index (month, quarter, soil layer, snow layer) of the data to be read
+!   \item[array]
+!    array containing returned values
+!   \end{description}
+!
+!EOP      
+
+    integer       :: ios1
+    integer       :: ios, nid, param_ID, nc_ID, nr_ID, dimids(3)
+    integer       :: nc, nr, t, nlevel, k
+    real, pointer :: level_data(:, :, :)
+    logical       :: file_exists
+
+    inquire(file=LIS_rc%paramfile(n), exist=file_exists)
+    if(file_exists) then
+        write(LIS_logunit, *) 'Reading '//trim(ncvar_name)//' map for level ', level
+
+        ! open NetCDF parameter file
+        ios = nf90_open(path=trim(LIS_rc%paramfile(n)), mode=NF90_NOWRITE, ncid=nid)
+        call LIS_verify(ios, 'Error in nf90_open in AC70_read_MULTILEVEL_param')
+
+        ! inquire the ID of east-west dimension
+        ios = nf90_inq_dimid(nid, 'east_west', nc_ID)
+        call LIS_verify(ios, 'Error in nf90_inq_dimid in AC70_read_MULTILEVEL_param')
+
+        ! inquire the ID of north-south dimension
+        ios = nf90_inq_dimid(nid, 'north_south', nr_ID)
+        call LIS_verify(ios, 'Error in nf90_inq_dimid in AC70_read_MULTILEVEL_param')
+
+        ! inquire the length of east-west dimension
+        ios = nf90_inquire_dimension(nid, nc_ID, len=nc)
+        call LIS_verify(ios, 'Error in nf90_inquire_dimension in AC70_read_MULTILEVEL_param')
+
+        ! inquire the length of north-south dimension
+        ios = nf90_inquire_dimension(nid, nr_ID, len=nr)
+        call LIS_verify(ios, 'Error in nf90_inquire_dimension in AC70_read_MULTILEVEL_param')
+
+        ! inquire the ID of parameter. 
+        ios = nf90_inq_varid(nid, Trim(ncvar_name), param_ID)
+        call LIS_verify(ios, trim(ncvar_name)//' field not found in the LIS param file')
+
+        ! inquire the IDs of all dimensions. The third dimension is the level dimension
+        ios = nf90_inquire_variable(nid, param_ID, dimids = dimids)
+        call LIS_verify(ios, trim(ncvar_name)//' failed to inquire dimensions')
+
+        ! inquire the length of the level dimension
+        ios = nf90_inquire_dimension(nid, dimids(3), len=nlevel)
+        call LIS_verify(ios, trim(ncvar_name)//' failed to inquire the length of the 3rd dimension')
+
+        ! allocate memory
+        allocate(level_data (LIS_rc%gnc(n), LIS_rc%gnr(n), nlevel))
+
+        ! inquire the variable ID of parameter 
+        ios = nf90_inq_varid(nid, trim(ncvar_name), param_ID)
+        call LIS_verify(ios, trim(ncvar_name)//' field not found in the LIS param file')
+
+        ! read parameter 
+        ios = nf90_get_var(nid, param_ID, level_data)
+        call LIS_verify(ios, 'Error in nf90_get_var in AC70_read_MULTILEVEL_param')
+
+        ! close netcdf file 
+        ios = nf90_close(nid)
+        call LIS_verify(ios, 'Error in nf90_close in AC70_read_MULTILEVEL_param')
+
+        ! grab parameter at specific level
+        placeholder(:, :) = & 
+             level_data(LIS_ews_halo_ind(n, LIS_localPet+1):LIS_ewe_halo_ind(n, LIS_localPet+1), &
+                        LIS_nss_halo_ind(n, LIS_localPet+1):LIS_nse_halo_ind(n, LIS_localPet+1), level)
+
+        ! free memory 
+        deallocate(level_data)
+
+    else
+        write(LIS_logunit, *) 'MULTILEVEL parameter data file: ', LIS_rc%paramfile(n), ' does not exist'
+        write(LIS_logunit, *) 'program stopping ...'
+        call LIS_endrun
+    endif
+ end subroutine AC70_read_MULTILEVEL_param
+                                          
+

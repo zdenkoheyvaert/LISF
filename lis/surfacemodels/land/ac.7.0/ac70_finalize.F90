@@ -9,58 +9,60 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
 !
-! !ROUTINE: noah33_finalize
-! \label{noah33_finalize}
+! !ROUTINE: Ac70_finalize
+! \label{Ac70_finalize}
 !
 ! !REVISION HISTORY:
-!  28 Apr 2002: Sujay Kumar; Initial code
-!   8 May 2009: Sujay Kumar; additions for Noah3.1
-!  27 Oct 2010: David Mocko, changes for Noah3.1 in LIS6.1
-!   7 Nov 2010: David Mocko, changes for Noah3.2 in LIS6.1
-!   9 Sep 2011: David Mocko, changes for Noah3.3 in LIS6.1
+!  This subroutine is generated with the Model Implementation Toolkit developed
+!  by Shugong Wang for the NASA Land Information System Version 7. The initial 
+!  specification of the subroutine is defined by Sujay Kumar. 
+!
+!   9/4/14: Shugong Wang; initial implementation for Ac70 with LIS-7
 !
 ! !INTERFACE:
-subroutine noah33_finalize()
+subroutine Ac70_finalize(n)
 ! !USES:
-  use LIS_coreMod,  only : LIS_rc
-  use noah33_lsmMod
+    use LIS_coreMod, only : LIS_rc
+    use Ac70_lsmMod
 !
 ! !DESCRIPTION:
-!  
-!  This routine cleans up the allocated memory structures in Noah3.3
-!  
+!
+!  This routine cleans up the allocated memory structures in Ac70
+!
 !EOP
-  implicit none
+    implicit none   
+    
+    integer :: t, n 
 
-  integer :: t,n
+    do n=1, LIS_rc%nnest
+        ! free memory allocated for each tile
+        do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
+            deallocate(AC70_struc(n)%ac70(t)%shdfac_monthly)
+            deallocate(AC70_struc(n)%ac70(t)%smceq)
+            deallocate(AC70_struc(n)%ac70(t)%sstc)
+            deallocate(AC70_struc(n)%ac70(t)%sh2o)
+            deallocate(AC70_struc(n)%ac70(t)%smc)
+            deallocate(AC70_struc(n)%ac70(t)%zss)
+            deallocate(AC70_struc(n)%ac70(t)%snowice)
+            deallocate(AC70_struc(n)%ac70(t)%snowliq)
+        end do  ! tile loop
+ 
+        ! free memory for ac70, the data at tile level
+        deallocate(AC70_struc(n)%ac70)
 
-  do n=1,LIS_rc%nnest
-     do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
-        deallocate(noah33_struc(n)%noah(t)%stc    )
-        deallocate(noah33_struc(n)%noah(t)%smc    )
-        deallocate(noah33_struc(n)%noah(t)%sh2o   )  
-        deallocate(noah33_struc(n)%noah(t)%relsmc )  
-     enddo
-     deallocate(noah33_struc(n)%noah)
-     deallocate(noah33_struc(n)%lyrthk)
-     deallocate(noah33_struc(n)%inittemp)
-     deallocate(noah33_struc(n)%initsm)
-     deallocate(noah33_struc(n)%initsmliq)
-     deallocate(noah33_struc(n)%shdtbl   )
-     deallocate(noah33_struc(n)%nrotbl   )
-     deallocate(noah33_struc(n)%rstbl    )
-     deallocate(noah33_struc(n)%rgltbl   )
-     deallocate(noah33_struc(n)%hstbl    )
-     deallocate(noah33_struc(n)%snuptbl  )
-     deallocate(noah33_struc(n)%maxalb   )
-     deallocate(noah33_struc(n)%emissmin )
-     deallocate(noah33_struc(n)%emissmax )
-     deallocate(noah33_struc(n)%laimin   )
-     deallocate(noah33_struc(n)%laimax   )
-     deallocate(noah33_struc(n)%albmin   )
-     deallocate(noah33_struc(n)%albmax   )
-     deallocate(noah33_struc(n)%z0min    )
-     deallocate(noah33_struc(n)%z0max    ) 
-  enddo
-  deallocate(noah33_struc)  
-end subroutine noah33_finalize
+        ! free momory for constant parameter 
+        deallocate(AC70_struc(n)%sldpth)
+
+        ! free momory for initial state variable
+        deallocate(AC70_struc(n)%init_stc)
+        deallocate(AC70_struc(n)%init_sh2o)
+        deallocate(AC70_struc(n)%init_smc)
+        !deallocate(AC70_struc(n)%init_zss)
+        !deallocate(AC70_struc(n)%init_snowice)
+        !deallocate(AC70_struc(n)%init_snowliq)
+    end do ! nest loop
+  
+    deallocate(AC70_struc)
+ 
+end subroutine Ac70_finalize
+
