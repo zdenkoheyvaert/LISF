@@ -16,7 +16,7 @@
 !
 !   Generators for readers for a specific variable can be created by providing
 !   a suitable setup routine that calls CustomNcReader_setup. See
-!   CustomLAI_setup below for more info.
+!   CustomLAI_Mod.F90 for more info.
 !
 !   The custom reader provides the following options for lis.config:
 !
@@ -76,6 +76,8 @@ module CustomNcReader_Mod
         character*100          :: varname
         real                   :: max_value
         real                   :: min_value
+        real                   :: qcmax_value
+        real                   :: qcmin_value
         integer                :: nc
         integer                :: nr
         integer                :: mi
@@ -90,26 +92,26 @@ module CustomNcReader_Mod
         real*8                 :: dlat, dlon
         real*8                 :: lat_lower_left, lon_lower_left
         real*8                 :: lat_upper_right, lon_upper_right
-        real,    allocatable :: rlat(:)
-        real,    allocatable :: rlon(:)
-        integer, allocatable :: n11(:)
-        integer, allocatable :: n12(:)
-        integer, allocatable :: n21(:)
-        integer, allocatable :: n22(:)
-        real,    allocatable :: w11(:)
-        real,    allocatable :: w12(:)
-        real,    allocatable :: w21(:)
-        real,    allocatable :: w22(:)
+        real,    allocatable   :: rlat(:)
+        real,    allocatable   :: rlon(:)
+        integer, allocatable   :: n11(:)
+        integer, allocatable   :: n12(:)
+        integer, allocatable   :: n21(:)
+        integer, allocatable   :: n22(:)
+        real,    allocatable   :: w11(:)
+        real,    allocatable   :: w12(:)
+        real,    allocatable   :: w21(:)
+        real,    allocatable   :: w22(:)
 
-        real                       :: ssdev_inp
-        real,    allocatable       :: model_xrange(:,:,:)
-        real,    allocatable       :: obs_xrange(:,:,:)
-        real,    allocatable       :: model_cdf(:,:,:)
-        real,    allocatable       :: obs_cdf(:,:,:)
-        real,    allocatable       :: model_mu(:,:)
-        real,    allocatable       :: obs_mu(:,:)
-        real,    allocatable       :: model_sigma(:,:)
-        real,    allocatable       :: obs_sigma(:,:)
+        real                   :: ssdev_inp
+        real,    allocatable   :: model_xrange(:,:,:)
+        real,    allocatable   :: obs_xrange(:,:,:)
+        real,    allocatable   :: model_cdf(:,:,:)
+        real,    allocatable   :: obs_cdf(:,:,:)
+        real,    allocatable   :: model_mu(:,:)
+        real,    allocatable   :: obs_mu(:,:)
+        real,    allocatable   :: model_sigma(:,:)
+        real,    allocatable   :: obs_sigma(:,:)
 
         integer                :: nbins
         integer                :: ntimes
@@ -1039,8 +1041,8 @@ contains
             do c=1, reader_struc(n)%nc
                 if (isnan(observation(c, r))) then
                     observation(c, r) = LIS_rc%udef
-                else if (.not. (reader_struc(n)%min_value < observation(c, r) &
-                     .and. observation(c, r) < reader_struc(n)%max_value)) then
+                else if (.not. (reader_struc(n)%qcmin_value < observation(c, r) &
+                     .and. observation(c, r) < reader_struc(n)%qcmax_value)) then
                     observation(c, r) = LIS_rc%udef
                 endif
             end do
