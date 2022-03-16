@@ -744,7 +744,7 @@ contains
         logical                :: data_upd_flag_local
         logical                :: data_upd
         real                   :: observations(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
-        real                   :: obs_current(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real                   :: obs_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
         real                   :: obs_unsc(LIS_rc%obs_ngrid(k))
         integer                :: fnd
         real                   :: timenow
@@ -800,10 +800,9 @@ contains
             do r=1,LIS_rc%obs_lnr(k)
                 do c=1,LIS_rc%obs_lnc(k)
                     if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
-                        grid_index = c+(r-1)*LIS_rc%obs_lnc(k)
-
-                        obs_current(c,r) = observations(c,r)
                         if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
+                            obs_current(c,r) =&
+                                observations(c+(r-1)*LIS_rc%obs_lnc(k))
                             obs_unsc(LIS_obs_domain(n,k)%gindex(c,r)) = &
                                  obs_current(c,r)
                         endif
@@ -859,8 +858,7 @@ contains
             do r=1, LIS_rc%obs_lnr(k)
                 do c=1, LIS_rc%obs_lnc(k)
                     if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
-                        obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
-                             observations(c+(r-1)*LIS_rc%obs_lnc(k))
+                        obsl(LIS_obs_domain(n,k)%gindex(c,r)) = obs_current(c,r)
                     endif
                 enddo
             enddo
