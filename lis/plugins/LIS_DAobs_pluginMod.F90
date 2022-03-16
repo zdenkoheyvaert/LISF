@@ -452,6 +452,10 @@ subroutine LIS_DAobs_plugin
     external read_MCD15A2Hlai, write_MCD15A2Hlai
 #endif
 
+#if ( defined DA_OBS_GLASS_LAI)
+    external read_CGLSlai, write_CGLSlai
+#endif
+
 #if ( defined DA_OBS_GLASS_Albedo)
     external read_GLASSalbedo, write_GLASSalbedo
 #endif
