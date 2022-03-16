@@ -12,6 +12,34 @@
 ! !DESCRIPTION: 
 !   This module contains interfaces and subroutines to
 !   handle the CGLS LAI data.
+!
+!  Available lis.config options:
+!
+!  CGLS LAI data directory:
+!      Path to CGLS files. (Required option)
+!  CGLS LAI apply QC flags:
+!      Whether to apply QC flags from the files. Only enable this if the files
+!      are downloaded from CGLS. (Required option)
+!  CGLS LAI is resampled:
+!      Whether the files are resampled manually to a regular latitude-longitude
+!      grid. If they are, it is assumed that they are all in the data directory
+!      without any subdirectories, and follow the naming scheme
+!
+!          CGLS_LAI_resampled_<res>deg_<YYYY>_<MM>_<DD>.nc
+!
+!      where <res> is the resolution with two decimals, e.g. 0.25 for quarter
+!      degree resolution. (Required option)
+!  CGLS LAI spatial resolution:      
+!      Spatial resolution of resampled data files, only required if "CGLS LAI
+!      is resampled" is set. (Optional)
+!
+!  If a rescaling option is set, the following options are also available:
+!  - CGLS LAI model CDF file
+!  - CGLS LAI observation CDF file
+!  - CGLS LAI number of bins in the CDF
+!
+!  The rescaling option has not been extensively tested and should be used with
+!  care.
 ! 
 ! !REVISION HISTORY: 
 !  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
