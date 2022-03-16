@@ -269,9 +269,6 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_CGLS_LAI ) || ( defined DA_OBS_CGLS_LAI )
     use CGLSLAI_Mod,       only : CGLSlai_setup
 #endif
-#if ( defined DA_OBS_VODCA_LAI )
-    use VODCALAI_Mod,       only : VODCAlai_setup
-#endif
 #if ( defined DA_OBS_CUSTOM_LAI )
     use CustomLAI_Mod,       only :&
          CustomLAI_setup, read_CustomLAI, write_CustomLAI
@@ -461,10 +458,6 @@ subroutine LIS_DAobs_plugin
 
 #if ( defined DA_OBS_CGLS_LAI ) || ( defined DA_OBS_CGLS_LAI_SM )
     external read_CGLSlai, write_CGLSlai
-#endif
-
-#if ( defined DA_OBS_VODCA_LAI)
-    external read_VODCAlai, write_VODCAlai
 #endif
 
 #if ( defined DA_OBS_GLASS_Albedo)
@@ -879,16 +872,6 @@ subroutine LIS_DAobs_plugin
         read_CGLSlai)
    call registerwritedaobs(trim(LIS_CGLSlaismobsId)//char(0),&
         write_CGLSlai)
-#endif
-
-#if ( defined DA_OBS_VODCA_LAI)
-   call registerdaobsclass(trim(LIS_VODCAlaiobsId),"LSM")
-   call registerdaobssetup(trim(LIS_VODCAlaiobsId)//char(0),&
-        VODCAlai_setup)
-   call registerreaddaobs(trim(LIS_VODCAlaiobsId)//char(0),&
-        read_VODCAlai)
-   call registerwritedaobs(trim(LIS_VODCAlaiobsId)//char(0),&
-        write_VODCAlai)
 #endif
 
 #if ( defined DA_OBS_CUSTOM_LAI)

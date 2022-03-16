@@ -8,8 +8,8 @@
 !BOP
 !
 ! !MODULE: CustomLAI_Mod
-! 
-! !DESCRIPTION: 
+!
+! !DESCRIPTION:
 !   This module contains a custom reader for global LAI netCDF products on a
 !   regular latitude longitude grid stored in netCDF files, with all necessary
 !   flags already applied beforehand during preprocessing.
@@ -42,12 +42,12 @@
 !       scaling is applied)
 !   Custom LAI number of bins in the CDF: (optional, only required if CDF scaling is applied)
 !       Number of bins in the CDFs.
-! 
-! !REVISION HISTORY: 
+!
+! !REVISION HISTORY:
 !  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
-! 
+!
 module CustomLAI_Mod
-    ! !USES: 
+    ! !USES:
     use CustomNcReader_Mod, only: CustomNcReader_dec
 
     implicit none
@@ -65,9 +65,9 @@ contains
         use LIS_coreMod, only: LIS_rc
         use CustomNcReader_Mod, only: CustomNcReader_setup
 
-        implicit none 
+        implicit none
 
-        ! !ARGUMENTS: 
+        ! !ARGUMENTS:
         integer                   :: k
         type(ESMF_State)          :: OBS_State(LIS_rc%nnest)
         type(ESMF_State)          :: OBS_Pert_State(LIS_rc%nnest)

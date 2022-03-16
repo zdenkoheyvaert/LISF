@@ -6,36 +6,36 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
-! 
+!
 ! !ROUTINE: write_CGLSlai
 ! \label{write_CGLSlai}
-! 
-! !REVISION HISTORY: 
+!
+! !REVISION HISTORY:
 !  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
-! 
-! !INTERFACE: 
+!
+! !INTERFACE:
 subroutine write_CGLSlai(n, k, OBS_State)
-! !USES: 
+! !USES:
   use ESMF
   use LIS_coreMod
   use LIS_logMod
   use LIS_fileIOMod
   use LIS_historyMod
   use LIS_DAobservationsMod
-  
+
   implicit none
 
-! !ARGUMENTS: 
+! !ARGUMENTS:
 
-  integer,     intent(in)  :: n 
+  integer,     intent(in)  :: n
   integer,     intent(in)  :: k
   type(ESMF_State)         :: OBS_State
 !
-! !DESCRIPTION: 
-! 
-! writes the transformed (interpolated/upscaled/reprojected)  
+! !DESCRIPTION:
+!
+! writes the transformed (interpolated/upscaled/reprojected)
 ! CGLS LAI observations to a file
-! 
+!
 !EOP
   type(ESMF_Field)         :: laiField
   logical                  :: data_update
@@ -44,52 +44,52 @@ subroutine write_CGLSlai(n, k, OBS_State)
   integer                  :: ftn
   integer                  :: status
 
-  call ESMF_AttributeGet(OBS_State, "Data Update Status", & 
+  call ESMF_AttributeGet(OBS_State, "Data Update Status", &
        data_update, rc=status)
   call LIS_verify(status)
 
-  if(data_update) then 
-     
+  if(data_update) then
+
      call ESMF_StateGet(OBS_State, "Observation01",laiField, &
           rc=status)
      call LIS_verify(status)
-     
+
      call ESMF_FieldGet(laiField, localDE=0, farrayPtr=laiobs, rc=status)
      call LIS_verify(status)
 
-     if(LIS_masterproc) then 
+     if(LIS_masterproc) then
         ftn = LIS_getNextUnitNumber()
-        call CGLS_laiobsname(n,k,obsname)        
+        call CGLS_laiobsname(n,k,obsname)
 
         call LIS_create_output_directory('DAOBS')
         open(ftn,file=trim(obsname), form='unformatted')
      endif
 
      call LIS_writevar_gridded_obs(ftn,n,k,laiobs)
-     
-     if(LIS_masterproc) then 
+
+     if(LIS_masterproc) then
         call LIS_releaseUnitNumber(ftn)
      endif
 
-  endif  
+  endif
 
 end subroutine write_CGLSlai
 
 !BOP
 ! !ROUTINE: CGLS_laiobsname
 ! \label{CGLS_laiobsname}
-! 
-! !INTERFACE: 
+!
+! !INTERFACE:
 subroutine CGLS_laiobsname(n,k,obsname)
-! !USES: 
+! !USES:
   use LIS_coreMod, only : LIS_rc
 
-! !ARGUMENTS: 
+! !ARGUMENTS:
   integer               :: n
   integer               :: k
   character(len=*)      :: obsname
-! 
-! !DESCRIPTION: 
+!
+! !DESCRIPTION:
 !
 !  writes the assimilated observation to a file.
 
@@ -101,7 +101,7 @@ subroutine CGLS_laiobsname(n,k,obsname)
 !  \item[obsname] name of the observation
 !  \end{description}
 !
- 
+
 !EOP
 
   character(len=12) :: cdate1

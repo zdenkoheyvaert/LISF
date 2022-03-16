@@ -13,9 +13,9 @@
 ! !REVISION HISTORY:
 !  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
 !
-! !INTERFACE: 
+! !INTERFACE:
 subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
-    ! !USES: 
+    ! !USES:
     use ESMF
     use LIS_mpiMod
     use LIS_coreMod
@@ -28,18 +28,18 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     use CGLSlai_Mod, only : CGLSlai_struc
 
     implicit none
-    ! !ARGUMENTS: 
-    integer, intent(in) :: n 
+    ! !ARGUMENTS:
+    integer, intent(in) :: n
     integer, intent(in) :: k
     type(ESMF_State)    :: OBS_State
     type(ESMF_State)    :: OBS_Pert_State
     !
     ! !DESCRIPTION:
-    !  
+    !
     !  reads the CGLS LAI observations from NETCDF files.
 
-    ! 
-    !  The arguments are: 
+    !
+    !  The arguments are:
     !  \begin{description}
     !  \item[n] index of the nest
     !  \item[k] number of observation state
@@ -77,7 +77,7 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     integer                :: prev_month
     real                   :: ndays
     real                   :: days(12)
-    data days /31,28,31,30,31,30,31,31,30,31,30,31/  
+    data days /31,28,31,30,31,30,31,31,30,31,30,31/
 
 
     call ESMF_AttributeGet(OBS_State,"Data Directory",&
@@ -87,42 +87,42 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
          data_update, rc=status)
     call LIS_verify(status)
 
-    data_upd = .false. 
+    data_upd = .false.
 
     alarmCheck = LIS_isAlarmRinging(LIS_rc, "CGLS LAI read alarm")
 
-    if(alarmCheck.or.CGLSlai_struc(n)%startMode) then 
+    if(alarmCheck.or.CGLSlai_struc(n)%startMode) then
         CGLSlai_struc(n)%startMode = .false.
 
         call create_CGLSlai_filename(&
             CGLSlai_struc(n)%isresampled == 1, CGLSlai_struc(n)%spatialres,&
             laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
-        inquire(file=fname,exist=file_exists)          
-        if(file_exists) then 
+        inquire(file=fname,exist=file_exists)
+        if(file_exists) then
             write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
             call read_CGLS_LAI_data(n,k, fname,laiobs)
             fnd = 1
         else
-            fnd = 0 
+            fnd = 0
             write(LIS_logunit,*) '[WARN] Missing LAI file: ',trim(fname)
         endif
     else
-        fnd = 0 
+        fnd = 0
         laiobs = LIS_rc%udef
     endif
 
     dataCheck = .false.
-    if(alarmCheck) then 
-        if(fnd.eq.1) then 
-            dataCheck = .true. 
+    if(alarmCheck) then
+        if(fnd.eq.1) then
+            dataCheck = .true.
         endif
     else
-        fnd = 0 
+        fnd = 0
         dataCheck = .false.
     endif
 
-    if(dataCheck) then 
+    if(dataCheck) then
 
         call ESMF_StateGet(OBS_State,"Observation01",laifield,&
              rc=status)
@@ -149,16 +149,16 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
 
         !-------------------------------------------------------------------------
         !  Transform data to the LSM climatology using a CDF-scaling approach
-        !-------------------------------------------------------------------------     
-        
+        !-------------------------------------------------------------------------
+
         if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then
 
             call LIS_rescale_with_CDF_matching(     &
-                 n,k,                               & 
-                 CGLSlai_struc(n)%nbins,         & 
-                 CGLSlai_struc(n)%ntimes,        & 
-                 MAX_LAI_VALUE,                      & 
-                 MIN_LAI_VALUE,                      & 
+                 n,k,                               &
+                 CGLSlai_struc(n)%nbins,         &
+                 CGLSlai_struc(n)%ntimes,        &
+                 MAX_LAI_VALUE,                      &
+                 MIN_LAI_VALUE,                      &
                  CGLSlai_struc(n)%model_xrange,  &
                  CGLSlai_struc(n)%obs_xrange,    &
                  CGLSlai_struc(n)%model_cdf,     &
@@ -166,20 +166,20 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
                  laiobs)
         endif
 
-        obsl = LIS_rc%udef 
+        obsl = LIS_rc%udef
         do r=1, LIS_rc%obs_lnr(k)
             do c=1, LIS_rc%obs_lnc(k)
-                if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
+                if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
                     obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
                          laiobs(c+(r-1)*LIS_rc%obs_lnc(k))
                 endif
             enddo
         enddo
 
-        if(fnd.eq.0) then 
-            data_upd_flag_local = .false. 
+        if(fnd.eq.0) then
+            data_upd_flag_local = .false.
         else
-            data_upd_flag_local = .true. 
+            data_upd_flag_local = .true.
         endif
 
 #if (defined SPMD)
@@ -192,11 +192,11 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
             data_upd = data_upd.or.data_upd_flag(p)
         enddo
 
-        if(data_upd) then 
+        if(data_upd) then
 
             do t=1,LIS_rc%obs_ngrid(k)
                 gid(t) = t
-                if(obsl(t).ne.-9999.0) then 
+                if(obsl(t).ne.-9999.0) then
                     assimflag(t) = 1
                 else
                     assimflag(t) = 0
@@ -207,7 +207,7 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
                  .true. , rc=status)
             call LIS_verify(status)
 
-            if(LIS_rc%obs_ngrid(k).gt.0) then 
+            if(LIS_rc%obs_ngrid(k).gt.0) then
                 call ESMF_AttributeSet(laifield,"Grid Number",&
                      gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                 call LIS_verify(status)
@@ -217,31 +217,31 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
                 call LIS_verify(status)
 
             endif
-            if(LIS_rc%dascaloption(k).eq."CDF matching") then 
+            if(LIS_rc%dascaloption(k).eq."CDF matching") then
                 if(CGLSlai_struc(n)%useSsdevScal.eq.1) then
                     call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
                          rc=status)
                     call LIS_verify(status, 'Error: StateGet Observation01')
 
                     allocate(ssdev(LIS_rc%obs_ngrid(k)))
-                    ssdev = CGLSlai_struc(n)%ssdev_inp 
+                    ssdev = CGLSlai_struc(n)%ssdev_inp
 
-                    if(CGLSlai_struc(n)%ntimes.eq.1) then 
+                    if(CGLSlai_struc(n)%ntimes.eq.1) then
                         jj = 1
                     else
                         jj = LIS_rc%mo
                     endif
                     do t=1,LIS_rc%obs_ngrid(k)
-                        if(CGLSlai_struc(n)%obs_sigma(t,jj).gt.0) then 
+                        if(CGLSlai_struc(n)%obs_sigma(t,jj).gt.0) then
                             ssdev(t) = ssdev(t)*CGLSlai_struc(n)%model_sigma(t,jj)/&
                                  CGLSlai_struc(n)%obs_sigma(t,jj)
-                            if(ssdev(t).lt.minssdev) then 
+                            if(ssdev(t).lt.minssdev) then
                                 ssdev(t) = minssdev
                             endif
                         endif
                     enddo
 
-                    if(LIS_rc%obs_ngrid(k).gt.0) then 
+                    if(LIS_rc%obs_ngrid(k).gt.0) then
                         call ESMF_AttributeSet(pertField,"Standard Deviation",&
                              ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                         call LIS_verify(status)
@@ -253,24 +253,24 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
         else
             call ESMF_AttributeSet(OBS_State,"Data Update Status",&
                  .false., rc=status)
-            call LIS_verify(status)     
+            call LIS_verify(status)
         endif
     else
         call ESMF_AttributeSet(OBS_State,"Data Update Status",&
              .false., rc=status)
-        call LIS_verify(status)     
+        call LIS_verify(status)
     endif
 end subroutine read_CGLSlai
 
 !BOP
-! 
+!
 ! !ROUTINE: read_CGLS_LAI_data
 ! \label{read_CGLS_LAI_data}
 !
 ! !INTERFACE:
 subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
-    ! 
-    ! !USES:   
+    !
+    ! !USES:
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
     use netcdf
 #endif
@@ -281,9 +281,9 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
 
     implicit none
     !
-    ! !INPUT PARAMETERS: 
-    ! 
-    integer                       :: n 
+    ! !INPUT PARAMETERS:
+    !
+    integer                       :: n
     integer                       :: k
     character (len=*)             :: fname
     real                          :: laiobs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
@@ -292,11 +292,11 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
     ! !OUTPUT PARAMETERS:
     !
     !
-    ! !DESCRIPTION: 
+    ! !DESCRIPTION:
     !  This subroutine reads the CGLS LAI file and applies the data
-    !  quality flags to filter the data. 
+    !  quality flags to filter the data.
     !
-    !  The arguments are: 
+    !  The arguments are:
     !  \begin{description}
     !  \item[n]            index of the nest
     !  \item[k]            number of observation state
@@ -351,7 +351,7 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
 
         ios = nf90_get_var(nid, laiid, lai, &
              start=(/lon_offset,lat_offset/), &
-             count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/)) 
+             count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/))
 
         call LIS_verify(ios, 'Error nf90_get_var: LAI')
 
@@ -380,7 +380,7 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
                         lai_flagged(c,r) = LIS_rc%udef
                     endif
 
-                else  ! no QC flag applied                
+                else  ! no QC flag applied
 
                     if(lai(c,r).gt.0) then
                         lai_flagged(c,r) =&
@@ -403,7 +403,7 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
 
         ios = nf90_get_var(nid, laiid, lai_flagged, &
              start=(/lon_offset,lat_offset/), &
-             count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/)) 
+             count=(/CGLSlai_struc(n)%nc,CGLSlai_struc(n)%nr/))
 
         call LIS_verify(ios, 'Error nf90_get_var: CGLS_LAI')
 
@@ -436,12 +436,12 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
         enddo
     enddo
 
-    if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then 
+    if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then
         write(LIS_logunit,*) '[INFO] interpolating CGLS LAI',trim(fname)
         !--------------------------------------------------------------------------
         ! Interpolate to the LIS running domain if model has finer resolution
         ! than observations
-        !-------------------------------------------------------------------------- 
+        !--------------------------------------------------------------------------
         call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
              lai_data_b, lai_in, laiobs_b_ip, laiobs_ip, &
              CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr, &
@@ -456,7 +456,7 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
         !--------------------------------------------------------------------------
         ! Upscale to the LIS running domain if model has coarser resolution
         ! than observations
-        !-------------------------------------------------------------------------- 
+        !--------------------------------------------------------------------------
         call upscaleByAveraging(CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr,&
              LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
              LIS_rc%udef, CGLSlai_struc(n)%n11,&
@@ -501,24 +501,24 @@ end subroutine read_CGLS_LAI_data
 !BOP
 ! !ROUTINE: create_CGLSlai_filename
 ! \label{create_CGLSlai_filename}
-! 
-! !INTERFACE: 
+!
+! !INTERFACE:
 subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, filename)
-    ! !USES:   
+    ! !USES:
 
     implicit none
-    ! !ARGUMENTS: 
+    ! !ARGUMENTS:
     logical, value       :: isresampled
     real*8, value        :: res
     character (len=*)    :: ndir
     integer, value       :: year, month, day
     character(len=*)     :: filename
-    ! 
-    ! !DESCRIPTION: 
+    !
+    ! !DESCRIPTION:
     !  This subroutine creates the CGLS LAI filename
-    !  based on the time and date 
-    ! 
-    !  The arguments are: 
+    !  based on the time and date
+    !
+    !  The arguments are:
     !  \begin{description}
     !  \item[isresampled] whether the original or the resampled files are read
     !  \item[res] resolution of the files
@@ -588,7 +588,7 @@ contains
             prefix2 = "LAI-RT6"
             sensor = "PROBAV"
             version = "V2.0.2"
-        else 
+        else
             prefix = "LAI_RT6"
             prefix2 = "LAI-RT6"
             sensor = "PROBAV"

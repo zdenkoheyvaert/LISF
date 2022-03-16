@@ -8,16 +8,16 @@
 !BOP
 !
 ! !MODULE: CGLSlai_Mod
-! 
-! !DESCRIPTION: 
+!
+! !DESCRIPTION:
 !   This module contains interfaces and subroutines to
 !   handle the CGLS LAI data.
-! 
-! !REVISION HISTORY: 
+!
+! !REVISION HISTORY:
 !  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
-! 
+!
 module CGLSlai_Mod
-    ! !USES: 
+    ! !USES:
     use ESMF
     use map_utils
     use, intrinsic :: iso_fortran_env, only: error_unit
@@ -44,7 +44,7 @@ module CGLSlai_Mod
         integer                :: mi
         real,     allocatable  :: laiobs1(:)
         real,     allocatable  :: laiobs2(:)
-        real                   :: gridDesci(50)    
+        real                   :: gridDesci(50)
         real*8                 :: time1, time2
         integer                :: fnd
         integer                :: useSsdevScal
@@ -86,13 +86,13 @@ module CGLSlai_Mod
 contains
 
     !BOP
-    ! 
+    !
     ! !ROUTINE: CGLSlai_setup
     ! \label{CGLSlai_setup}
-    ! 
-    ! !INTERFACE: 
+    !
+    ! !INTERFACE:
     subroutine CGLSlai_setup(k, OBS_State, OBS_Pert_State)
-        ! !USES: 
+        ! !USES:
         use ESMF
         use LIS_coreMod
         use LIS_timeMgrMod
@@ -102,22 +102,22 @@ contains
         use LIS_DAobservationsMod
         use LIS_logmod
 
-        implicit none 
+        implicit none
 
-        ! !ARGUMENTS: 
+        ! !ARGUMENTS:
         integer                ::  k
         type(ESMF_State)       ::  OBS_State(LIS_rc%nnest)
         type(ESMF_State)       ::  OBS_Pert_State(LIS_rc%nnest)
-        ! 
-        ! !DESCRIPTION: 
-        !   
-        !   This routine completes the runtime initializations and 
+        !
+        ! !DESCRIPTION:
+        !
+        !   This routine completes the runtime initializations and
         !   creation of data structures required for handling CGLS LAI data.
-        !  
-        !   The arguments are: 
+        !
+        !   The arguments are:
         !   \begin{description}
-        !    \item[k] number of observation state 
-        !    \item[OBS\_State]   observation state 
+        !    \item[k] number of observation state
+        !    \item[OBS\_State]   observation state
         !    \item[OBS\_Pert\_State] observation perturbations state
         !   \end{description}
         !EOP
@@ -199,7 +199,7 @@ contains
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI model CDF file:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then 
+            if(LIS_rc%dascaloption(k).ne."none") then
                 call ESMF_ConfigGetAttribute(LIS_config,modelcdffile(n),rc=status)
                 call LIS_verify(status, 'CGLS LAI model CDF file: not defined')
             endif
@@ -208,7 +208,7 @@ contains
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI observation CDF file:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then 
+            if(LIS_rc%dascaloption(k).ne."none") then
                 call ESMF_ConfigGetAttribute(LIS_config,obscdffile(n),rc=status)
                 call LIS_verify(status, 'CGLS LAI observation CDF file: not defined')
             endif
@@ -216,7 +216,7 @@ contains
 
         call ESMF_ConfigFindLabel(LIS_config, "CGLS LAI number of bins in the CDF:", rc=status)
         do n=1, LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then 
+            if(LIS_rc%dascaloption(k).ne."none") then
                 call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%nbins, rc=status)
                 call LIS_verify(status, "CGLS LAI number of bins in the CDF: not defined")
             endif
@@ -242,7 +242,7 @@ contains
         enddo
 
         write(LIS_logunit,*)&
-             '[INFO] read CGLS LAI data specifications'       
+             '[INFO] read CGLS LAI data specifications'
 
         do n=1,LIS_rc%nnest
 
@@ -275,11 +275,11 @@ contains
                 read(ftn,*) varmin(i),varmax(i)
                 write(LIS_logunit,*) '[INFO] ',vname(i),varmin(i),varmax(i)
             enddo
-            call LIS_releaseUnitNumber(ftn)   
+            call LIS_releaseUnitNumber(ftn)
 
             allocate(ssdev(LIS_rc%obs_ngrid(k)))
 
-            if(trim(LIS_rc%perturb_obs(k)).ne."none") then 
+            if(trim(LIS_rc%perturb_obs(k)).ne."none") then
                 allocate(obs_pert%vname(1))
                 allocate(obs_pert%perttype(1))
                 allocate(obs_pert%ssdev(1))
@@ -293,7 +293,7 @@ contains
                 call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
                      obs_pert)
 
-                ! Set obs err to be uniform (will be rescaled later for each grid point). 
+                ! Set obs err to be uniform (will be rescaled later for each grid point).
                 ssdev = obs_pert%ssdev(1)
                 CGLSlai_struc(n)%ssdev_inp = obs_pert%ssdev(1)
 
@@ -302,16 +302,16 @@ contains
                      rc=status)
                 call LIS_verify(status)
 
-                ! initializing the perturbations to be zero 
+                ! initializing the perturbations to be zero
                 call ESMF_FieldGet(pertField(n),localDE=0,farrayPtr=obs_temp,rc=status)
                 call LIS_verify(status)
-                obs_temp(:,:) = 0 
+                obs_temp(:,:) = 0
 
                 call ESMF_AttributeSet(pertField(n),"Perturbation Type",&
                      obs_pert%perttype(1), rc=status)
                 call LIS_verify(status)
 
-                if(LIS_rc%obs_ngrid(k).gt.0) then 
+                if(LIS_rc%obs_ngrid(k).gt.0) then
                     call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
                          ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                     call LIS_verify(status)
@@ -339,19 +339,19 @@ contains
                      obs_pert%ccorr(1,:),itemCount=1,rc=status)
 
                 call ESMF_StateAdd(OBS_Pert_State(n),(/pertField(n)/),rc=status)
-                call LIS_verify(status)         
+                call LIS_verify(status)
 
             endif
 
             deallocate(vname)
             deallocate(varmax)
             deallocate(varmin)
-            deallocate(ssdev)   
+            deallocate(ssdev)
 
         enddo
 
         do n=1,LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then 
+            if(LIS_rc%dascaloption(k).ne."none") then
 
                 call LIS_getCDFattributes(k,modelcdffile(n),&
                      CGLSlai_struc(n)%ntimes, ngrid)
@@ -377,14 +377,14 @@ contains
                      LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, &
                      CGLSlai_struc(n)%nbins))
                 allocate(CGLSlai_struc(n)%obs_cdf(&
-                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, & 
+                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, &
                      CGLSlai_struc(n)%nbins))
 
                 !----------------------------------------------------------------------------
                 ! Read the model and observation CDF data
                 !----------------------------------------------------------------------------
                 call LIS_readMeanSigmaData(n,k,&
-                     CGLSlai_struc(n)%ntimes, & 
+                     CGLSlai_struc(n)%ntimes, &
                      LIS_rc%obs_ngrid(k), &
                      modelcdffile(n), &
                      "LAI",&
@@ -392,7 +392,7 @@ contains
                      CGLSlai_struc(n)%model_sigma)
 
                 call LIS_readMeanSigmaData(n,k,&
-                     CGLSlai_struc(n)%ntimes, & 
+                     CGLSlai_struc(n)%ntimes, &
                      LIS_rc%obs_ngrid(k), &
                      obscdffile(n), &
                      "LAI",&
@@ -401,7 +401,7 @@ contains
 
                 call LIS_readCDFdata(n,k,&
                      CGLSlai_struc(n)%nbins,&
-                     CGLSlai_struc(n)%ntimes, & 
+                     CGLSlai_struc(n)%ntimes, &
                      LIS_rc%obs_ngrid(k), &
                      modelcdffile(n), &
                      "LAI",&
@@ -410,36 +410,36 @@ contains
 
                 call LIS_readCDFdata(n,k,&
                      CGLSlai_struc(n)%nbins,&
-                     CGLSlai_struc(n)%ntimes, & 
+                     CGLSlai_struc(n)%ntimes, &
                      LIS_rc%obs_ngrid(k), &
                      obscdffile(n), &
                      "LAI",&
                      CGLSlai_struc(n)%obs_xrange,&
                      CGLSlai_struc(n)%obs_cdf)
 
-                if(CGLSlai_struc(n)%useSsdevScal.eq.1) then 
-                    if(CGLSlai_struc(n)%ntimes.eq.1) then 
+                if(CGLSlai_struc(n)%useSsdevScal.eq.1) then
+                    if(CGLSlai_struc(n)%ntimes.eq.1) then
                         jj = 1
                     else
                         jj = LIS_rc%mo
                     endif
                     do t=1,LIS_rc%obs_ngrid(k)
-                        if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then 
+                        if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then
                             print*, ssdev(t),CGLSlai_struc(n)%model_sigma(t,jj),&
                                  CGLSlai_struc(n)%obs_sigma(t,jj)
-                            if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.0) then 
+                            if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.0) then
                                 ssdev(t) = ssdev(t)*CGLSlai_struc(n)%model_sigma(t,jj)/&
                                      CGLSlai_struc(n)%obs_sigma(t,jj)
                             endif
 
-                            if(ssdev(t).lt.minssdev) then 
+                            if(ssdev(t).lt.minssdev) then
                                 ssdev(t) = minssdev
                             endif
                         endif
                     enddo
                 endif
 
-                if(LIS_rc%obs_ngrid(k).gt.0) then 
+                if(LIS_rc%obs_ngrid(k).gt.0) then
                     call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
                          ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                     call LIS_verify(status)
@@ -490,7 +490,7 @@ contains
 
             CGLSlai_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
             CGLSlai_struc(n)%gridDesci(2) = CGLSlai_struc(n)%nc
-            CGLSlai_struc(n)%gridDesci(3) = CGLSlai_struc(n)%nr 
+            CGLSlai_struc(n)%gridDesci(3) = CGLSlai_struc(n)%nr
             CGLSlai_struc(n)%gridDesci(4) = CGLSlai_struc(n)%lat_lower_left
             CGLSlai_struc(n)%gridDesci(5) = CGLSlai_struc(n)%lon_lower_left
             CGLSlai_struc(n)%gridDesci(6) = 128
@@ -503,9 +503,9 @@ contains
             CGLSlai_struc(n)%mi = CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr
 
             !-----------------------------------------------------------------------------
-            !   Use interpolation if LIS is running finer than native resolution. 
+            !   Use interpolation if LIS is running finer than native resolution.
             !-----------------------------------------------------------------------------
-            if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then 
+            if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then
 
                 allocate(CGLSlai_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(CGLSlai_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
@@ -519,7 +519,7 @@ contains
                 allocate(CGLSlai_struc(n)%w22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create interpolation input for CGLS LAI'       
+                     '[INFO] create interpolation input for CGLS LAI'
 
                 call bilinear_interp_input_withgrid(CGLSlai_struc(n)%gridDesci(:), &
                      LIS_rc%obs_gridDesc(k,:),&
@@ -535,7 +535,7 @@ contains
                      CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create upscaling input for CGLS LAI'       
+                     '[INFO] create upscaling input for CGLS LAI'
 
                 call upscaleByAveraging_input(CGLSlai_struc(n)%gridDesci(:),&
                      LIS_rc%obs_gridDesc(k,:),&
@@ -543,13 +543,13 @@ contains
                      LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), CGLSlai_struc(n)%n11)
 
                 write(LIS_logunit,*)&
-                     '[INFO] finished creating upscaling input for CGLS LAI'       
+                     '[INFO] finished creating upscaling input for CGLS LAI'
             endif
 
             call LIS_registerAlarm("CGLS LAI read alarm",&
                  86400.0, 86400.0)
 
-            CGLSlai_struc(n)%startMode = .true. 
+            CGLSlai_struc(n)%startMode = .true.
 
             call ESMF_StateAdd(OBS_State(n),(/obsField(n)/),rc=status)
             call LIS_verify(status)
