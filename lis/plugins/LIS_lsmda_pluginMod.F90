@@ -2476,30 +2476,8 @@ subroutine LIS_lsmda_plugin
    call registerlsmdadescalestatevar(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_VODCAlaiobsId)//char(0),noahmp36_descale_veg)
 
-   ! Generic LAI reader
-   call registerlsmdainit(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_daveg_init)
-   call registerlsmdagetstatevar(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_getvegvars)
-   call registerlsmdasetstatevar(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_setvegvars)
-   call registerlsmdaobstransform(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_transform_veg)
-   call registerlsmdamapobstolsm(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_map_veg)
-   call registerlsmdaupdatestate(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_updatevegvars)
-   call registerlsmdaqcstate(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_qcveg)
-
-   call registerlsmdagetobspred(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_getLAIpred)
-   call registerlsmdaqcobsstate(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_qc_LAIobs)
-   call registerlsmdascalestatevar(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_scale_veg)
-   call registerlsmdadescalestatevar(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp36_descale_veg)
+   ! Custom LAI reader
+   call register_noahmp36_laida(LIS_CustomLAIobsId)
 
    call registerlsmdainit(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_NASASMAPvodobsId)//char(0),noahmp36_daveg_init)
@@ -2810,46 +2788,7 @@ subroutine LIS_lsmda_plugin
    call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_CGLSlaismobsId)//char(0),noahmp401_descale_laisoilm)
 
-   call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_daveg_init)
-   call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getvegvars)
-   call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_setvegvars)
-   call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_updatevegvars)
-   call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qcveg)
-
-   call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_getLAIpred)
-   call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_qc_LAIobs)
-   call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_scale_veg)
-   call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_VODCAlaiobsId)//char(0),noahmp401_descale_veg)
-
-   ! Generic LAI reader
-   call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_daveg_init)
-   call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_getvegvars)
-   call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_setvegvars)
-   call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_updatevegvars)
-   call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_qcveg)
-
-   call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_getLAIpred)
-   call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_qc_LAIobs)
-   call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_scale_veg)
-   call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-        trim(LIS_CustomLAIobsId)//char(0),noahmp401_descale_veg)
+   call register_noahmp401_laida(LIS_CustomLAIobsId)
 
 ! Yeosang Yoon, SNODEP DA
 #if ( defined DA_OBS_SNODEP )
@@ -3924,6 +3863,64 @@ subroutine LIS_lsmda_plugin
         trim(LIS_usafsiobsId)//char(0),jules5x_qc_usafsiobs)
 #endif
 #endif 
+
+
+contains
+
+    subroutine register_noahmp36_laida(obsId)
+        implicit none
+        character*50, intent(in) :: obsId
+
+        call registerlsmdainit(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_daveg_init)
+        call registerlsmdagetstatevar(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_getvegvars)
+        call registerlsmdasetstatevar(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_setvegvars)
+        call registerlsmdaobstransform(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_transform_veg)
+        call registerlsmdamapobstolsm(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_map_veg)
+        call registerlsmdaupdatestate(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_updatevegvars)
+        call registerlsmdaqcstate(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_qcveg)
+
+        call registerlsmdagetobspred(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_getLAIpred)
+        call registerlsmdaqcobsstate(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_qc_LAIobs)
+        call registerlsmdascalestatevar(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_scale_veg)
+        call registerlsmdadescalestatevar(trim(LIS_noahmp36Id)//"+"//&
+             trim(obsId)//char(0),noahmp36_descale_veg)
+    end subroutine register_noahmp36_laida
+
+    subroutine register_noahmp401_laida(obsId)
+        implicit none
+        character*50, intent(in) :: obsId
+
+       call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_daveg_init)
+       call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_getvegvars)
+       call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_setvegvars)
+       call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_updatevegvars)
+       call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_qcveg)
+
+       call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_getLAIpred)
+       call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_qc_LAIobs)
+       call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_scale_veg)
+       call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_descale_veg)
+    end subroutine register_noahmp401_laida
+
 
 #endif  !endif for DA_DIRECT_INSERTION, DA_ENKS, or DA_ENKF
 
