@@ -7,519 +7,376 @@
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 #include "LIS_misc.h"
 module VODObservationOperator_Mod
-!BOP
-!
-! !MODULE: VODObservationOperator_Mod
-!
-! !DESCRIPTION:
-!    This modules provides routines for an observation operator for VOD.
-!    Although it's not a real RTM it programmatically works similarly and is
-!    therefore implemented analogously to a RTM.
-!
-! !HISTORY:
-! 02 Mar 2022: Samuel Scherrer; based on VODObservationOperator
-!
-! !USES:        
+    !BOP
+    !
+    ! !MODULE: VODObservationOperator_Mod
+    !
+    ! !DESCRIPTION:
+    !    This modules provides routines for an observation operator for VOD.
+    !    Although it's not a real RTM it programmatically works similarly and is
+    !    therefore implemented analogously to a RTM.
+    !
+    ! To use this module, you need to provide a netCDF file with 6 variables,
+    ! intercept, LAI_coef, and SM1_coef to SM4_coef. Each of these variables
+    ! must have the dimensions (ntimes, ngrid), where ntimes is either 1 or 12,
+    ! depending on whether a single model for the full year should be used, or
+    ! monthly varying models, and ngrid is the dimension of the model tile
+    ! space (i.e. a flat 1D array with only land points such that east_west is
+    ! changing fastest).
+    !
+    ! !HISTORY:
+    ! 02 Mar 2022: Samuel Scherrer; based on VODObservationOperator
+    !
+    ! !USES:
 
 #if (defined RTMS)
 
-  use ESMF
-  use LIS_coreMod
-  use LIS_RTMMod
-  use LIS_logMod
+    use ESMF
+    use LIS_coreMod
+    use LIS_RTMMod
+    use LIS_logMod
 
-  implicit none
- 
-  PRIVATE
-!-----------------------------------------------------------------------------
-! !PUBLIC MEMBER FUNCTIONS:
-!-----------------------------------------------------------------------------
-  public :: VODObservationOperator_initialize
-  public :: VODObservationOperator_f2t
-  public :: VODObservationOperator_run
-  public :: VODObservationOperator_output
-  public :: VODObservationOperator_geometry 
-!-----------------------------------------------------------------------------
-! !PUBLIC TYPES:
-!-----------------------------------------------------------------------------
-  public :: vod_obsop_struc
-!EOP
-  type, public ::  vod_obsop_type_dec 
-   
-     character*256      :: parameter_fname
+    implicit none
 
-     real, allocatable :: laicoef(:)
-     real, allocatable :: sm1coef(:)
-     real, allocatable :: sm2coef(:)
-     real, allocatable :: sm3coef(:)
-     real, allocatable :: sm4coef(:)
+    PRIVATE
+    !-----------------------------------------------------------------------------
+    ! !PUBLIC MEMBER FUNCTIONS:
+    !-----------------------------------------------------------------------------
+    public :: VODObservationOperator_initialize
+    public :: VODObservationOperator_f2t
+    public :: VODObservationOperator_run
+    public :: VODObservationOperator_output
+    public :: VODObservationOperator_geometry
+    !-----------------------------------------------------------------------------
+    ! !PUBLIC TYPES:
+    !-----------------------------------------------------------------------------
+    public :: vod_obsop_struc
+    !EOP
+    type, public ::  vod_obsop_type_dec
 
-     real, allocatable :: lone(:)
-     real, allocatable :: late(:)
-     !-------output------------!   
-     real, allocatable :: VOD(:)
-  end type vod_obsop_type_dec
+        character*256     :: parameter_fname
 
-  type(vod_obsop_type_dec), allocatable :: vod_obsop_struc(:) 
+        integer           :: ntimes
+        real, allocatable :: intercept(:,:)
+        real, allocatable :: laicoef(:,:)
+        real, allocatable :: sm1coef(:,:)
+        real, allocatable :: sm2coef(:,:)
+        real, allocatable :: sm3coef(:,:)
+        real, allocatable :: sm4coef(:,:)
 
-  SAVE
+        !-------output------------!
+        real, allocatable :: VOD(:)
+    end type vod_obsop_type_dec
+
+    type(vod_obsop_type_dec), allocatable :: vod_obsop_struc(:)
+
+    SAVE
 
 contains
-!BOP
-! 
-! !ROUTINE: VODObservationOperator_initialize
-! \label{VODObservationOperator_initialize}
-! 
-! !INTERFACE:
-   subroutine VODObservationOperator_initialize()
-! !USES:
-
-! !DESCRIPTION:        
-!
-!  This routine creates the datatypes and allocates memory for noahMP3.6-specific
-!  variables. It also invokes the routine to read the runtime specific options
-!  for noahMP3.6 from the configuration file. 
-! 
-!  The routines invoked are: 
-!  \begin{description}
-!   \item[readVODObservationOperatorcrd](\ref{readVODObservationOperatorcrd}) \newline
-!
-!EOP
-   implicit none
-    
-   integer :: rc
-   integer :: n,t
-   integer :: ierr, ios
-   integer , parameter :: OPEN_OK = 0
-   character*128 :: message
-   ! typically the parameters are available on the same grid as the observations
-   real          :: laicoef(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
-
-   !allocate memory for nest
-   allocate(vod_obsop_struc(LIS_rc%nnest))
-
-   do n=1,LIS_rc%nnest
-       !allocate memory for all tile in current nest
-
-      allocate(vod_obsop_struc(n)%laicoef(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(vod_obsop_struc(n)%sm1coef(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(vod_obsop_struc(n)%sm2coef(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(vod_obsop_struc(n)%sm3coef(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(vod_obsop_struc(n)%sm4coef(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-
-      allocate(vod_obsop_struc(n)%lone(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(vod_obsop_struc(n)%late(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-
-      allocate(vod_obsop_struc(n)%VOD(LIS_rc%npatch(n,LIS_rc%lsm_index)))
-
-      call add_sfc_fields(n,LIS_sfcState(n), "Leaf Area Index")
-      call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 1")
-      call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 2")
-      call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 3")
-      call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 4")
-
-   enddo 
-
-
-   call ESMF_ConfigFindLabel(LIS_config, "VOD Observation Operator parameter file:",rc = rc)
-   do n=1, LIS_rc%nnest 
-      call ESMF_ConfigGetAttribute(LIS_config,vod_obsop_struc(n)%parameter_fname, rc=rc)
-      call LIS_verify(rc, "VOD Observation Operator parameter file: not defined")
-   enddo
-
-
-   do n=1,LIS_rc%nnest
-
-       !------------------------------------------------------------
-       ! Read grid information and initialize resampling
-       !------------------------------------------------------------
-       lat_lower_left = 90 - 0.5 * vod_obsop_struc(n)%spatialres
-       lat_upper_right = -90 + 0.5 * vod_obsop_struc(n)%spatialres
-       lon_lower_left = -180 + 0.5 * vod_obsop_struc(n)%spatialres
-       lon_upper_right = 180 - 0.5 * vod_obsop_struc(n)%spatialres
-       ! dlat is positive since LIS will figure out that latitude is decreasing
-       dlat = vod_obsop_struc(n)%spatialres
-       dlon = vod_obsop_struc(n)%spatialres
-       nr = nint(180.0 / vod_obsop_struc(n)%spatialres)
-       nc = 2 * nr
-
-       gridDesci(1) = 0  ! regular lat-lon grid
-       gridDesci(2) = vod_obsop_struc(n)%nc
-       gridDesci(3) = vod_obsop_struc(n)%nr 
-       gridDesci(4) = vod_obsop_struc(n)%lat_lower_left
-       gridDesci(5) = vod_obsop_struc(n)%lon_lower_left
-       gridDesci(6) = 128
-       gridDesci(7) = vod_obsop_struc(n)%lat_upper_right
-       gridDesci(8) = vod_obsop_struc(n)%lon_upper_right
-       gridDesci(9) = vod_obsop_struc(n)%dlat
-       gridDesci(10) = vod_obsop_struc(n)%dlon
-       gridDesci(20) = 64
-       mi = nc*nr
-
-       !-----------------------------------------------------------------------------
-       !   Use interpolation if LIS is running finer than native resolution. 
-       !-----------------------------------------------------------------------------
-       if(LIS_rc%obs_gridDesc(k,10).lt.dlon) then
-
-           allocate(rlat(nc*nr))
-           allocate(rlon(nc*nr))
-           allocate(n11(nc*nr))
-           allocate(n12(nc*nr))
-           allocate(n21(nc*nr))
-           allocate(n22(nc*nr))
-           allocate(w11(nc*nr))
-           allocate(w12(nc*nr))
-           allocate(w21(nc*nr))
-           allocate(w22(nc*nr))
-
-           write(LIS_logunit,*)&
-                '[INFO] create interpolation input for Generic LAI'       
-
-           call bilinear_interp_input_withgrid(vod_obsop_struc(n)%gridDesci(:), &
-                LIS_rc%obs_gridDesc(k,:),&
-                LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k),&
-                vod_obsop_struc(n)%rlat, vod_obsop_struc(n)%rlon,&
-                vod_obsop_struc(n)%n11, vod_obsop_struc(n)%n12, &
-                vod_obsop_struc(n)%n21, vod_obsop_struc(n)%n22, &
-                vod_obsop_struc(n)%w11, vod_obsop_struc(n)%w12, &
-                vod_obsop_struc(n)%w21, vod_obsop_struc(n)%w22)
-       else
-
-           allocate(vod_obsop_struc(n)%n11(&
-                vod_obsop_struc(n)%nc*vod_obsop_struc(n)%nr))
-
-           write(LIS_logunit,*)&
-                '[INFO] create upscaling input for Generic LAI'       
-
-           call upscaleByAveraging_input(vod_obsop_struc(n)%gridDesci(:),&
-                LIS_rc%obs_gridDesc(k,:),&
-                vod_obsop_struc(n)%nc*vod_obsop_struc(n)%nr, &
-                LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), vod_obsop_struc(n)%n11)
-
-           write(LIS_logunit,*)&
-                '[INFO] finished creating upscaling input for Generic LAI'       
-       endif
-   enddo
-
-   
-
-    do n=1, LIS_rc%nnest
-        write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
-        ios = nf90_open(path=trim(vod_obsop_struc(n)%parameter_fname),mode=NF90_NOWRITE,ncid=nid)
-        call LIS_verify(ios,'Error opening file '//trim(vod_obsop_struc(n)%parameter_fname))
-
-        ios = nf90_inq_varid(nid, trim(vod_obsop_struc(n)%laicoef_varname), laiid)
-        call LIS_verify(ios, 'Error nf90_inq_varid: '//vod_obsop_struc(n)%laicoef_varname)
-
-        ios = nf90_get_var(nid, laiid, laicoef, &
-             count=(/GenericLAI_struc(n)%nc,GenericLAI_struc(n)%nr/)) 
-
-
-        ios = nf90_inq_varid(nid, trim(vod_obsop_struc(n)%sm1coef_varname), sm1id)
-        call LIS_verify(ios, 'Error nf90_inq_varid: '//vod_obsop_struc(n)%sm1coef_varname)
-        ios = nf90_inq_varid(nid, trim(vod_obsop_struc(n)%sm2coef_varname), sm2id)
-        call LIS_verify(ios, 'Error nf90_inq_varid: '//vod_obsop_struc(n)%sm2coef_varname)
-        ios = nf90_inq_varid(nid, trim(vod_obsop_struc(n)%sm3coef_varname), sm3id)
-        call LIS_verify(ios, 'Error nf90_inq_varid: '//vod_obsop_struc(n)%sm3coef_varname)
-        ios = nf90_inq_varid(nid, trim(vod_obsop_struc(n)%sm4coef_varname), sm4id)
-        call LIS_verify(ios, 'Error nf90_inq_varid: '//vod_obsop_struc(n)%sm4coef_varname)
-    enddo
-
-
-
-
-!-------------------------------------------------------------------------
-!!!!READ IN A PARAMETER TABLE for VV pol
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%AA_VV_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening AA_VV_PARM.TBL'
-         CALL wrf_error_fatal ( message )
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
-           READ (19,*)vod_obsop_struc(n)%AA_VV(t),vod_obsop_struc(n)%lone(t),&
-          vod_obsop_struc(n)%late(t)
-       enddo 
-       CLOSE (19)
-   enddo
-!----------------------------------------------------------------------------
-!-----READ IN B PARAMETER TABLE for VV pol 
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%BB_VV_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening BB_VV_PARM.TBL'
-         CALL wrf_error_fatal ( message ) 
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
-           READ (19,*)vod_obsop_struc(n)%BB_VV(t)
-       enddo
-
-   ! READ (19,*) B_val
-       CLOSE (19)
-   enddo
-!-----------------------------------------------------------------------------
-!-----READ IN C PARAMETER TABLE for VV pol 
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%CC_VV_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening CC_VV_PARM.TBL'
-         CALL wrf_error_fatal ( message )
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)  
-           READ (19,*) vod_obsop_struc(n)%CC_VV(t)
-       enddo
-
-!       READ (19,*) C_val
-       CLOSE (19)
-   enddo
-!-------------------------------------------------------------------------------
-!-----READ IN D PARAMETER TABLE for VV pol 
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%DD_VV_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr) 
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening DD_VV_PARM.TBL'
-         CALL wrf_error_fatal ( message )
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
-           READ (19,*) vod_obsop_struc(n)%DD_VV(t)
-       enddo
-
-!        READ (19,*) D_val
-       CLOSE (19)
-   enddo
-
-
-!-------------------------------------------------------------------------
-!!!!READ IN A PARAMETER TABLE for VH pol
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%AA_VH_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening AA_VH_PARM.TBL'
-         CALL wrf_error_fatal ( message )
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
-           READ (19,*)vod_obsop_struc(n)%AA_VH(t)
-       enddo 
-       CLOSE (19)
-   enddo
-!----------------------------------------------------------------------------
-!-----READ IN B PARAMETER TABLE for VH pol 
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%BB_VH_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening BB_VH_PARM.TBL'
-         CALL wrf_error_fatal ( message ) 
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
-           READ (19,*)vod_obsop_struc(n)%BB_VH(t)
-       enddo
-
-   ! READ (19,*) B_val
-       CLOSE (19)
-   enddo
-!-----------------------------------------------------------------------------
-!-----READ IN C PARAMETER TABLE for VH pol 
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%CC_VH_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr)
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening CC_VH_PARM.TBL'
-         CALL wrf_error_fatal ( message )
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)  
-           READ (19,*) vod_obsop_struc(n)%CC_VH(t)
-       enddo
-
-!       READ (19,*) C_val
-       CLOSE (19)
-   enddo
-!-------------------------------------------------------------------------------
-!-----READ IN D PARAMETER TABLE for VH pol 
-   do n=1, LIS_rc%nnest
-       OPEN(19, FILE=trim(vod_obsop_struc(n)%DD_VH_tbl_name),FORM='FORMATTED',STATUS='OLD',IOSTAT=ierr) 
-       IF(ierr .NE. OPEN_OK ) THEN
-         WRITE(message,FMT='(A)') &
-         'failure opening DD_VH_PARM.TBL'
-         CALL wrf_error_fatal ( message )
-       END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
-           READ (19,*) vod_obsop_struc(n)%DD_VH(t)
-       enddo
-
-!        READ (19,*) D_val
-       CLOSE (19)
-   enddo
-
-   end subroutine VODObservationOperator_initialize 
-!!--------------------------------------------------------------------------------
-
-   subroutine add_sfc_fields(n, sfcState,varname)
-
-   implicit none 
-
-   integer            :: n 
-   type(ESMF_State)   :: sfcState
-   character(len=*)   :: varname
-
-   type(ESMF_Field)     :: varField
-   type(ESMF_ArraySpec) :: arrspec
-   integer              :: status
-   real :: sum
-   call ESMF_ArraySpecSet(arrspec,rank=1,typekind=ESMF_TYPEKIND_R4,&
-         rc=status)
-   call LIS_verify(status)
-
-   varField = ESMF_FieldCreate(arrayspec=arrSpec, & 
-         grid=LIS_vecTile(n), name=trim(varname), &
-         rc=status)
-   call LIS_verify(status, 'Error in field_create of '//trim(varname))
-    
-   call ESMF_StateAdd(sfcState, (/varField/), rc=status)
-   call LIS_verify(status, 'Error in StateAdd of '//trim(varname))
-
-   end subroutine add_sfc_fields
-
-
-   subroutine VODObservationOperator_f2t(n)
-
-   implicit none
-
-   integer, intent(in)    :: n 
-
-   end subroutine VODObservationOperator_f2t
-
-
-   subroutine VODObservationOperator_geometry(n)
-   implicit none
-   integer, intent(in)    :: n
-
-   end subroutine VODObservationOperator_geometry 
-  !Do nothing for now
-   subroutine VODObservationOperator_run(n)
-   use LIS_histDataMod
-! !USES: 
-   implicit none
-
-   integer, intent(in) :: n
-
-   integer             :: t,p
-   integer             :: status
-   integer             :: col,row
-   real                :: A_VV_cal,B_VV_cal,C_VV_cal,D_VV_cal,A_VH_cal,&
-                          B_VH_cal, C_VH_cal, D_VH_cal,lon,lat,lon1,lat1
-   real, pointer       :: sm(:), lai(:)
-   real                :: sigmabare_VV,sigmabare_VH,s0VV_s_db, s0VH_s_dB, &
-                        sigmacan_VV, sigmacan_VH,sigmasoil_VV,sigmasoil_VH,&
-                        tt_VV, tt_VH
-
-   real                :: theta, ctheta
-
-
-   theta = 0.6458 !incidence angle in radians (37 deg)
-   ctheta = cos(theta)
-
-
-!   map surface properties to SFC    
-   call getsfcvar(LIS_sfcState(n), "Soil Moisture Content",&
-         sm)
-   call getsfcvar(LIS_sfcState(n), "Leaf Area Index", &
-         lai)
-
-
-!---------------------------------------------
-! Tile loop 
-!--------------------------------------------
-   do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
-       row = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%row
-       col = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%col
-       lat = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lat
-       lon = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lon
-       do p=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
-          lon1= vod_obsop_struc(n)%lone(p)
-          lat1= vod_obsop_struc(n)%late(p)
-          if (lon1 .eq. lon .and. lat1 .eq. lat) then
-             A_VV_cal=vod_obsop_struc(n)%AA_VV(p)
-             B_VV_cal=vod_obsop_struc(n)%BB_VV(p)
-             C_VV_cal=vod_obsop_struc(n)%CC_VV(p)
-             D_VV_cal=vod_obsop_struc(n)%DD_VV(p)        
-             A_VH_cal=vod_obsop_struc(n)%AA_VH(p)
-             B_VH_cal=vod_obsop_struc(n)%BB_VH(p)
-             C_VH_cal=vod_obsop_struc(n)%CC_VH(p)
-             D_VH_cal=vod_obsop_struc(n)%DD_VH(p)
-          endif
-       enddo
-       
-      if(.not.isNaN(sm(t)).and. sm(t).ne.LIS_rc%udef) then
-         !bare soil backscatter in db
-          s0VV_s_db=C_VV_cal+D_VV_cal*sm(t)
-          s0VH_s_db=C_VH_cal+D_VH_cal*sm(t)
-         !bare soil backscatter in linear units      
-          sigmabare_VV=10.**(s0VV_s_db/10.)
-          sigmabare_VH=10.**(s0VH_s_db/10.)
-         !attenuation
-          tt_VV=exp(-2.*B_VV_cal*lai(t)/ctheta)
-          tt_VH=exp(-2.*B_VH_cal*lai(t)/ctheta)
-         !attenuated soil backscatter
-          sigmasoil_VV=tt_VV*sigmabare_VV
-          sigmasoil_VH=tt_VH*sigmabare_VH
-         !vegetation backscatter in linear units
-          sigmacan_VV=(1.-tt_VV)*ctheta*(A_VV_cal*lai(t))
-          sigmacan_VH=(1.-tt_VH)*ctheta*(A_VH_cal*lai(t))
-         !total backscatter
-          vod_obsop_struc(n)%Sig0VV(t)=10.*log10(sigmacan_VV+sigmasoil_VV)
-          vod_obsop_struc(n)%Sig0VH(t)=10.*log10(sigmacan_VH+sigmasoil_VH)
-       else
-          vod_obsop_struc(n)%Sig0VV(t)=LIS_rc%udef
-          vod_obsop_struc(n)%Sig0VH(t)=LIS_rc%udef
-
-       endif
-
-       call LIS_diagnoseRTMOutputVar(n, t,LIS_MOC_RTM_Sig0VV,value=       &
-          vod_obsop_struc(n)%Sig0VV(t),             &
-          vlevel=1, unit="dB",direction="-")
-
-       call LIS_diagnoseRTMOutputVar(n, t,LIS_MOC_RTM_Sig0VH,value=       &
-          vod_obsop_struc(n)%Sig0VH(t),             &
-          vlevel=1, unit="dB",direction="-")
-   enddo
-
-   end subroutine VODObservationOperator_run
-
-
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   subroutine getsfcvar(sfcState, varname, var)
-! !USES: 
-    
-   implicit none
-    
-   type(ESMF_State)      :: sfcState
-   type(ESMF_Field)      :: varField
-   character(len=*)      :: varname
-   real, pointer         :: var(:)
-   integer               :: status
-
-   call ESMF_StateGet(sfcState, trim(varname), varField, rc=status)
-   call LIS_verify(status, 'Error in StateGet: CMEM3_handlerMod '//trim(varname))
-   call ESMF_FieldGet(varField, localDE=0,farrayPtr=var, rc=status)
-   call LIS_verify(status, 'Error in FieldGet: CMEM3_handlerMod '//trim(varname))
-
-   end subroutine getsfcvar
+    !BOP
+    !
+    ! !ROUTINE: VODObservationOperator_initialize
+    ! \label{VODObservationOperator_initialize}
+    !
+    ! !INTERFACE:
+    subroutine VODObservationOperator_initialize()
+        ! !USES:
+
+        ! !DESCRIPTION:
+        !
+        !  This routine creates the datatypes and allocates memory for noahMP3.6-specific
+        !  variables. It also invokes the routine to read the runtime specific options
+        !  for noahMP3.6 from the configuration file.
+        !
+        !  The routines invoked are:
+        !  \begin{description}
+        !   \item[readVODObservationOperatorcrd](\ref{readVODObservationOperatorcrd}) \newline
+        !
+        !EOP
+        implicit none
+
+        integer :: rc
+        integer :: n,t
+        integer :: ierr, ios
+        integer :: ngridId, ntimesId, ngrid, ntimes
+        integer , parameter :: OPEN_OK = 0
+        character*128 :: message
+        ! typically the parameters are available on the same grid as the observations
+        real          :: laicoef(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+
+        !allocate memory for nest
+        allocate(vod_obsop_struc(LIS_rc%nnest))
+
+        call ESMF_ConfigFindLabel(LIS_config, "VOD Observation Operator parameter file:",rc = rc)
+        do n=1, LIS_rc%nnest
+            call ESMF_ConfigGetAttribute(LIS_config,vod_obsop_struc(n)%parameter_fname, rc=rc)
+            call LIS_verify(rc, "VOD Observation Operator parameter file: not defined")
+        enddo
+
+        do n=1,LIS_rc%nnest
+            allocate(vod_obsop_struc(n)%VOD(LIS_rc%npatch(n,LIS_rc%lsm_index)))
+            ! allocate(vod_obsop_struc(n)%lone(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
+            ! allocate(vod_obsop_struc(n)%late(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
+
+            call add_sfc_fields(n,LIS_sfcState(n), "Leaf Area Index")
+            call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 1")
+            call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 2")
+            call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 3")
+            call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 4")
+
+        enddo
+
+
+
+        do n=1, LIS_rc%nnest
+            write(LIS_logunit,*) '[INFO] Reading ',trim(vod_obsop_struc(n)%parameter_fname)
+
+            ios = nf90_open(path=trim(vod_obsop_struc(n)%parameter_fname),mode=NF90_NOWRITE,ncid=nid)
+            call LIS_verify(ios,'Error opening file '//trim(vod_obsop_struc(n)%parameter_fname))
+
+            ! check if ngrid is as expected
+            ios = nf90_inq_dimid(nid, "ngrid", ngridId)
+            call LIS_verify(ios, "Error nf90_inq_varid: ngrid")
+            ios = nf90_inquire_dimension(nid, ngridId, len=ngrid)
+            call LIS_verify(ios, "Error nf90_inquire_dimension: ngrid")
+            if (ngrid /= LIS_rc%glbngrid_red(n)) then
+                write(LIS_logunit, *) "[ERR] ngrid in "//trim(vod_obsop_struc(n)%parameter_fname)&
+                     //" not consistent with expected ngrid: ", ngrid,&
+                     " instead of ",LIS_rc%glbngrid_red(n)
+                call LIS_endrun
+            endif
+
+            ! read ntimes
+            ios = nf90_inq_dimid(nid, "ntimes", ntimesId)
+            call LIS_verify(ios, "Error nf90_inq_varid: ntimes")
+            ios = nf90_inquire_dimension(nid, ntimesId, len=ntimes)
+            call LIS_verify(ios, "Error nf90_inquire_dimension: ntimes")
+
+            ! now that we have ntimes, we can allocate the coefficient arrays
+            ! for the nest
+            allocate(vod_obsop_struc(n)%intercept(LIS_rc%npatch(n), ntimes)
+            allocate(vod_obsop_struc(n)%laicoef(LIS_rc%npatch(n), ntimes)
+            allocate(vod_obsop_struc(n)%sm1coef(LIS_rc%npatch(n), ntimes)
+            allocate(vod_obsop_struc(n)%sm2coef(LIS_rc%npatch(n), ntimes)
+            allocate(vod_obsop_struc(n)%sm3coef(LIS_rc%npatch(n), ntimes)
+            allocate(vod_obsop_struc(n)%sm4coef(LIS_rc%npatch(n), ntimes)
+
+            read_coef_from_file(nid, ngrid, ntimes, "intercept", vod_obsop_struc(n)%intercept)
+            read_coef_from_file(nid, ngrid, ntimes, "LAI_coef", vod_obsop_struc(n)%laicoef)
+            read_coef_from_file(nid, ngrid, ntimes, "SM1_coef", vod_obsop_struc(n)%sm1coef)
+            read_coef_from_file(nid, ngrid, ntimes, "SM2_coef", vod_obsop_struc(n)%sm1coef)
+            read_coef_from_file(nid, ngrid, ntimes, "SM3_coef", vod_obsop_struc(n)%sm1coef)
+            read_coef_from_file(nid, ngrid, ntimes, "SM4_coef", vod_obsop_struc(n)%sm1coef)
+        enddo
+
+        do n=1,LIS_rc%nnest
+            call add_fields_toState(n,LIS_forwardState(n),"VOD")
+        enddo
+
+    contains
+
+        subroutine read_coef_from_file(nid, ngrid, ntimes, varname, coef)
+            implicit none
+            integer, intent(in) :: nid, ngrid, ntimes
+            character, intent(in) :: varname(:)
+            real, intent(inout) :: coef(:,:)
+
+            real :: coef_file(:,:)
+            real, allocatable :: coef_grid(:)
+            integer :: ios
+
+            allocate(lai_file(ngrid, ntimes))
+            call LIS_verify(nf90_inq_varid(nid, trim(varname), varid),&
+                 "Error nf90_inq_varid: ", trim(varname))
+            call LIS_verify(nf90_get_var(nid, varid, laicoef_file), &
+                 "Error nf90_get_var: ", trim(varname))
+            allocate(coef_grid(LIS_rc%ngrid(n)))
+            do j=1,ntimes
+                call LIS_convertVarToLocalSpace(n, coef_file(:,j), coef_grid)
+                call gridvar_to_patchvar(&
+                     n, LIS_rc%lsm_index, coef_grid, coef(:, j))
+            enddo
+            deallocate(coef_grid)
+            deallocate(coef_file)
+
+        end subroutine read_coef_from_file
+
+        subroutine gridvar_to_patchvar(n,m,gvar,pvar)
+            ! Converts a variable in local gridspace (length LIS_rc%ngrid(n))
+            ! to local patch space (length LIS_rc%npatch(n,m))
+
+            implicit none
+
+            integer, intent(in) :: n 
+            integer, intent(in) :: m
+            real, intent(in)    :: gvar(LIS_rc%ngrid(n))
+            real, intent(inout) :: tvar(LIS_rc%npatch(n,m))
+            integer             :: t,r,c
+
+            do t=1,LIS_rc%npatch(n,m)
+                r = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%row
+                c = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%col
+                tvar(t) = gvar(LIS_domain(n)%gindex(c,r))
+            enddo
+
+        end subroutine gridvar_to_patchvar
+
+        subroutine add_fields_toState(n, inState,varname)
+
+            use LIS_logMod,   only : LIS_verify
+            use LIS_coreMod,  only : LIS_vecTile
+
+            implicit none
+
+            integer            :: n
+            type(ESMF_State)   :: inState
+            character(len=*)   :: varname
+
+            type(ESMF_Field)     :: varField
+            type(ESMF_ArraySpec) :: arrspec
+            integer              :: status
+            real :: sum
+            call ESMF_ArraySpecSet(arrspec,rank=1,typekind=ESMF_TYPEKIND_R4,&
+                 rc=status)
+            call LIS_verify(status)
+
+            varField = ESMF_FieldCreate(arrayspec=arrSpec, &
+                 grid=LIS_vecTile(n), name=trim(varname), &
+                 rc=status)
+            call LIS_verify(status, "Error in field_create of "//trim(varname))
+
+            call ESMF_StateAdd(inState, (/varField/), rc=status)
+            call LIS_verify(status, "Error in StateAdd of "//trim(varname))
+
+        end subroutine add_fields_toState
+
+    end subroutine VODObservationOperator_initialize
+    !!--------------------------------------------------------------------------------
+
+    subroutine add_sfc_fields(n, sfcState,varname)
+
+        implicit none
+
+        integer            :: n
+        type(ESMF_State)   :: sfcState
+        character(len=*)   :: varname
+
+        type(ESMF_Field)     :: varField
+        type(ESMF_ArraySpec) :: arrspec
+        integer              :: status
+        real :: sum
+        call ESMF_ArraySpecSet(arrspec,rank=1,typekind=ESMF_TYPEKIND_R4,&
+             rc=status)
+        call LIS_verify(status)
+
+        varField = ESMF_FieldCreate(arrayspec=arrSpec, &
+             grid=LIS_vecTile(n), name=trim(varname), &
+             rc=status)
+        call LIS_verify(status, 'Error in field_create of '//trim(varname))
+
+        call ESMF_StateAdd(sfcState, (/varField/), rc=status)
+        call LIS_verify(status, 'Error in StateAdd of '//trim(varname))
+
+    end subroutine add_sfc_fields
+
+
+    subroutine VODObservationOperator_f2t(n)
+
+        implicit none
+
+        integer, intent(in)    :: n
+
+    end subroutine VODObservationOperator_f2t
+
+
+    subroutine VODObservationOperator_geometry(n)
+        implicit none
+        integer, intent(in)    :: n
+
+    end subroutine VODObservationOperator_geometry
+    !Do nothing for now
+    subroutine VODObservationOperator_run(n)
+        use LIS_histDataMod
+        ! !USES:
+        implicit none
+
+        integer, intent(in) :: n
+
+        integer             :: t, timeidx
+        integer             :: status
+        integer             :: col,row
+        real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
+        real                :: laicoef, sm1coef, sm2coef, sm3coef, sm4coef
+
+        !   map surface properties to SFC
+        call getsfcvar(LIS_sfcState(n), "Leaf Area Index", lai)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 1", sm1)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 2", sm2)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 3", sm3)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 4", sm4)
+
+
+        !---------------------------------------------
+        ! Patch loop
+        !--------------------------------------------
+        timeidx = LIS_rc%mo
+        do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
+            intercept = vod_obsop_struc(n)%intercept(t, t)
+            laicoef = vod_obsop_struc(n)%laicoef(t, t)
+            sm1coef = vod_obsop_struc(n)%sm1coef(t, t)
+            sm2coef = vod_obsop_struc(n)%sm2coef(t, t)
+            sm3coef = vod_obsop_struc(n)%sm3coef(t, t)
+            sm4coef = vod_obsop_struc(n)%sm4coef(t, t)
+
+            if(.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
+                 .and. .not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
+                 .and. .not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
+                 .and. .not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
+                 .and. .not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef) then
+                vod_obsop_struc(n)%VOD(t) = intercept + laicoef * lai(t)&
+                     + sm1coef * sm1(t)&
+                     + sm2coef * sm2(t)&
+                     + sm3coef * sm3(t)&
+                     + sm4coef * sm4(t)
+            else
+                vod_obsop_struc(n)%VOD(t)=LIS_rc%udef
+            endif
+
+            call LIS_diagnoseRTMOutputVar(n, p, LIS_MOC_RTM_Sig0VV,&
+                 value=vod_obsop_struc(n)%VOD(t))
+        enddo
+
+        call getsfcvar(LIS_forwardState(n), "VOD", vod_obsop_struc(n)%VOD)
+
+    end subroutine VODObservationOperator_run
+
+
+    !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    subroutine getsfcvar(sfcState, varname, var)
+        ! !USES:
+
+        implicit none
+
+        type(ESMF_State)      :: sfcState
+        type(ESMF_Field)      :: varField
+        character(len=*)      :: varname
+        real, pointer         :: var(:)
+        integer               :: status
+
+        call ESMF_StateGet(sfcState, trim(varname), varField, rc=status)
+        call LIS_verify(status, "Error in StateGet: VODObservationOperator_getsfcvar "//trim(varname))
+        call ESMF_FieldGet(varField, localDE=0,farrayPtr=var, rc=status)
+        call LIS_verify(status, "Error in FieldGet: VODObservationOperator_getsfcvar "//trim(varname))
+
+    end subroutine getsfcvar
 
 !!!!BOP
 !!!! !ROUTINE: VODObservationOperator_output
 !!!! \label{VODObservationOperator_output}
 !!!!
-!!!! !INTERFACE: 
-   subroutine VODObservationOperator_output(n)
-   integer, intent(in) :: n 
-   end subroutine VODObservationOperator_output
+!!!! !INTERFACE:
+    subroutine VODObservationOperator_output(n)
+        integer, intent(in) :: n
+    end subroutine VODObservationOperator_output
 #endif
 end module VODObservationOperator_Mod
-
-
