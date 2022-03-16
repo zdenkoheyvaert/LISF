@@ -650,7 +650,7 @@ contains
                 allocate(reader_struc(n)%w22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create interpolation input for Custom "//trim(varname)//"'       
+                     "[INFO] create interpolation input for Custom "//trim(varname)//""       
 
                 call bilinear_interp_input_withgrid(reader_struc(n)%gridDesci(:), &
                      LIS_rc%obs_gridDesc(k,:),&
@@ -666,7 +666,7 @@ contains
                      reader_struc(n)%nc*reader_struc(n)%nr))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create upscaling input for Custom "//trim(varname)//"'       
+                     "[INFO] create upscaling input for Custom "//trim(varname)//""       
 
                 call upscaleByAveraging_input(reader_struc(n)%gridDesci(:),&
                      LIS_rc%obs_gridDesc(k,:),&
@@ -674,7 +674,7 @@ contains
                      LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), reader_struc(n)%n11)
 
                 write(LIS_logunit,*)&
-                     '[INFO] finished creating upscaling input for Custom "//trim(varname)//"'       
+                     "[INFO] finished creating upscaling input for Custom "//trim(varname)//""       
             endif
 
             call LIS_registerAlarm("Custom "//trim(varname)//" read alarm",&
@@ -733,7 +733,7 @@ contains
         integer                :: count
         real                   :: cgmt
         real*8                 :: time
-        logical                :: alarmCheck, file_exists,dataCheck
+        logical                :: alarmCheck, file_exists
         integer                :: c,r,i,j,p,t
         real,          pointer :: obsl(:)
         type(ESMF_Field)       :: varfield
@@ -744,6 +744,8 @@ contains
         logical                :: data_upd_flag_local
         logical                :: data_upd
         real                   :: observations(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real                   :: obs_current(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real                   :: obs_unsc(LIS_rc%obs_ngrid(k))
         integer                :: fnd
         real                   :: timenow
         real                   :: ssdev(LIS_rc%obs_ngrid(k))
@@ -759,10 +761,12 @@ contains
         call LIS_verify(status)
 
         data_upd = .false. 
+        obs_unsc = LIS_rc%udef
+        obs_current = LIS_rc%udef
 
+        ! Read the data from file
         alarmCheck = LIS_isAlarmRinging(LIS_rc, "Custom "&
              //trim(reader_struc(n)%varname)//" read alarm")
-
         if(alarmCheck) then 
             call create_CustomNetCDF_filename(reader_struc(n)%nc_prefix,&
                  obsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
@@ -782,17 +786,9 @@ contains
             observations = LIS_rc%udef
         endif
 
-        dataCheck = .false.
-        if(alarmCheck) then 
-            if(fnd.eq.1) then 
-                dataCheck = .true. 
-            endif
-        else
-            fnd = 0 
-            dataCheck = .false.
-        endif
 
-        if(dataCheck) then 
+        ! process the data
+        if(alarmCheck.and.(fnd.eq.1)) then 
 
             call ESMF_StateGet(OBS_State,"Observation01",varfield,&
                  rc=status)
@@ -801,15 +797,20 @@ contains
             call ESMF_FieldGet(varfield,localDE=0,farrayPtr=obsl,rc=status)
             call LIS_verify(status, 'Error: FieldGet')
 
-            obsl = LIS_rc%udef 
-            do r=1, LIS_rc%obs_lnr(k)
-                do c=1, LIS_rc%obs_lnc(k)
+            do r=1,LIS_rc%obs_lnr(k)
+                do c=1,LIS_rc%obs_lnc(k)
                     if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
-                        obsl(LIS_obs_domain(n,k)%gindex(c,r))=&
-                             observations(c+(r-1)*LIS_rc%obs_lnc(k))
+                        grid_index = c+(r-1)*LIS_rc%obs_lnc(k)
+
+                        obs_current(c,r) = observations(c,r)
+                        if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
+                            obs_unsc(LIS_obs_domain(n,k)%gindex(c,r)) = &
+                                 obs_current(c,r)
+                        endif
                     endif
                 enddo
             enddo
+
 
             !-------------------------------------------------------------------------
             !  Transform data to the LSM climatology using a CDF-scaling approach
@@ -828,7 +829,7 @@ contains
                      reader_struc(n)%obs_xrange,    &
                      reader_struc(n)%model_cdf,     &
                      reader_struc(n)%obs_cdf,       &
-                     observations)
+                     obs_current)
             elseif ((LIS_rc%dascaloption(k).eq."seasonal"&
                      .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
                  .and.fnd.ne.0) then
@@ -845,10 +846,15 @@ contains
                      reader_struc(n)%model_sigma,  &
                      reader_struc(n)%obs_mu,  &
                      reader_struc(n)%obs_sigma,  &
-                     observations)
+                     obs_current)
 
             endif
 
+            !-------------------------------------------------------------------------
+            !  End transforming
+            !-------------------------------------------------------------------------     
+
+            ! write transformed data to ESMF pointer
             obsl = LIS_rc%udef 
             do r=1, LIS_rc%obs_lnr(k)
                 do c=1, LIS_rc%obs_lnc(k)
@@ -859,12 +865,7 @@ contains
                 enddo
             enddo
 
-            if(fnd.eq.0) then 
-                data_upd_flag_local = .false. 
-            else
-                data_upd_flag_local = .true. 
-            endif
-
+            data_upd_flag_local = (fnd.ne.0)
 #if (defined SPMD)
             call MPI_ALLGATHER(data_upd_flag_local,1, &
                  MPI_LOGICAL, data_upd_flag(:),&
@@ -899,8 +900,14 @@ contains
                          assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                     call LIS_verify(status)
 
+                    call ESMF_AttributeSet(varfield, "Unscaled Obs",&
+                         obs_unsc, itemCount=LIS_rc%obs_ngrid(k), rc=status)
+                    call LIS_verify(status, 'Error in setting Unscaled Obs attribute')      
+
                 endif
 
+                ! rescale perturbation standard deviations if rescaling of the
+                ! data is performed
                 if(LIS_rc%dascaloption(k).ne."none") then
                     call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
                          rc=status)
@@ -1257,8 +1264,6 @@ contains
     end subroutine Custom_obsname
 
 
-
-
     !BOP
     ! 
     ! !ROUTINE: CustomNcReader_rescale_with_seasonal_scaling
@@ -1332,7 +1337,7 @@ contains
             col = LIS_obs_domain(n,k)%col(grididx)
             row = LIS_obs_domain(n,k)%row(grididx)
 
-            if(obs_value(col,row).ne.-9999.0 &
+            if((.not. isnan(obs_value(col,row))).and.obs_value(col,row).ne.-9999.0 &
                  .and. obs_mu(grididx, timeidx).ne.-9999.0 &
                  .and. obs_sigma(grididx, timeidx).gt.epsilon(0.0)) then 
 
