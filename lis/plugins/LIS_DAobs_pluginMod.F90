@@ -269,11 +269,9 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_CGLS_LAI ) || ( defined DA_OBS_CGLS_LAI )
     use CGLSLAI_Mod,       only : CGLSlai_setup
 #endif
-#if ( defined DA_OBS_VODCA_LAI )
-    use VODCALAI_Mod,       only : VODCAlai_setup
-#endif
-#if ( defined DA_OBS_GENERIC_LAI )
-    use GenericLAI_Mod,       only : GenericLAI_setup
+#if ( defined DA_OBS_CUSTOM_LAI )
+    use CustomLAI_Mod,       only :&
+         CustomLAI_setup, read_CustomLAI
 #endif
 #if ( defined DA_OBS_NRT_SMAPSM )
     use SMAPNRTsm_Mod,           only : SMAPNRTsm_setup
@@ -291,6 +289,18 @@ subroutine LIS_DAobs_plugin
     use ASO_SWE_Mod,  only : ASO_SWE_setup
 #endif
 
+#if ( defined DA_OBS_THYSM)
+    use THySM_Mod,    only : THySM_setup
+#endif
+
+#if ( defined DA_OBS_SNODAS )
+   use SNODAS_Mod,    only : SNODAS_setup
+#endif
+
+#if ( defined DA_OBS_HYDROWEBWL )
+   use hydrowebWLobs_module,   only : hydrowebwlobs_setup
+#endif
+    
 #if ( defined DA_OBS_SYNTHETICSM )
     external read_syntheticsmobs, write_syntheticsmobs
 #endif
@@ -298,6 +308,10 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_SYNTHETICWL )
     external read_syntheticwlobs, write_syntheticwlobs
 #endif
+
+#if ( defined DA_OBS_THYSM )
+    external read_THySM, write_THySM
+#endif    
 
 #if ( defined DA_OBS_SYNTHETICSND )
     external read_syntheticsndobs,write_syntheticsndobs
@@ -389,6 +403,11 @@ subroutine LIS_DAobs_plugin
    external read_GCOMW_AMSR2L3SND,  write_GCOMW_AMSR2L3sndobs
 #endif
 
+#if ( defined DA_OBS_HYDROWEBWL )
+    external read_hydrowebWLobs, write_hydrowebWLobs
+#endif
+
+    
 #if 0 
    external read_WindSatsm, write_WindSatsmobs
    external read_WindSatCsm, write_WindSatCsmobs
@@ -441,14 +460,6 @@ subroutine LIS_DAobs_plugin
     external read_CGLSlai, write_CGLSlai
 #endif
 
-#if ( defined DA_OBS_VODCA_LAI)
-    external read_VODCAlai, write_VODCAlai
-#endif
-
-#if ( defined DA_OBS_GENERIC_LAI)
-    external read_GenericLAI, write_GenericLAI
-#endif
-
 #if ( defined DA_OBS_GLASS_Albedo)
     external read_GLASSalbedo, write_GLASSalbedo
 #endif
@@ -464,6 +475,11 @@ subroutine LIS_DAobs_plugin
 #if ( defined DA_OBS_ASO_SWE)
     external read_ASO_SWE, write_ASO_SWEobs
 #endif
+
+#if ( defined DA_OBS_SNODAS )
+   external read_SNODAS,  write_SNODAS
+#endif
+    
 
     LIS_DAobsFuncEntry%head_daobsfunc_list => null()
     
@@ -858,24 +874,14 @@ subroutine LIS_DAobs_plugin
         write_CGLSlai)
 #endif
 
-#if ( defined DA_OBS_VODCA_LAI)
-   call registerdaobsclass(trim(LIS_VODCAlaiobsId),"LSM")
-   call registerdaobssetup(trim(LIS_VODCAlaiobsId)//char(0),&
-        VODCAlai_setup)
-   call registerreaddaobs(trim(LIS_VODCAlaiobsId)//char(0),&
-        read_VODCAlai)
-   call registerwritedaobs(trim(LIS_VODCAlaiobsId)//char(0),&
-        write_VODCAlai)
-#endif
-
-#if ( defined DA_OBS_GENERIC_LAI)
-   call registerdaobsclass(trim(LIS_GenericLAIobsId),"LSM")
-   call registerdaobssetup(trim(LIS_GenericLAIobsId)//char(0),&
-        GenericLAI_setup)
-   call registerreaddaobs(trim(LIS_GenericLAIobsId)//char(0),&
-        read_GenericLAI)
-   call registerwritedaobs(trim(LIS_GenericLAIobsId)//char(0),&
-        write_GenericLAI)
+#if ( defined DA_OBS_CUSTOM_LAI)
+   call registerdaobsclass(trim(LIS_CustomLAIobsId),"LSM")
+   call registerdaobssetup(trim(LIS_CustomLAIobsId)//char(0),&
+        CustomLAI_setup)
+   call registerreaddaobs(trim(LIS_CustomLAIobsId)//char(0),&
+        read_CustomLAI)
+   call registerwritedaobs(trim(LIS_CustomLAIobsId)//char(0),&
+        write_CustomNetCDF)
 #endif
 
 #if ( defined DA_OBS_NRT_SMAPSM )
@@ -918,8 +924,37 @@ subroutine LIS_DAobs_plugin
    call registerwritedaobs(trim(LIS_ASOsweobsId)//char(0),&
         write_ASO_SWEobs)
 #endif
+
+#if ( defined DA_OBS_THYSM )
+   call registerdaobsclass(trim(LIS_THySMid),"LSM")
+   call registerdaobssetup(trim(LIS_THySMid)//char(0),&
+        THySM_setup)
+   call registerreaddaobs(trim(LIS_THySMid)//char(0),&
+        read_THySM)
+   call registerwritedaobs(trim(LIS_THySMid)//char(0),&
+        write_THySM)
 #endif
 
+#if ( defined DA_OBS_SNODAS )
+!MLW: SNODAS snow depth
+   call registerdaobsclass(trim(LIS_SNODASobsId),"LSM")
+   call registerdaobssetup(trim(LIS_SNODASobsId)//char(0), &
+        SNODAS_setup)
+   call registerreaddaobs(trim(LIS_SNODASobsId)//char(0),  &
+        read_SNODAS)
+   call registerwritedaobs(trim(LIS_SNODASobsId)//char(0), &
+        write_SNODAS)
+#endif
+
+#if ( defined DA_OBS_HYDROWEBWL )
+!synthetic noah soil moisture    
+   call registerdaobsclass(trim(LIS_hydrowebwlId),"Routing")
+   call registerdaobssetup(trim(LIS_hydrowebwlId)//char(0),hydrowebwlobs_setup)
+   call registerreaddaobs(trim(LIS_hydrowebwlId)//char(0),read_hydrowebwlobs)
+   call registerwritedaobs(trim(LIS_hydrowebwlId)//char(0),write_hydrowebwlobs)
+#endif
+   
+#endif
  end subroutine LIS_DAobs_plugin
 
  subroutine registerdaobsclass(funcName, funcClass)
