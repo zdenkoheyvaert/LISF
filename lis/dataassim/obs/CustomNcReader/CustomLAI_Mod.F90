@@ -78,7 +78,9 @@ contains
         do n=1,LIS_rc%nnest
             CustomLAI_struc(n)%varname = "LAI"
             CustomLAI_struc(n)%min_value = 0.0001
-            CustomLAI_struc(n)%max_value = 20.0
+            CustomLAI_struc(n)%max_value = 10.0
+            CustomLAI_struc(n)%qcmin_value = 0.0
+            CustomLAI_struc(n)%qcmax_value = 100.0
         enddo
 
         call CustomNcReader_setup(k, OBS_State, OBS_Pert_State, CustomLAI_struc)
