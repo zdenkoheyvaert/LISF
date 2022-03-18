@@ -52,7 +52,7 @@ module CustomLAI_Mod
 
     implicit none
 
-    public :: CustomLAI_setup
+    public :: CustomLAI_setup, read_CustomLAI, write_CustomLAI
     public :: CustomLAI_struc
 
     type(CustomNcReader_dec),allocatable :: CustomLAI_struc(:)
@@ -96,5 +96,13 @@ contains
         type(ESMF_State)          :: OBS_Pert_State
         call read_CustomNetCDF(n, k, OBS_State, OBS_Pert_State, CustomLAI_struc)
     end subroutine read_CustomLAI
+
+    subroutine write_CustomLAI(n, k, OBS_State)
+        use ESMF
+        use CustomNcReader_Mod, only: write_CustomNetCDF
+        integer,     intent(in)  :: n, k
+        type(ESMF_State)         :: OBS_State
+        call write_CustomNetCDF(n, k, OBS_State)
+    end subroutine write_CustomLAI
 
 end module CustomLAI_Mod
