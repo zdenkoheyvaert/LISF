@@ -52,6 +52,7 @@
 ! !REVISION HISTORY:
 !  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
 !
+#include "LIS_misc.h"
 module CustomNcReader_Mod
     ! !USES:
     use ESMF
@@ -773,7 +774,6 @@ contains
 
             inquire(file=fname,exist=file_exists)
             if(file_exists) then
-                write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
                 call read_CustomNetCDF_data(n,k, fname,observations,&
                     reader_struc)
                 fnd = 1
@@ -1008,7 +1008,10 @@ contains
         integer                 :: numvalidobs
         real*8                  :: cornerlat(2), cornerlon(2)
 
-#if(defined USE_NETCDF3 || defined USE_NETCDF4)
+#if !(defined USE_NETCDF3 || defined USE_NETCDF4)
+        write(LIS_logunit,*) "[ERR] read_CustomNetCDF requires NETCDF"
+        call LIS_endrun
+#else
         integer, dimension(nf90_max_var_dims)  :: dimIDs
         integer                                :: numLons, numLats
 
@@ -1024,7 +1027,7 @@ contains
         lat_offset = 1  ! no offset
         lon_offset = 1
 
-
+        write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
         ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
         call LIS_verify(ios,'Error opening file '//trim(fname))
 
@@ -1052,7 +1055,6 @@ contains
                 endif
             end do
         end do
-
 
         ! fill obs_in and obs_data_b, which are required further on
         do r=1, reader_struc(n)%nr
@@ -1373,7 +1375,9 @@ contains
     subroutine CustomNcReader_readSeasonalScalingData(&
          n, k, ntimes, filename, varname, mu, sigma)
 
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
         use netcdf
+#endif
         use LIS_coreMod, only: LIS_rc
         use LIS_logMod, only: LIS_logunit, LIS_verify, LIS_endrun
         use LIS_DAobservationsMod, only: LIS_convertObsVarToLocalSpace
@@ -1410,6 +1414,10 @@ contains
         real, allocatable        :: mu_file(:,:,:), sigma_file(:,:,:)
         integer                  :: nid
 
+#if !(defined USE_NETCDF3 || defined USE_NETCDF4)
+        write(LIS_logunit,*) "[ERR] read_CustomNetCDF requires NETCDF"
+        call LIS_endrun
+#else
         write(LIS_logunit,*) "[INFO] Reading mean from seasonal seasonal file ",trim(filename)
         call LIS_verify(nf90_open(path=trim(filename),mode=NF90_NOWRITE,&
              ncid=nid),"failed to open file "//trim(filename))
@@ -1466,6 +1474,7 @@ contains
         write(LIS_logunit,*)&
              "[INFO] Successfully read mean and seasonal scaling file ",&
              trim(filename)
+#endif
     end subroutine CustomNcReader_readSeasonalScalingData
 
     subroutine CustomNcReader_updateSsdev(k, obs_sigma, model_sigma, ssdev)
