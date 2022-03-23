@@ -413,6 +413,8 @@ subroutine LIS_lsmda_plugin
    external noahmp36_qc_Sig0VVobs
    external noahmp36_getSig0VHpred
    external noahmp36_qc_Sig0VHobs
+   external noahmp36_getSig0VVVHpred
+   external noahmp36_qc_Sig0VVVHobs
 
    external noahmp36_getsoilmLAI           
    external noahmp36_setsoilmLAI              
@@ -2004,6 +2006,30 @@ subroutine LIS_lsmda_plugin
         trim(LIS_S1_sigmaVHSMLAI_obsId)//char(0),noahmp36_transform_veg)
    call registerlsmdamapobstolsm(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_S1_sigmaVHSMLAI_obsId)//char(0),noahmp36_map_veg)
+
+! S1 backscatter DA VVVHSMLAI
+   call registerlsmdainit(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_dasoilmLAI_init)
+   call registerlsmdagetstatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_getsoilmLAI)
+   call registerlsmdasetstatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_setsoilmLAI)
+   call registerlsmdagetobspred(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_getSig0VVVHpred)
+   call registerlsmdaqcstate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_qcsoilmLAI)
+   call registerlsmdaqcobsstate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_qc_Sig0VVVHobs)
+   call registerlsmdascalestatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_scale_soilmLAI)
+   call registerlsmdadescalestatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_descale_soilmLAI)
+   call registerlsmdaupdatestate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_updatesoilmLAI)
+   call registerlsmdaobstransform(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_transform_veg)
+   call registerlsmdamapobstolsm(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),noahmp36_map_veg)
 
 
 ! Noahmp-3.6 synthetic soil moisture
