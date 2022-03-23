@@ -61,7 +61,9 @@ subroutine noahmp36_getirrigationstates(n,irrigState)
 !                             and add optional flag for groundwater abstraction
 ! Feb 2020: Jessica Erlingis; Correct sprinkler scheme so that it checks moisture
 !                             at otimess and applies constant rate for irrhrs
-
+! Feb 2022: Sara Modanesi; adding double option for activating irrigation (i.e.
+!                          growing season based on climatological GVF or based
+!                          on dynamic LAI
 !EOP
   implicit none
   ! Sprinkler parameters
@@ -100,7 +102,8 @@ subroutine noahmp36_getirrigationstates(n,irrigState)
   real                 :: smhigh, smlow
   integer              :: lroot,veg_index1,veg_index2
   real                 :: gsthresh, ltime
-  real                 :: shdfac, shdmin, shdmax
+  real                 :: shdfac, shdfac2, shdmin, shdmax !SM Feb 2022
+  real                 :: lai, var !SM Feb 2022
   real                 :: timestep, shift_otimes, shift_otimee
 ! _______________wanshu  add GW extraction_______________________________
   real                 :: AWS
@@ -268,16 +271,34 @@ subroutine noahmp36_getirrigationstates(n,irrigState)
                ! the range is, the higher GVF threshold will be for this grid.                           
                ! JE Gsthresh is a GVF threshold used to identify a growing season for each
                ! pixel and allow irrigation during that time
-                  gsthresh = shdmin + & 
-                      (LIS_rc%irrigation_GVFparam1 + LIS_rc%irrigation_GVFparam2*&
-                       (shdmax-shdmin)) * (shdmax - shdmin)
+
+               !SM Feb 2022 start changes to avoid douple option for the growing
+               !season: dynamic LAI or climatological GVF
+                  if(LIS_rc%growing_season .eq. 1) then!GVF
+
+                    gsthresh = shdmin + &
+                        (LIS_rc%irrigation_GVFparam1 + LIS_rc%irrigation_GVFparam2*&
+                         (shdmax-shdmin)) * (shdmax - shdmin)
+                    var=shdfac
+                    shdfac2=shdfac
+
+                  elseif(LIS_rc%growing_season .eq. 0) then
+
+                    lai= NOAHMP36_struc(n)%noahmp36(t)%lai
+                    gsthresh=1.0
+                    var=lai
+                    shdfac2=1.0 - exp((-0.5)*lai) !based on Fang et al., 2018
+
+                  endif
 
 
                  !JE Changes needed to this code block to account for variable soil layers
                  ! in Noah-MP
                  
-                 if(shdfac .ge. gsthresh) then 
-                    crootd = irrigRootdepth(t)*shdfac
+                ! if(shdfac .ge. gsthresh) then !SM Feb 2022 outcommented to allow double option for the growing season
+                   ! crootd = irrigRootdepth(t)*shdfac
+                 if(var .ge. gsthresh) then !SM Feb 2022
+                    crootd = irrigRootdepth(t)*shdfac2 ! end changes SM Feb 2022
                     if(crootd.gt.0.and.crootd.lt.zdpth(1)) then 
                        lroot = 1
                        rdpth(1) = crootd
