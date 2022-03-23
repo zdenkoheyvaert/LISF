@@ -233,6 +233,10 @@ subroutine LIS_DAobs_plugin
    use S1_sigmaVHSMLAI_Mod,       only : S1_sigmaVHSMLAI_setup 
 #endif 
 
+#if ( defined DA_OBS_S1_sigmaVVVHSMLAI )
+   use S1_sigmaVVVHSMLAI_Mod,       only : S1_sigmaVVVHSMLAI_setup
+#endif 
+
 #if ( defined DA_OBS_SSMI_SNWD )
    use SSMISNWDsnow_Mod,        only : SSMISNWDsnow_setup
 #endif
@@ -417,6 +421,10 @@ subroutine LIS_DAobs_plugin
 
 #if ( defined DA_OBS_S1_sigmaVHSMLAI)    
    external read_S1_sigmaVHSMLAI, write_S1_sigmaVHSMLAIobs  
+#endif 
+
+#if ( defined DA_OBS_S1_sigmaVVVHSMLAI)    
+   external read_S1_sigmaVVVHSMLAI, write_S1_sigmaVVVHSMLAIobs  
 #endif 
 
 #if ( defined DA_OBS_SSMI_SNWD )
@@ -715,6 +723,17 @@ subroutine LIS_DAobs_plugin
         read_S1_sigmaVHSMLAI)
    call registerwritedaobs(trim(LIS_S1_sigmaVHSMLAI_obsId)//char(0), &
         write_S1_sigmaVHSMLAIobs)
+#endif
+
+#if ( defined DA_OBS_S1_sigmaVVVHSMLAI )
+!S1 backscatter obs VVVHSMLAI
+   call registerdaobsclass(trim(LIS_S1_sigmaVVVHSMLAI_obsId),"LSM")
+   call registerdaobssetup(trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0), &
+        S1_sigmaVVVHSMLAI_setup)
+   call registerreaddaobs(trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0),  &
+        read_S1_sigmaVVVHSMLAI)
+   call registerwritedaobs(trim(LIS_S1_sigmaVVVHSMLAI_obsId)//char(0), &
+        write_S1_sigmaVVVHSMLAIobs)
 #endif
 
 #if ( defined DA_OBS_SSMI_SNWD )
