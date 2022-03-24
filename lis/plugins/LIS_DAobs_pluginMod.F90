@@ -271,7 +271,7 @@ subroutine LIS_DAobs_plugin
 #endif
 #if ( defined DA_OBS_CUSTOM_LAI )
     use CustomLAI_Mod,       only :&
-         CustomLAI_setup, read_CustomLAI
+         CustomLAI_setup, read_CustomLAI, write_CustomLAI
 #endif
 #if ( defined DA_OBS_NRT_SMAPSM )
     use SMAPNRTsm_Mod,           only : SMAPNRTsm_setup
@@ -881,7 +881,7 @@ subroutine LIS_DAobs_plugin
    call registerreaddaobs(trim(LIS_CustomLAIobsId)//char(0),&
         read_CustomLAI)
    call registerwritedaobs(trim(LIS_CustomLAIobsId)//char(0),&
-        write_CustomNetCDF)
+        write_CustomLAI)
 #endif
 
 #if ( defined DA_OBS_NRT_SMAPSM )
