@@ -1,0 +1,124 @@
+!-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
+! NASA Goddard Space Flight Center Land Information System (LIS) v7.2
+!
+! Copyright (c) 2015 United States Government as represented by the
+! Administrator of the National Aeronautics and Space Administration.
+! All Rights Reserved.
+!-------------------------END NOTICE -- DO NOT EDIT-----------------------
+!BOP
+!
+! !MODULE: CustomLAI_Mod
+!
+! !DESCRIPTION:
+!   This module contains a custom reader for global LAI netCDF products on a
+!   regular latitude longitude grid stored in netCDF files, with all necessary
+!   flags already applied beforehand during preprocessing.
+!
+!   The custom reader provides the following options for lis.config:
+!
+!   Custom LAI data directory:
+!       Path to directory that contains image netCDF files.
+!   Custom LAI netCDF variable name:
+!       Name of the variable in the netCDF files.
+!   Custom LAI netCDF name prefix:
+!       Prefix for the netCDF image file name. The image file names must follow
+!       the pattern <prefix>_YYYY_MM_DD.nc
+!   Custom LAI spatial resolution
+!       Spatial resolution of the product. It is assumed that the grid starts
+!       at -180 + res/2 longitude and -90 + res/2 latitude.
+!   Data assimilation scaling strategy:
+!       Options are "none", "CDF matching", "seasonal", "seasonal multiplicative"
+!   Custom LAI model scaling file:
+!       Path to the model CDF/mean file (optional, only required if scaling is applied)
+!   Custom LAI observation scaling file:
+!       Path to the observation CDF/mean file (optional, only required if scaling is applied)
+!   Custom LAI varname in model scaling file:
+!       Prefix of the names of the variables in the model scaling files,
+!       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
+!       scaling is applied)
+!   Custom LAI varname in observation scaling file:
+!       Prefix of the names of the variables in the observation scaling files,
+!       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
+!       scaling is applied)
+!   Custom LAI number of bins in the CDF: (optional, only required if CDF scaling is applied)
+!       Number of bins in the CDFs.
+!
+! !REVISION HISTORY:
+!  02 Mar 2022    Samuel Scherrer; initial reader based on MODIS LAI reader
+!
+#if defined(CUSTOM_READER_NAME) && defined(CUSTOM_READER_OBSID) && defined(CUSTOM_READER_VARNAME) && defined(CUSTOM_READER_MINVAL) && defined(CUSTOM_READER_MAXVAL) && defined(CUSTOM_READER_QCMAXVAL) && defined(CUSTOM_READER_QCMINVAL)
+#define CONCAT_I(a,b) a##b
+#define CONCAT(a,b) CONCAT_I(a, b)
+
+#define CUSTOM_READER_MODNAME CONCAT(CUSTOM_READER_NAME,_Mod)
+#define CUSTOM_READER_STRUC CONCAT(CUSTOM_READER_NAME,_struc)
+#define CUSTOM_READER_SETUP CONCAT(CUSTOM_READER_NAME,_setup)
+#define CUSTOM_READER_READ CONCAT(read_,CUSTOM_READER_NAME)
+#define CUSTOM_READER_WRITE CONCAT(write_,CUSTOM_READER_NAME)
+
+
+module CUSTOM_READER_MODNAME
+    ! !USES:
+    use CustomNcReader_Mod, only: CustomNcReader_dec
+
+    implicit none
+
+    public :: CUSTOM_READER_SETUP, CUSTOM_READER_READ, CUSTOM_READER_WRITE
+    public :: CUSTOM_READER_STRUC
+
+    type(CustomNcReader_dec),allocatable :: CUSTOM_READER_STRUC(:)
+
+contains
+
+    subroutine CUSTOM_READER_SETUP(k, OBS_State, OBS_Pert_State)
+
+        use ESMF, only: ESMF_State
+        use LIS_coreMod, only: LIS_rc
+        use CustomNcReader_Mod, only: CustomNcReader_setup
+
+        implicit none
+
+        ! !ARGUMENTS:
+        integer                   :: k
+        type(ESMF_State)          :: OBS_State(LIS_rc%nnest)
+        type(ESMF_State)          :: OBS_Pert_State(LIS_rc%nnest)
+
+        integer :: n
+
+        allocate(CUSTOM_READER_STRUC(LIS_rc%nnest))
+        do n=1,LIS_rc%nnest
+            CUSTOM_READER_STRUC(n)%varname = CUSTOM_READER_VARNAME
+            CUSTOM_READER_STRUC(n)%min_value = CUSTOM_READER_MINVAL
+            CUSTOM_READER_STRUC(n)%max_value = CUSTOM_READER_MAXVAL
+            CUSTOM_READER_STRUC(n)%qcmin_value = CUSTOM_READER_QCMINVAL
+            CUSTOM_READER_STRUC(n)%qcmax_value = CUSTOM_READER_QCMAXVAL
+            CUSTOM_READER_STRUC(n)%obsid = CUSTOM_READER_OBSID
+        enddo
+
+        call CustomNcReader_setup(k, OBS_State, OBS_Pert_State, CUSTOM_READER_STRUC)
+
+    end subroutine CUSTOM_READER_SETUP
+
+    subroutine CUSTOM_READER_READ(n, k, OBS_State, OBS_Pert_State)
+        use ESMF, only: ESMF_State
+        use LIS_coreMod, only: LIS_rc
+        use CustomNcReader_Mod, only: read_CustomNetCDF
+        integer, intent(in)       :: n, k
+        type(ESMF_State)          :: OBS_State
+        type(ESMF_State)          :: OBS_Pert_State
+        call read_CustomNetCDF(n, k, OBS_State, OBS_Pert_State, CUSTOM_READER_STRUC)
+    end subroutine CUSTOM_READER_READ
+
+    subroutine CUSTOM_READER_WRITE(n, k, OBS_State)
+        use ESMF
+        use CustomNcReader_Mod, only: write_CustomNetCDF
+        integer,     intent(in)  :: n, k
+        type(ESMF_State)         :: OBS_State
+        call write_CustomNetCDF(n, k, OBS_State)
+    end subroutine CUSTOM_READER_WRITE
+
+end module CUSTOM_READER_MODNAME
+
+#else
+#error "Some required template variables for Custom reader have not been defined"
+#endif

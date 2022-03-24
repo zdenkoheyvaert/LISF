@@ -75,6 +75,8 @@ module CustomNcReader_Mod
     type, public:: CustomNcReader_dec
 
         character*100          :: varname
+        ! should be the id that is set in LIS_pluginIndices
+        character*100          :: obsid
         real                   :: max_value
         real                   :: min_value
         real                   :: qcmax_value
@@ -862,6 +864,14 @@ contains
                     endif
                 enddo
             enddo
+
+            !-------------------------------------------------------------------------
+            !  Apply LSM-based QC and screening of observations
+            !-------------------------------------------------------------------------     
+            call lsmdaqcobsstate(trim(LIS_rc%lsm)//"+"&
+                 //trim(reader_struc(n)%obsid)//char(0),n, k,OBS_state)
+            call LIS_checkForValidObs(n,k,obsl,fnd,obs_current)
+            
 
             data_upd_flag_local = (fnd.ne.0)
 #if (defined SPMD)
