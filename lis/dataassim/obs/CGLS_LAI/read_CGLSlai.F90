@@ -6,6 +6,7 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 #include "LIS_misc.h"
+
 !BOP
 ! !ROUTINE: read_CGLSlai
 ! \label{read_CGLSlai}
@@ -54,8 +55,8 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     real,  parameter       :: MAX_LAI_VALUE=10.0, MIN_LAI_VALUE=0.0001
     integer                :: status
     integer                :: grid_index
-    character*100          :: laiobsdir
-    character*300          :: fname
+    character(len=255)     :: laiobsdir
+    character(len=255)     :: fname
     integer                :: cyr, cmo, cda, chr,cmn,css,cdoy
     real                   :: wt1, wt2,ts
     integer                :: count
@@ -94,8 +95,8 @@ subroutine read_CGLSlai(n, k, OBS_State, OBS_Pert_State)
     if(alarmCheck.or.CGLSlai_struc(n)%startMode) then 
         CGLSlai_struc(n)%startMode = .false.
 
-        call create_CGLSlai_filename(&
-            CGLSlai_struc(n)%isresampled == 1, CGLSlai_struc(n)%spatialres,&
+        call create_CGLS_LAI_filename(&
+            CGLSlai_struc(n)%isresampled, CGLSlai_struc(n)%spatialres,&
             laiobsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
         inquire(file=fname,exist=file_exists)          
@@ -497,22 +498,21 @@ contains
 
 end subroutine read_CGLS_LAI_data
 
-
 !BOP
 ! !ROUTINE: create_CGLSlai_filename
 ! \label{create_CGLSlai_filename}
 ! 
 ! !INTERFACE: 
-subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, filename)
+subroutine create_CGLS_LAI_filename(isresampled, res, ndir, year, month, day, filename)
     ! !USES:   
 
     implicit none
     ! !ARGUMENTS: 
-    logical, value       :: isresampled
-    real*8, value        :: res
-    character (len=*)    :: ndir
-    integer, value       :: year, month, day
-    character(len=*)     :: filename
+    integer, intent(in)              :: isresampled
+    real*8, intent(in)               :: res
+    character(len=*), intent(in)     :: ndir
+    integer, intent(in)              :: year, month, day
+    character(len=*), intent(inout)  :: filename
     ! 
     ! !DESCRIPTION: 
     !  This subroutine creates the CGLS LAI filename
@@ -523,7 +523,6 @@ subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, fil
     !  \item[isresampled] whether the original or the resampled files are read
     !  \item[res] resolution of the files
     !  \item[ndir] name of the CGLS LAI data directory
-    !  \item[version] version of the CGLS LAI data
     !  \item[year]  current year
     !  \item[month]  current month
     !  \item[day]  current day
@@ -532,18 +531,18 @@ subroutine create_CGLSlai_filename(isresampled, res, ndir, year, month, day, fil
     !
     !EOP
 
-    if (isresampled) then
+    if (isresampled.ne.0) then
         call create_CGLSlai_filename_from_resampled(res, ndir, year, month, day, filename)
     else
-        call create_CGLSlai_filename_from_original(ndir, year, month, day, filename)
+         call create_CGLSlai_filename_from_original(ndir, year, month, day, filename)
     endif
 
 contains
     subroutine create_CGLSlai_filename_from_original(ndir, year, month, day, filename)
         implicit none
-        character(len=*)  :: filename
-        integer, value    :: year, month, day
         character (len=*) :: ndir
+        integer, value    :: year, month, day
+        character(len=*)  :: filename
 
         !  The naming scheme is
         !    <prefix>_<year><month><day>0000_GLOBE_<sensor>_<version>/
@@ -630,4 +629,6 @@ contains
 
     end subroutine create_CGLSlai_filename_from_resampled
 
-end subroutine create_CGLSlai_filename
+end subroutine create_CGLS_LAI_filename
+
+

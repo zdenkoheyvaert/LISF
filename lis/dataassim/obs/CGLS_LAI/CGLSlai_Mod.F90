@@ -217,7 +217,7 @@ contains
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI spatial resolution:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if (CGLSlai_struc(n)%isresampled) then
+            if (CGLSlai_struc(n)%isresampled.ne.0) then
                 call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%spatialres,&
                      rc=status)
                 call LIS_verify(status, 'CGLS LAI spatial resolution: is missing')
@@ -483,7 +483,7 @@ contains
             CGLSlai_struc(n)%scale = 0.033333
 
             if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
-                if(CGLSlai_struc(n)%isresampled == 1) then
+                if(CGLSlai_struc(n)%isresampled.ne.0) then
                     ! images are rescaled to custom resolution
                     CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
                     CGLSlai_struc(n)%lat_upper_right = -90 + 0.5 * CGLSlai_struc(n)%spatialres
