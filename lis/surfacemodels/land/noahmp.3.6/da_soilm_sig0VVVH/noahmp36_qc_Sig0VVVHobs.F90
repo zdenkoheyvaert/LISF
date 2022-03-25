@@ -233,24 +233,6 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
   do t = 1,LIS_rc%obs_ngrid(k)
 !------------------start loop considering s_vv--------------------------
      if(s_vv(t).ne.LIS_rc%udef) then 
-        call ESMF_ConfigGetattribute(LIS_config,VV_agri_mask_start_doy,&
-          label="S1 VV agriculture mask start doy:",rc=status)
-        call LIS_verify(status,'S1 VV agriculture mask start doy not defined')
-        call ESMF_ConfigGetattribute(LIS_config,VV_agri_mask_end_doy,&
-          label="S1 VV agriculture mask end doy:",rc=status)
-        call LIS_verify(status,'S1 VV agriculture mask end doy not defined')
-        call ESMF_ConfigGetattribute(LIS_config,VV_mask_start_doy,&
-          label="S1 VV mask start doy:",rc=status)
-        call LIS_verify(status,'S1 VV mask start doy not defined')
-        call ESMF_ConfigGetattribute(LIS_config,VV_mask_end_doy,&
-          label="S1 VV mask end doy:",rc=status)
-        call LIS_verify(status,'S1 VV mask end doy not defined')
-        call ESMF_ConfigGetattribute(LIS_config,VH_mask_start_doy,&
-          label="S1 VH mask start doy:",rc=status)
-        call LIS_verify(status,'S1 VH mask start doy not defined')
-        call ESMF_ConfigGetattribute(LIS_config,VH_mask_end_doy,&
-          label="S1 VH mask end doy:",rc=status)
-        call LIS_verify(status,'S1 VH mask end doy not defined')
 ! MN: check for rain
         if(rainf_obs(t).gt.3E-6) then   ! Var name Noah36 --> rainf 
            s_vv(t) = LIS_rc%udef
@@ -283,17 +265,6 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
         elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah36 --> vegt
            s_vv(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.17) then !water ! Var name Noah36 --> vegt
-           s_vv(t) = LIS_rc%udef
-! filter vv for shooting period over agricultural grid cells
-        elseif(vegt_obs(t).eq.12.and.LIS_rc%doy.gt.VV_agri_mask_start_doy.and.&
-           LIS_rc%doy.lt.VV_agri_mask_end_doy) then
-           s_vv(t) = LIS_rc%udef
-        elseif(vegt_obs(t).eq.14.and.LIS_rc%doy.gt.VV_agri_mask_start_doy&
-            .and.LIS_rc%doy.lt.VV_agri_mask_end_doy) then
-           s_vv(t) = LIS_rc%udef       
-! filter vv for period over all grid cells
-        elseif(LIS_rc%doy.gt.VV_mask_start_doy.and.&
-           LIS_rc%doy.lt.VV_mask_end_doy) then
            s_vv(t) = LIS_rc%udef
  ! MN: check for snow  
         elseif(sneqv_obs(t).gt.0.001) then 
@@ -345,10 +316,6 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
         elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah36 --> vegt
            s_vh(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.17) then !water ! Var name Noah36 --> vegt
-           s_vh(t) = LIS_rc%udef
-! filter vh for period over all grid cells
-        elseif(LIS_rc%doy.gt.VH_mask_start_doy.and.&
-           LIS_rc%doy.lt.VH_mask_end_doy) then
            s_vh(t) = LIS_rc%udef
  ! MN: check for snow  
         elseif(sneqv_obs(t).gt.0.001) then
