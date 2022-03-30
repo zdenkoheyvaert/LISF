@@ -31,6 +31,7 @@ module LIS_pluginIndices
 !   4 Nov 2014: Jonathan Case, added support for daily NESDIS/VIIRS GVF for Noah
 !  16 Aug 2016: Mahdi Navari, added PILDAS  
 !  28 Aug 2020: Sara Modanesi, added WCM in Radiative Transfer Models
+!  24 Mar 2022: Samuel Scherrer, added VODLinFM in Radiative Transfer Models
 !
 !EOP
   PRIVATE
@@ -349,6 +350,7 @@ module LIS_pluginIndices
    character*50, public, parameter :: LIS_cmem3Id = "CMEM"
    character*50, public, parameter :: LIS_tauomegaRTMId = "Tau Omega"
    character*50, public, parameter :: LIS_wcmRTMId = "WCM"
+   character*50, public, parameter :: LIS_vodlinfmId = "VODLinFM"
 !-------------------------------------------------------------------------
 ! Land Slide Models
 !-------------------------------------------------------------------------

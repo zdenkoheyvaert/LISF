@@ -34,7 +34,7 @@ subroutine noahmp401_sfc2vod(n, sfcState)
 ! 
 ! !DESCRIPTION: 
 ! This subroutine assigns the noahmp401 specific surface variables
-! to WCM. 
+! to the VOD observation operator. 
 !
 !EOP
   type(ESMF_Field)    :: laiField, sm1field, sm2field, sm3field, sm4field

@@ -6,13 +6,13 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 #include "LIS_misc.h"
-module VODObservationOperator_Mod
+module VODLinFM_Mod
     !BOP
     !
-    ! !MODULE: VODObservationOperator_Mod
+    ! !MODULE: VODLinFM_Mod
     !
     ! !DESCRIPTION:
-    !    This modules provides routines for an observation operator for VOD.
+    !    This modules provides implements a linear forward model for VOD.
     !    Although it's not a real RTM it programmatically works similarly and is
     !    therefore implemented analogously to a RTM.
     !
@@ -25,7 +25,7 @@ module VODObservationOperator_Mod
     ! changing fastest).
     !
     ! !HISTORY:
-    ! 02 Mar 2022: Samuel Scherrer; based on VODObservationOperator
+    ! 02 Mar 2022: Samuel Scherrer; initial contribution based on WCMRTM
     !
     ! !USES:
 
@@ -42,17 +42,17 @@ module VODObservationOperator_Mod
     !-----------------------------------------------------------------------------
     ! !PUBLIC MEMBER FUNCTIONS:
     !-----------------------------------------------------------------------------
-    public :: VODObservationOperator_initialize
-    public :: VODObservationOperator_f2t
-    public :: VODObservationOperator_run
-    public :: VODObservationOperator_output
-    public :: VODObservationOperator_geometry
+    public :: VODLinFM_initialize
+    public :: VODLinFM_f2t
+    public :: VODLinFM_run
+    public :: VODLinFM_output
+    public :: VODLinFM_geometry
     !-----------------------------------------------------------------------------
     ! !PUBLIC TYPES:
     !-----------------------------------------------------------------------------
-    public :: vod_obsop_struc
+    public :: vodlinfm_struc
     !EOP
-    type, public ::  vod_obsop_type_dec
+    type, public ::  vodlinfm_type_dec
 
         character*256     :: parameter_fname
 
@@ -66,21 +66,24 @@ module VODObservationOperator_Mod
 
         !-------output------------!
         real, allocatable :: VOD(:)
-    end type vod_obsop_type_dec
+    end type vodlinfm_type_dec
 
-    type(vod_obsop_type_dec), allocatable :: vod_obsop_struc(:)
+    type(vodlinfm_type_dec), allocatable :: vodlinfm_struc(:)
 
     SAVE
 
 contains
     !BOP
     !
-    ! !ROUTINE: VODObservationOperator_initialize
-    ! \label{VODObservationOperator_initialize}
+    ! !ROUTINE: VODLinFM_initialize
+    ! \label{VODLinFM_initialize}
     !
     ! !INTERFACE:
-    subroutine VODObservationOperator_initialize()
+    subroutine VODLinFM_initialize()
         ! !USES:
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
+        use netcdf
+#endif
 
         ! !DESCRIPTION:
         !
@@ -90,33 +93,34 @@ contains
         !
         !  The routines invoked are:
         !  \begin{description}
-        !   \item[readVODObservationOperatorcrd](\ref{readVODObservationOperatorcrd}) \newline
+        !   \item[readVODLinFMcrd](\ref{readVODLinFMcrd}) \newline
         !
         !EOP
         implicit none
 
         integer :: rc
-        integer :: n,t
-        integer :: ierr, ios
+        integer :: n,t, m
+        integer :: ierr, ios, nid
         integer :: ngridId, ntimesId, ngrid, ntimes
         integer , parameter :: OPEN_OK = 0
         character*128 :: message
-        ! typically the parameters are available on the same grid as the observations
-        real          :: laicoef(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+
+#if !(defined USE_NETCDF3 || defined USE_NETCDF4)
+        write(LIS_logunit,*) "[ERR] VODLinFM_initialize requires NETCDF"
+        call LIS_endrun
+#else
 
         !allocate memory for nest
-        allocate(vod_obsop_struc(LIS_rc%nnest))
+        allocate(vodlinfm_struc(LIS_rc%nnest))
 
-        call ESMF_ConfigFindLabel(LIS_config, "VOD Observation Operator parameter file:",rc = rc)
+        call ESMF_ConfigFindLabel(LIS_config, "VODLinFM parameter file:",rc = rc)
         do n=1, LIS_rc%nnest
-            call ESMF_ConfigGetAttribute(LIS_config,vod_obsop_struc(n)%parameter_fname, rc=rc)
-            call LIS_verify(rc, "VOD Observation Operator parameter file: not defined")
+            call ESMF_ConfigGetAttribute(LIS_config,vodlinfm_struc(n)%parameter_fname, rc=rc)
+            call LIS_verify(rc, "VODLinFM parameter file: not defined")
         enddo
 
         do n=1,LIS_rc%nnest
-            allocate(vod_obsop_struc(n)%VOD(LIS_rc%npatch(n,LIS_rc%lsm_index)))
-            ! allocate(vod_obsop_struc(n)%lone(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-            ! allocate(vod_obsop_struc(n)%late(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
+            allocate(vodlinfm_struc(n)%VOD(LIS_rc%npatch(n,LIS_rc%lsm_index)))
 
             call add_sfc_fields(n,LIS_sfcState(n), "Leaf Area Index")
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 1")
@@ -129,10 +133,13 @@ contains
 
 
         do n=1, LIS_rc%nnest
-            write(LIS_logunit,*) '[INFO] Reading ',trim(vod_obsop_struc(n)%parameter_fname)
+            write(LIS_logunit,*) '[INFO] Reading ',&
+                trim(vodlinfm_struc(n)%parameter_fname)
 
-            ios = nf90_open(path=trim(vod_obsop_struc(n)%parameter_fname),mode=NF90_NOWRITE,ncid=nid)
-            call LIS_verify(ios,'Error opening file '//trim(vod_obsop_struc(n)%parameter_fname))
+            ios = nf90_open(path=trim(vodlinfm_struc(n)%parameter_fname),&
+                mode=NF90_NOWRITE,ncid=nid)
+            call LIS_verify(ios,'Error opening file '&
+                //trim(vodlinfm_struc(n)%parameter_fname))
 
             ! check if ngrid is as expected
             ios = nf90_inq_dimid(nid, "ngrid", ngridId)
@@ -140,7 +147,7 @@ contains
             ios = nf90_inquire_dimension(nid, ngridId, len=ngrid)
             call LIS_verify(ios, "Error nf90_inquire_dimension: ngrid")
             if (ngrid /= LIS_rc%glbngrid_red(n)) then
-                write(LIS_logunit, *) "[ERR] ngrid in "//trim(vod_obsop_struc(n)%parameter_fname)&
+                write(LIS_logunit, *) "[ERR] ngrid in "//trim(vodlinfm_struc(n)%parameter_fname)&
                      //" not consistent with expected ngrid: ", ngrid,&
                      " instead of ",LIS_rc%glbngrid_red(n)
                 call LIS_endrun
@@ -151,22 +158,30 @@ contains
             call LIS_verify(ios, "Error nf90_inq_varid: ntimes")
             ios = nf90_inquire_dimension(nid, ntimesId, len=ntimes)
             call LIS_verify(ios, "Error nf90_inquire_dimension: ntimes")
+            vodlinfm_struc(n)%ntimes = ntimes
 
             ! now that we have ntimes, we can allocate the coefficient arrays
             ! for the nest
-            allocate(vod_obsop_struc(n)%intercept(LIS_rc%npatch(n), ntimes)
-            allocate(vod_obsop_struc(n)%laicoef(LIS_rc%npatch(n), ntimes)
-            allocate(vod_obsop_struc(n)%sm1coef(LIS_rc%npatch(n), ntimes)
-            allocate(vod_obsop_struc(n)%sm2coef(LIS_rc%npatch(n), ntimes)
-            allocate(vod_obsop_struc(n)%sm3coef(LIS_rc%npatch(n), ntimes)
-            allocate(vod_obsop_struc(n)%sm4coef(LIS_rc%npatch(n), ntimes)
+            m = LIS_rc%lsm_index
+            allocate(vodlinfm_struc(n)%intercept(LIS_rc%npatch(n, m), ntimes))
+            allocate(vodlinfm_struc(n)%laicoef(LIS_rc%npatch(n, m), ntimes))
+            allocate(vodlinfm_struc(n)%sm1coef(LIS_rc%npatch(n, m), ntimes))
+            allocate(vodlinfm_struc(n)%sm2coef(LIS_rc%npatch(n, m), ntimes))
+            allocate(vodlinfm_struc(n)%sm3coef(LIS_rc%npatch(n, m), ntimes))
+            allocate(vodlinfm_struc(n)%sm4coef(LIS_rc%npatch(n, m), ntimes))
 
-            read_coef_from_file(nid, ngrid, ntimes, "intercept", vod_obsop_struc(n)%intercept)
-            read_coef_from_file(nid, ngrid, ntimes, "LAI_coef", vod_obsop_struc(n)%laicoef)
-            read_coef_from_file(nid, ngrid, ntimes, "SM1_coef", vod_obsop_struc(n)%sm1coef)
-            read_coef_from_file(nid, ngrid, ntimes, "SM2_coef", vod_obsop_struc(n)%sm1coef)
-            read_coef_from_file(nid, ngrid, ntimes, "SM3_coef", vod_obsop_struc(n)%sm1coef)
-            read_coef_from_file(nid, ngrid, ntimes, "SM4_coef", vod_obsop_struc(n)%sm1coef)
+            call read_coef_from_file(nid, ngrid, ntimes, "intercept", &
+                vodlinfm_struc(n)%intercept)
+            call read_coef_from_file(nid, ngrid, ntimes, "LAI_coef", &
+                vodlinfm_struc(n)%laicoef)
+            call read_coef_from_file(nid, ngrid, ntimes, "SM1_coef", &
+                vodlinfm_struc(n)%sm1coef)
+            call read_coef_from_file(nid, ngrid, ntimes, "SM2_coef", &
+                vodlinfm_struc(n)%sm1coef)
+            call read_coef_from_file(nid, ngrid, ntimes, "SM3_coef", &
+                vodlinfm_struc(n)%sm1coef)
+            call read_coef_from_file(nid, ngrid, ntimes, "SM4_coef", &
+                vodlinfm_struc(n)%sm1coef)
         enddo
 
         do n=1,LIS_rc%nnest
@@ -176,20 +191,20 @@ contains
     contains
 
         subroutine read_coef_from_file(nid, ngrid, ntimes, varname, coef)
-            implicit none
+            use LIS_historyMod, only: LIS_convertVarToLocalSpace
             integer, intent(in) :: nid, ngrid, ntimes
-            character, intent(in) :: varname(:)
+            character(len=*), intent(in) :: varname
             real, intent(inout) :: coef(:,:)
 
-            real :: coef_file(:,:)
+            real, allocatable :: coef_file(:,:)
             real, allocatable :: coef_grid(:)
-            integer :: ios
+            integer :: ios, varid, j
 
-            allocate(lai_file(ngrid, ntimes))
-            call LIS_verify(nf90_inq_varid(nid, trim(varname), varid),&
-                 "Error nf90_inq_varid: ", trim(varname))
-            call LIS_verify(nf90_get_var(nid, varid, laicoef_file), &
-                 "Error nf90_get_var: ", trim(varname))
+            allocate(coef_file(ngrid, ntimes))
+            ios = nf90_inq_varid(nid, trim(varname), varid)
+            call LIS_verify(ios, "Error nf90_inq_varid: "//trim(varname))
+            ios = nf90_get_var(nid, varid, coef_file)
+            call LIS_verify(ios, "Error nf90_get_var: "//trim(varname))
             allocate(coef_grid(LIS_rc%ngrid(n)))
             do j=1,ntimes
                 call LIS_convertVarToLocalSpace(n, coef_file(:,j), coef_grid)
@@ -201,7 +216,7 @@ contains
 
         end subroutine read_coef_from_file
 
-        subroutine gridvar_to_patchvar(n,m,gvar,pvar)
+        subroutine gridvar_to_patchvar(n,m,gvar,tvar)
             ! Converts a variable in local gridspace (length LIS_rc%ngrid(n))
             ! to local patch space (length LIS_rc%npatch(n,m))
 
@@ -249,8 +264,8 @@ contains
             call LIS_verify(status, "Error in StateAdd of "//trim(varname))
 
         end subroutine add_fields_toState
-
-    end subroutine VODObservationOperator_initialize
+#endif
+    end subroutine VODLinFM_initialize
     !!--------------------------------------------------------------------------------
 
     subroutine add_sfc_fields(n, sfcState,varname)
@@ -280,22 +295,22 @@ contains
     end subroutine add_sfc_fields
 
 
-    subroutine VODObservationOperator_f2t(n)
+    subroutine VODLinFM_f2t(n)
 
         implicit none
 
         integer, intent(in)    :: n
 
-    end subroutine VODObservationOperator_f2t
+    end subroutine VODLinFM_f2t
 
 
-    subroutine VODObservationOperator_geometry(n)
+    subroutine VODLinFM_geometry(n)
         implicit none
         integer, intent(in)    :: n
 
-    end subroutine VODObservationOperator_geometry
+    end subroutine VODLinFM_geometry
     !Do nothing for now
-    subroutine VODObservationOperator_run(n)
+    subroutine VODLinFM_run(n)
         use LIS_histDataMod
         ! !USES:
         implicit none
@@ -306,7 +321,7 @@ contains
         integer             :: status
         integer             :: col,row
         real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
-        real                :: laicoef, sm1coef, sm2coef, sm3coef, sm4coef
+        real                :: intercept, laicoef, sm1coef, sm2coef, sm3coef, sm4coef
 
         !   map surface properties to SFC
         call getsfcvar(LIS_sfcState(n), "Leaf Area Index", lai)
@@ -319,36 +334,45 @@ contains
         !---------------------------------------------
         ! Patch loop
         !--------------------------------------------
-        timeidx = LIS_rc%mo
+        if (vodlinfm_struc(n)%ntimes == 1) then
+            timeidx = 1
+        elseif (vodlinfm_struc(n)%ntimes == 12) then
+            timeidx = LIS_rc%mo
+        else
+            write(LIS_logunit, *) "[ERR] ntimes in "//trim(vodlinfm_struc(n)%parameter_fname)&
+                 //" must be 1 or 12, but is ", vodlinfm_struc(n)%ntimes
+            call LIS_endrun
+        endif
         do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
-            intercept = vod_obsop_struc(n)%intercept(t, t)
-            laicoef = vod_obsop_struc(n)%laicoef(t, t)
-            sm1coef = vod_obsop_struc(n)%sm1coef(t, t)
-            sm2coef = vod_obsop_struc(n)%sm2coef(t, t)
-            sm3coef = vod_obsop_struc(n)%sm3coef(t, t)
-            sm4coef = vod_obsop_struc(n)%sm4coef(t, t)
+            intercept = vodlinfm_struc(n)%intercept(t, t)
+            laicoef = vodlinfm_struc(n)%laicoef(t, t)
+            sm1coef = vodlinfm_struc(n)%sm1coef(t, t)
+            sm2coef = vodlinfm_struc(n)%sm2coef(t, t)
+            sm3coef = vodlinfm_struc(n)%sm3coef(t, t)
+            sm4coef = vodlinfm_struc(n)%sm4coef(t, t)
 
             if(.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
                  .and. .not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
                  .and. .not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
                  .and. .not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
                  .and. .not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef) then
-                vod_obsop_struc(n)%VOD(t) = intercept + laicoef * lai(t)&
+                vodlinfm_struc(n)%VOD(t) = intercept + laicoef * lai(t)&
                      + sm1coef * sm1(t)&
                      + sm2coef * sm2(t)&
                      + sm3coef * sm3(t)&
                      + sm4coef * sm4(t)
             else
-                vod_obsop_struc(n)%VOD(t)=LIS_rc%udef
+                vodlinfm_struc(n)%VOD(t)=LIS_rc%udef
             endif
 
-            call LIS_diagnoseRTMOutputVar(n, p, LIS_MOC_RTM_Sig0VV,&
-                 value=vod_obsop_struc(n)%VOD(t))
+            call LIS_diagnoseRTMOutputVar(n, t, LIS_MOC_RTM_VOD,&
+                 value=vodlinfm_struc(n)%VOD(t),&
+                 vlevel=1,&
+                 unit="-",&
+                 direction="+")
         enddo
 
-        call getsfcvar(LIS_forwardState(n), "VOD", vod_obsop_struc(n)%VOD)
-
-    end subroutine VODObservationOperator_run
+    end subroutine VODLinFM_run
 
 
     !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -364,19 +388,19 @@ contains
         integer               :: status
 
         call ESMF_StateGet(sfcState, trim(varname), varField, rc=status)
-        call LIS_verify(status, "Error in StateGet: VODObservationOperator_getsfcvar "//trim(varname))
+        call LIS_verify(status, "Error in StateGet: VODLinFM_getsfcvar "//trim(varname))
         call ESMF_FieldGet(varField, localDE=0,farrayPtr=var, rc=status)
-        call LIS_verify(status, "Error in FieldGet: VODObservationOperator_getsfcvar "//trim(varname))
+        call LIS_verify(status, "Error in FieldGet: VODLinFM_getsfcvar "//trim(varname))
 
     end subroutine getsfcvar
 
 !!!!BOP
-!!!! !ROUTINE: VODObservationOperator_output
-!!!! \label{VODObservationOperator_output}
+!!!! !ROUTINE: VODLinFM_output
+!!!! \label{VODLinFM_output}
 !!!!
 !!!! !INTERFACE:
-    subroutine VODObservationOperator_output(n)
+    subroutine VODLinFM_output(n)
         integer, intent(in) :: n
-    end subroutine VODObservationOperator_output
+    end subroutine VODLinFM_output
 #endif
-end module VODObservationOperator_Mod
+end module VODLinFM_Mod

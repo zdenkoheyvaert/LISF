@@ -82,6 +82,12 @@ subroutine LIS_RTM_plugin
        WCMRTM_run
 #endif
 
+#if ( defined RTMS_VODLINFM )
+   use VODLinFM_Mod, only : VODLinFM_initialize, VODLinFM_f2t,&
+       VODLinFM_geometry, &
+       VODLinFM_run
+#endif
+
 #if ( defined RTMS_CRTM )
 ! CRTM 1.x
 !   call registerrtminit(trim(LIS_crtmId)//char(0), CRTM_Kmatrix_initialize)
@@ -132,6 +138,14 @@ subroutine LIS_RTM_plugin
    call registergeometry2rtm(trim(LIS_wcmrtmId)//char(0), &
                              WCMRTM_geometry)
    call registerrtmrun(trim(LIS_wcmrtmId)//char(0),WCMRTM_run)
+#endif
+
+#if ( defined RTMS_VODLINFM )
+   call registerrtminit(trim(LIS_vodlinfmId)//char(0),VODLinFM_initialize)
+   call registerrtmf2t(trim(LIS_vodlinfmId)//char(0),VODLinFM_f2t)
+   call registergeometry2rtm(trim(LIS_vodlinfmId)//char(0), &
+                             VODLinFM_geometry)
+   call registerrtmrun(trim(LIS_vodlinfmId)//char(0),VODLinFM_run)
 #endif
 #endif
 end subroutine LIS_RTM_plugin

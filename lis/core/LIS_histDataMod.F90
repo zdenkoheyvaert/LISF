@@ -318,6 +318,7 @@ module LIS_histDataMod
   public :: LIS_MOC_RTM_SM
   public :: LIS_MOC_RTM_Sig0VV
   public :: LIS_MOC_RTM_Sig0VH
+  public :: LIS_MOC_RTM_VOD
   ! Irrigation
   public :: LIS_MOC_IRRIGATEDWATER  
 
@@ -804,6 +805,7 @@ module LIS_histDataMod
    integer :: LIS_MOC_RTM_SM = -9999
    integer :: LIS_MOC_RTM_Sig0VV = -9999
    integer :: LIS_MOC_RTM_Sig0VH = -9999
+   integer :: LIS_MOC_RTM_VOD = -9999
 
    integer :: LIS_MOC_IRRIGATEDWATER
 
@@ -4286,6 +4288,17 @@ contains
          "rtm Sigma0 VH",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_RTM_COUNT,LIS_MOC_RTM_Sig0VH,&
+            LIS_histData(n)%head_rtm_list,&
+            n,1,ntiles,(/"dB"/),1,(/"-"/),1,1,1)
+    endif
+
+    call ESMF_ConfigFindLabel(modelSpecConfig,"RTM VOD:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_rtm_list,&
+         "RTM_VOD",&
+         "rtm_VOD",&
+         "rtm VOD",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_RTM_COUNT,LIS_MOC_RTM_VOD,&
             LIS_histData(n)%head_rtm_list,&
             n,1,ntiles,(/"dB"/),1,(/"-"/),1,1,1)
     endif

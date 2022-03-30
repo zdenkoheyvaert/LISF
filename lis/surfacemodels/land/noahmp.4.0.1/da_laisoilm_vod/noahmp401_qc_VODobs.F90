@@ -97,7 +97,7 @@ subroutine noahmp401_qc_VODobs(n,k,OBS_State)
   real                     :: vegt_obs(LIS_rc%obs_ngrid(k))
 
 !-----this part is derived from ./lis/dataassim/obs/s1_sigma/read_S1_sigma.F90
-  call ESMF_StateGet(OBS_State,"VOD",vodField,&
+  call ESMF_StateGet(OBS_State,"Observation01",vodField,&
        rc=status) !
   call LIS_verify(status,&
        "ESMF_StateGet failed in noahmp401_qc_VODobs")
