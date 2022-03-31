@@ -152,10 +152,11 @@ contains
 ! !INTERFACE:
 subroutine LIS_lsmda_plugin
 !EOP
-
+! Hans Lievens added DA_PF
 #if ( ( defined DA_DIRECT_INSERTION ) || \
       ( defined DA_ENKS )             || \
-      ( defined DA_ENKF ) )
+      ( defined DA_ENKF )             || \
+      ( defined DA_PF ) )
 
    use LIS_pluginIndices
 
@@ -2096,6 +2097,28 @@ subroutine LIS_lsmda_plugin
         trim(LIS_SMMRSNWDsnowobsId)//char(0),noahmp36_descale_snow)
    call registerlsmdaupdatestate(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_SMMRSNWDsnowobsId)//char(0),noahmp36_updatesnowvars)
+
+! Hans Lievens added S1 snow depth
+   call registerlsmdainit(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_dasnow_init)
+   call registerlsmdagetstatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_getsnowvars)
+   call registerlsmdasetstatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_setsnowvars)
+   call registerlsmdagetobspred(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_getsnwdpred)
+   call registerlsmdaqcstate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_qcsnow)
+   call registerlsmdaqcobsstate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_qc_snowobs)
+   call registerlsmdascalestatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_scale_snow)
+   call registerlsmdadescalestatevar(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_descale_snow)
+   call registerlsmdaupdatestate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_updatesnowvars)
+   call registerlsmdaqcobsstate(trim(LIS_noahmp36Id)//"+"//&
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_qc_snowobs)
 
 !NT
 ! NoahMP-3.6 SSMI snow depth
