@@ -288,7 +288,6 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
     integer                       :: k
     character (len=*)             :: fname
     real                          :: laiobs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
-    real*8                        :: cornerlat(2), cornerlon(2)
 
     ! !OUTPUT PARAMETERS:
     !
@@ -327,12 +326,6 @@ subroutine read_CGLS_LAI_data(n, k, fname, laiobs_ip)
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
 
     !values
-
-    cornerlat(1)=CGLSlai_struc(n)%gridDesci(4)
-    cornerlon(1)=CGLSlai_struc(n)%gridDesci(5)
-    cornerlat(2)=CGLSlai_struc(n)%gridDesci(7)
-    cornerlon(2)=CGLSlai_struc(n)%gridDesci(8)
-
     lai_data_b = .false.
 
     lat_offset = 1  ! no offset

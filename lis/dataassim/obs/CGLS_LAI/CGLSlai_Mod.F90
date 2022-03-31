@@ -32,14 +32,26 @@
 !  CGLS LAI spatial resolution:      
 !      Spatial resolution of resampled data files, only required if "CGLS LAI
 !      is resampled" is set. (Optional)
+!  CGLS LAI lat max:
+!      Maximum latitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
+!  CGLS LAI lat min:
+!      Minimum latitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
+!  CGLS LAI lon max:
+!      Maximum longitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
+!  CGLS LAI lon min:
+!      Minimum longitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
 !
 !  If a rescaling option is set, the following options are also available:
 !  - CGLS LAI model CDF file
 !  - CGLS LAI observation CDF file
 !  - CGLS LAI number of bins in the CDF
 !
-!  The rescaling option has not been extensively tested and should be used with
-!  care.
+!  The rescaling option has not been extensively tested and should be used
+!  carefully.
 ! 
 ! !REVISION HISTORY: 
 !  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
@@ -81,8 +93,7 @@ module CGLSlai_Mod
         real*8                 :: spatialres
         real                   :: scale
         real*8                 ::  dlat, dlon
-        real*8                 ::  lat_lower_left, lon_lower_left
-        real*8                 ::  lat_upper_right, lon_upper_right
+        real*8                 ::  latmax, latmin, lonmax, lonmin
         real,    allocatable :: rlat(:)
         real,    allocatable :: rlon(:)
         integer, allocatable :: n11(:)
@@ -206,6 +217,11 @@ contains
             call LIS_verify(status, 'CGLS LAI apply QC flags: is missing')
         enddo
 
+
+        !-----------------------------------------------------------------------------
+        !  CGLS LAI grid definition
+        !-----------------------------------------------------------------------------
+
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI is resampled:",&
              rc=status)
         do n=1,LIS_rc%nnest
@@ -223,6 +239,51 @@ contains
                 call LIS_verify(status, 'CGLS LAI spatial resolution: is missing')
             endif
         enddo
+
+        do n=1,LIS_rc%nnest
+            if (CGLSlai_struc(n)%isresampled.ne.0) then
+                CGLSlai_struc(n)%latmax = 90 - 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%latmin = -90 + 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%lonmax = 180 - 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%lonmin = -180 + 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lat max:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmax,&
+                     rc=status)
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lat min:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmin,&
+                     rc=status)
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lon max:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmax,&
+                     rc=status)
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lon min:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmin,&
+                     rc=status)
+                CGLSlai_struc(n)%nr = nint((CGLSlai_struc(n)%latmax - CGLSlai_struc(n)%latmin)&
+                                           / CGLSlai_struc(n)%spatialres) + 1
+                CGLSlai_struc(n)%nc = nint((CGLSlai_struc(n)%lonmax - CGLSlai_struc(n)%lonmin)&
+                                           / CGLSlai_struc(n)%spatialres) + 1
+            else
+                CGLSlai_struc(n)%latmax = 80
+                CGLSlai_struc(n)%latmin = -59.9910714285396
+                CGLSlai_struc(n)%lonmax= -180
+                CGLSlai_struc(n)%lonmin = 179.991071429063
+                CGLSlai_struc(n)%dlat = 0.008928002004371148
+                CGLSlai_struc(n)%dlon = 0.008928349985839856
+                CGLSlai_struc(n)%nc = 40320
+                CGLSlai_struc(n)%nr = 15680
+            endif
+        enddo
+
+
+        !-----------------------------------------------------------------------------
+        !  CGLS LAI rescaling
+        !-----------------------------------------------------------------------------
 
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI model CDF file:",&
              rc=status)
@@ -482,48 +543,20 @@ contains
             ! scale factor for unpacking the data
             CGLSlai_struc(n)%scale = 0.033333
 
-            if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
-                if(CGLSlai_struc(n)%isresampled.ne.0) then
-                    ! images are rescaled to custom resolution
-                    CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lat_upper_right = -90 + 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lon_lower_left = -180 + 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lon_upper_right = 180 - 0.5 * CGLSlai_struc(n)%spatialres
-                    ! dlat is positive since LIS will figure out that latitude is
-                    ! decreasing
-                    CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%nr = nint(180.0 / CGLSlai_struc(n)%spatialres)
-                    CGLSlai_struc(n)%nc = 2 * CGLSlai_struc(n)%nr
-                else
-                    ! original spatial resolution of the downloaded data product
-                    CGLSlai_struc(n)%lat_lower_left = 80
-                    CGLSlai_struc(n)%lat_upper_right = -59.9910714285396
-                    CGLSlai_struc(n)%lon_lower_left = -180
-                    CGLSlai_struc(n)%lon_upper_right = 179.991071429063
-                    ! dlat is positive since LIS will figure out that latitude is
-                    ! decreasing
-                    CGLSlai_struc(n)%dlat = 0.008928002004371148
-                    CGLSlai_struc(n)%dlon = 0.008928349985839856
-                    CGLSlai_struc(n)%nc = 40320
-                    CGLSlai_struc(n)%nr = 15680
-                endif
-            elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
-                write(unit=error_unit, fmt=*) &
-                     'The CGLS_LAI module only works with latlon projection'
-                stop 1
+            if(LIS_rc%lis_obs_map_proj(k).ne."latlon") then
+                write(LIS_logunit,*)&
+                     '[ERROR] The CGLS LAI module only works with latlon projection'       
+                call LIS_endrun
             endif
-
-            ! from netCDF files
 
             CGLSlai_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
             CGLSlai_struc(n)%gridDesci(2) = CGLSlai_struc(n)%nc
             CGLSlai_struc(n)%gridDesci(3) = CGLSlai_struc(n)%nr 
-            CGLSlai_struc(n)%gridDesci(4) = CGLSlai_struc(n)%lat_lower_left
-            CGLSlai_struc(n)%gridDesci(5) = CGLSlai_struc(n)%lon_lower_left
+            CGLSlai_struc(n)%gridDesci(4) = CGLSlai_struc(n)%latmax
+            CGLSlai_struc(n)%gridDesci(5) = CGLSlai_struc(n)%lonmin
             CGLSlai_struc(n)%gridDesci(6) = 128
-            CGLSlai_struc(n)%gridDesci(7) = CGLSlai_struc(n)%lat_upper_right
-            CGLSlai_struc(n)%gridDesci(8) = CGLSlai_struc(n)%lon_upper_right
+            CGLSlai_struc(n)%gridDesci(7) = CGLSlai_struc(n)%latmin
+            CGLSlai_struc(n)%gridDesci(8) = CGLSlai_struc(n)%lonmax
             CGLSlai_struc(n)%gridDesci(9) = CGLSlai_struc(n)%dlat
             CGLSlai_struc(n)%gridDesci(10) = CGLSlai_struc(n)%dlon
             CGLSlai_struc(n)%gridDesci(20) = 64
