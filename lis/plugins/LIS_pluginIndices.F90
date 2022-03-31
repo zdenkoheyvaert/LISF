@@ -237,6 +237,8 @@ module LIS_pluginIndices
    character*50, public,  parameter :: LIS_ANSASCFsnowobsId    = "ANSA SCF"
    character*50, public,  parameter :: LIS_ANSASNWDsnowobsId   = "ANSA snow depth"
    character*50, public,  parameter :: LIS_SMMRSNWDsnowobsId   = "SMMR snow depth"
+! Hans Lievens added S1
+   character*50, public,  parameter :: LIS_S1_SNWD_obsId       = "S1 snow depth"
    character*50, public,  parameter :: LIS_SSMISNWDsnowobsId   = "SSMI snow depth"
    character*50, public,  parameter :: LIS_AMSREsweobsId       = "AMSR-E SWE"
 !   character*50, public,  parameter :: LIS_AMSREsnowobsId      = "AMSR-E snow" !yliu
