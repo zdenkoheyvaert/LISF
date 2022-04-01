@@ -391,6 +391,11 @@ subroutine LIS_DAobs_plugin
    external read_SMMRSNWDsnow, write_SMMRSNWDsnowobs
 #endif
 
+! Hans Lievens added S1 snow depth obs
+#if ( defined DA_OBS_S1_SNWD )
+   external read_S1_SNWD, write_S1_SNWDobs
+#endif
+
 #if ( defined DA_OBS_SSMI_SNWD )
    external read_SSMISNWDsnow, write_SSMISNWDsnowobs
 #endif

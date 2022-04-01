@@ -353,7 +353,7 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
         do j=1,S1_SNWD_struc(n)%nc
               
            call latlon_to_ij(LIS_domain(n)%lisproj,&
-                lat_nc(S1_SNWD_struc(n)%nr-(i-1)),lon_nc(j),col,row)
+                lat_nc(i),lon_nc(j),col,row)
            stn_col = nint(col)
            stn_row = nint(row)
 
@@ -454,7 +454,7 @@ subroutine S1_SNWD_filename(filename, ndir, yr, mo, da)
   write(unit=fmo, fmt='(i2.2)') mo
   write(unit=fda, fmt='(i2.2)') da 
 
-  filename = trim(ndir)//'/SD_'//trim(fyr)//trim(fmo)//trim(fda)//'.nc'
+  filename = trim(ndir)//'/snd_'//trim(fyr)//trim(fmo)//trim(fda)//'.nc'
     
 end subroutine S1_SNWD_filename
 

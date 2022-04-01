@@ -257,8 +257,8 @@ contains
 ! set up the S1 domain %and interpolation weights. 
 !-------------------------------------------------------------
     do n=1,LIS_rc%nnest
-       S1_SNWD_struc(n)%nc = 34704
-       S1_SNWD_struc(n)%nr = 4500 
+       S1_SNWD_struc(n)%nc = 1248
+       S1_SNWD_struc(n)%nr = 576
 
        allocate(S1_SNWD_struc(n)%snwd(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
        allocate(S1_SNWD_struc(n)%snwdtime(&
