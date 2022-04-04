@@ -8,16 +8,56 @@
 !BOP
 !
 ! !MODULE: CGLSlai_Mod
-!
-! !DESCRIPTION:
+! 
+! !DESCRIPTION: 
 !   This module contains interfaces and subroutines to
 !   handle the CGLS LAI data.
 !
-! !REVISION HISTORY:
-!  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
+!  Available lis.config options:
 !
+!  CGLS LAI data directory:
+!      Path to CGLS files. (Required option)
+!  CGLS LAI apply QC flags:
+!      Whether to apply QC flags from the files. Only enable this if the files
+!      are downloaded from CGLS. (Required option)
+!  CGLS LAI is resampled:
+!      Whether the files are resampled manually to a regular latitude-longitude
+!      grid. If they are, it is assumed that they are all in the data directory
+!      without any subdirectories, and follow the naming scheme
+!
+!          CGLS_LAI_resampled_<res>deg_<YYYY>_<MM>_<DD>.nc
+!
+!      where <res> is the resolution with two decimals, e.g. 0.25 for quarter
+!      degree resolution. (Required option)
+!  CGLS LAI spatial resolution:      
+!      Spatial resolution of resampled data files, only required if "CGLS LAI
+!      is resampled" is set. (Optional)
+!  CGLS LAI lat max:
+!      Maximum latitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
+!  CGLS LAI lat min:
+!      Minimum latitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
+!  CGLS LAI lon max:
+!      Maximum longitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
+!  CGLS LAI lon min:
+!      Minimum longitude value in case CGLS LAI has been resampled and cropped to
+!      a subdomain. (Optional)
+!
+!  If a rescaling option is set, the following options are also available:
+!  - CGLS LAI model CDF file
+!  - CGLS LAI observation CDF file
+!  - CGLS LAI number of bins in the CDF
+!
+!  The rescaling option has not been extensively tested and should be used
+!  carefully.
+! 
+! !REVISION HISTORY: 
+!  03 Nov 2021    Samuel Scherrer; initial reader based on MCD152AH reader
+! 
 module CGLSlai_Mod
-    ! !USES:
+    ! !USES: 
     use ESMF
     use map_utils
     use, intrinsic :: iso_fortran_env, only: error_unit
@@ -44,7 +84,7 @@ module CGLSlai_Mod
         integer                :: mi
         real,     allocatable  :: laiobs1(:)
         real,     allocatable  :: laiobs2(:)
-        real                   :: gridDesci(50)
+        real                   :: gridDesci(50)    
         real*8                 :: time1, time2
         integer                :: fnd
         integer                :: useSsdevScal
@@ -53,8 +93,7 @@ module CGLSlai_Mod
         real*8                 :: spatialres
         real                   :: scale
         real*8                 ::  dlat, dlon
-        real*8                 ::  lat_lower_left, lon_lower_left
-        real*8                 ::  lat_upper_right, lon_upper_right
+        real*8                 ::  latmax, latmin, lonmax, lonmin
         real,    allocatable :: rlat(:)
         real,    allocatable :: rlon(:)
         integer, allocatable :: n11(:)
@@ -86,13 +125,13 @@ module CGLSlai_Mod
 contains
 
     !BOP
-    !
+    ! 
     ! !ROUTINE: CGLSlai_setup
     ! \label{CGLSlai_setup}
-    !
-    ! !INTERFACE:
+    ! 
+    ! !INTERFACE: 
     subroutine CGLSlai_setup(k, OBS_State, OBS_Pert_State)
-        ! !USES:
+        ! !USES: 
         use ESMF
         use LIS_coreMod
         use LIS_timeMgrMod
@@ -102,22 +141,22 @@ contains
         use LIS_DAobservationsMod
         use LIS_logmod
 
-        implicit none
+        implicit none 
 
-        ! !ARGUMENTS:
+        ! !ARGUMENTS: 
         integer                ::  k
         type(ESMF_State)       ::  OBS_State(LIS_rc%nnest)
         type(ESMF_State)       ::  OBS_Pert_State(LIS_rc%nnest)
-        !
-        ! !DESCRIPTION:
-        !
-        !   This routine completes the runtime initializations and
+        ! 
+        ! !DESCRIPTION: 
+        !   
+        !   This routine completes the runtime initializations and 
         !   creation of data structures required for handling CGLS LAI data.
-        !
-        !   The arguments are:
+        !  
+        !   The arguments are: 
         !   \begin{description}
-        !    \item[k] number of observation state
-        !    \item[OBS\_State]   observation state
+        !    \item[k] number of observation state 
+        !    \item[OBS\_State]   observation state 
         !    \item[OBS\_Pert\_State] observation perturbations state
         !   \end{description}
         !EOP
@@ -178,6 +217,11 @@ contains
             call LIS_verify(status, 'CGLS LAI apply QC flags: is missing')
         enddo
 
+
+        !-----------------------------------------------------------------------------
+        !  CGLS LAI grid definition
+        !-----------------------------------------------------------------------------
+
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI is resampled:",&
              rc=status)
         do n=1,LIS_rc%nnest
@@ -196,10 +240,55 @@ contains
             endif
         enddo
 
+        do n=1,LIS_rc%nnest
+            if (CGLSlai_struc(n)%isresampled.ne.0) then
+                CGLSlai_struc(n)%latmax = 90 - 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%latmin = -90 + 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%lonmax = 180 - 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%lonmin = -180 + 0.5 * CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lat max:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmax,&
+                     rc=status)
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lat min:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmin,&
+                     rc=status)
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lon max:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmax,&
+                     rc=status)
+                call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lon min:",&
+                     rc=status)
+                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmin,&
+                     rc=status)
+                CGLSlai_struc(n)%nr = nint((CGLSlai_struc(n)%latmax - CGLSlai_struc(n)%latmin)&
+                                           / CGLSlai_struc(n)%spatialres) + 1
+                CGLSlai_struc(n)%nc = nint((CGLSlai_struc(n)%lonmax - CGLSlai_struc(n)%lonmin)&
+                                           / CGLSlai_struc(n)%spatialres) + 1
+            else
+                CGLSlai_struc(n)%latmax = 80
+                CGLSlai_struc(n)%latmin = -59.9910714285396
+                CGLSlai_struc(n)%lonmax= -180
+                CGLSlai_struc(n)%lonmin = 179.991071429063
+                CGLSlai_struc(n)%dlat = 0.008928002004371148
+                CGLSlai_struc(n)%dlon = 0.008928349985839856
+                CGLSlai_struc(n)%nc = 40320
+                CGLSlai_struc(n)%nr = 15680
+            endif
+        enddo
+
+
+        !-----------------------------------------------------------------------------
+        !  CGLS LAI rescaling
+        !-----------------------------------------------------------------------------
+
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI model CDF file:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then
+            if(LIS_rc%dascaloption(k).ne."none") then 
                 call ESMF_ConfigGetAttribute(LIS_config,modelcdffile(n),rc=status)
                 call LIS_verify(status, 'CGLS LAI model CDF file: not defined')
             endif
@@ -208,7 +297,7 @@ contains
         call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI observation CDF file:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then
+            if(LIS_rc%dascaloption(k).ne."none") then 
                 call ESMF_ConfigGetAttribute(LIS_config,obscdffile(n),rc=status)
                 call LIS_verify(status, 'CGLS LAI observation CDF file: not defined')
             endif
@@ -216,7 +305,7 @@ contains
 
         call ESMF_ConfigFindLabel(LIS_config, "CGLS LAI number of bins in the CDF:", rc=status)
         do n=1, LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then
+            if(LIS_rc%dascaloption(k).ne."none") then 
                 call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%nbins, rc=status)
                 call LIS_verify(status, "CGLS LAI number of bins in the CDF: not defined")
             endif
@@ -242,7 +331,7 @@ contains
         enddo
 
         write(LIS_logunit,*)&
-             '[INFO] read CGLS LAI data specifications'
+             '[INFO] read CGLS LAI data specifications'       
 
         do n=1,LIS_rc%nnest
 
@@ -275,11 +364,11 @@ contains
                 read(ftn,*) varmin(i),varmax(i)
                 write(LIS_logunit,*) '[INFO] ',vname(i),varmin(i),varmax(i)
             enddo
-            call LIS_releaseUnitNumber(ftn)
+            call LIS_releaseUnitNumber(ftn)   
 
             allocate(ssdev(LIS_rc%obs_ngrid(k)))
 
-            if(trim(LIS_rc%perturb_obs(k)).ne."none") then
+            if(trim(LIS_rc%perturb_obs(k)).ne."none") then 
                 allocate(obs_pert%vname(1))
                 allocate(obs_pert%perttype(1))
                 allocate(obs_pert%ssdev(1))
@@ -293,7 +382,7 @@ contains
                 call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
                      obs_pert)
 
-                ! Set obs err to be uniform (will be rescaled later for each grid point).
+                ! Set obs err to be uniform (will be rescaled later for each grid point). 
                 ssdev = obs_pert%ssdev(1)
                 CGLSlai_struc(n)%ssdev_inp = obs_pert%ssdev(1)
 
@@ -302,16 +391,16 @@ contains
                      rc=status)
                 call LIS_verify(status)
 
-                ! initializing the perturbations to be zero
+                ! initializing the perturbations to be zero 
                 call ESMF_FieldGet(pertField(n),localDE=0,farrayPtr=obs_temp,rc=status)
                 call LIS_verify(status)
-                obs_temp(:,:) = 0
+                obs_temp(:,:) = 0 
 
                 call ESMF_AttributeSet(pertField(n),"Perturbation Type",&
                      obs_pert%perttype(1), rc=status)
                 call LIS_verify(status)
 
-                if(LIS_rc%obs_ngrid(k).gt.0) then
+                if(LIS_rc%obs_ngrid(k).gt.0) then 
                     call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
                          ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                     call LIS_verify(status)
@@ -339,19 +428,19 @@ contains
                      obs_pert%ccorr(1,:),itemCount=1,rc=status)
 
                 call ESMF_StateAdd(OBS_Pert_State(n),(/pertField(n)/),rc=status)
-                call LIS_verify(status)
+                call LIS_verify(status)         
 
             endif
 
             deallocate(vname)
             deallocate(varmax)
             deallocate(varmin)
-            deallocate(ssdev)
+            deallocate(ssdev)   
 
         enddo
 
         do n=1,LIS_rc%nnest
-            if(LIS_rc%dascaloption(k).ne."none") then
+            if(LIS_rc%dascaloption(k).ne."none") then 
 
                 call LIS_getCDFattributes(k,modelcdffile(n),&
                      CGLSlai_struc(n)%ntimes, ngrid)
@@ -377,14 +466,14 @@ contains
                      LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, &
                      CGLSlai_struc(n)%nbins))
                 allocate(CGLSlai_struc(n)%obs_cdf(&
-                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, &
+                     LIS_rc%obs_ngrid(k), CGLSlai_struc(n)%ntimes, & 
                      CGLSlai_struc(n)%nbins))
 
                 !----------------------------------------------------------------------------
                 ! Read the model and observation CDF data
                 !----------------------------------------------------------------------------
                 call LIS_readMeanSigmaData(n,k,&
-                     CGLSlai_struc(n)%ntimes, &
+                     CGLSlai_struc(n)%ntimes, & 
                      LIS_rc%obs_ngrid(k), &
                      modelcdffile(n), &
                      "LAI",&
@@ -392,7 +481,7 @@ contains
                      CGLSlai_struc(n)%model_sigma)
 
                 call LIS_readMeanSigmaData(n,k,&
-                     CGLSlai_struc(n)%ntimes, &
+                     CGLSlai_struc(n)%ntimes, & 
                      LIS_rc%obs_ngrid(k), &
                      obscdffile(n), &
                      "LAI",&
@@ -401,7 +490,7 @@ contains
 
                 call LIS_readCDFdata(n,k,&
                      CGLSlai_struc(n)%nbins,&
-                     CGLSlai_struc(n)%ntimes, &
+                     CGLSlai_struc(n)%ntimes, & 
                      LIS_rc%obs_ngrid(k), &
                      modelcdffile(n), &
                      "LAI",&
@@ -410,36 +499,36 @@ contains
 
                 call LIS_readCDFdata(n,k,&
                      CGLSlai_struc(n)%nbins,&
-                     CGLSlai_struc(n)%ntimes, &
+                     CGLSlai_struc(n)%ntimes, & 
                      LIS_rc%obs_ngrid(k), &
                      obscdffile(n), &
                      "LAI",&
                      CGLSlai_struc(n)%obs_xrange,&
                      CGLSlai_struc(n)%obs_cdf)
 
-                if(CGLSlai_struc(n)%useSsdevScal.eq.1) then
-                    if(CGLSlai_struc(n)%ntimes.eq.1) then
+                if(CGLSlai_struc(n)%useSsdevScal.eq.1) then 
+                    if(CGLSlai_struc(n)%ntimes.eq.1) then 
                         jj = 1
                     else
                         jj = LIS_rc%mo
                     endif
                     do t=1,LIS_rc%obs_ngrid(k)
-                        if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then
+                        if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.LIS_rc%udef) then 
                             print*, ssdev(t),CGLSlai_struc(n)%model_sigma(t,jj),&
                                  CGLSlai_struc(n)%obs_sigma(t,jj)
-                            if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.0) then
+                            if(CGLSlai_struc(n)%obs_sigma(t,jj).ne.0) then 
                                 ssdev(t) = ssdev(t)*CGLSlai_struc(n)%model_sigma(t,jj)/&
                                      CGLSlai_struc(n)%obs_sigma(t,jj)
                             endif
 
-                            if(ssdev(t).lt.minssdev) then
+                            if(ssdev(t).lt.minssdev) then 
                                 ssdev(t) = minssdev
                             endif
                         endif
                     enddo
                 endif
 
-                if(LIS_rc%obs_ngrid(k).gt.0) then
+                if(LIS_rc%obs_ngrid(k).gt.0) then 
                     call ESMF_AttributeSet(pertField(n),"Standard Deviation",&
                          ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                     call LIS_verify(status)
@@ -454,48 +543,20 @@ contains
             ! scale factor for unpacking the data
             CGLSlai_struc(n)%scale = 0.033333
 
-            if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
-                if(CGLSlai_struc(n)%isresampled.ne.0) then
-                    ! images are rescaled to custom resolution
-                    CGLSlai_struc(n)%lat_lower_left = 90 - 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lat_upper_right = -90 + 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lon_lower_left = -180 + 0.5 * CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%lon_upper_right = 180 - 0.5 * CGLSlai_struc(n)%spatialres
-                    ! dlat is positive since LIS will figure out that latitude is
-                    ! decreasing
-                    CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
-                    CGLSlai_struc(n)%nr = nint(180.0 / CGLSlai_struc(n)%spatialres)
-                    CGLSlai_struc(n)%nc = 2 * CGLSlai_struc(n)%nr
-                else
-                    ! original spatial resolution of the downloaded data product
-                    CGLSlai_struc(n)%lat_lower_left = 80
-                    CGLSlai_struc(n)%lat_upper_right = -59.9910714285396
-                    CGLSlai_struc(n)%lon_lower_left = -180
-                    CGLSlai_struc(n)%lon_upper_right = 179.991071429063
-                    ! dlat is positive since LIS will figure out that latitude is
-                    ! decreasing
-                    CGLSlai_struc(n)%dlat = 0.008928002004371148
-                    CGLSlai_struc(n)%dlon = 0.008928349985839856
-                    CGLSlai_struc(n)%nc = 40320
-                    CGLSlai_struc(n)%nr = 15680
-                endif
-            elseif(LIS_rc%lis_obs_map_proj(k).eq."lambert") then
-                write(unit=error_unit, fmt=*) &
-                     'The CGLS_LAI module only works with latlon projection'
-                stop 1
+            if(LIS_rc%lis_obs_map_proj(k).ne."latlon") then
+                write(LIS_logunit,*)&
+                     '[ERROR] The CGLS LAI module only works with latlon projection'       
+                call LIS_endrun
             endif
-
-            ! from netCDF files
 
             CGLSlai_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
             CGLSlai_struc(n)%gridDesci(2) = CGLSlai_struc(n)%nc
-            CGLSlai_struc(n)%gridDesci(3) = CGLSlai_struc(n)%nr
-            CGLSlai_struc(n)%gridDesci(4) = CGLSlai_struc(n)%lat_lower_left
-            CGLSlai_struc(n)%gridDesci(5) = CGLSlai_struc(n)%lon_lower_left
+            CGLSlai_struc(n)%gridDesci(3) = CGLSlai_struc(n)%nr 
+            CGLSlai_struc(n)%gridDesci(4) = CGLSlai_struc(n)%latmax
+            CGLSlai_struc(n)%gridDesci(5) = CGLSlai_struc(n)%lonmin
             CGLSlai_struc(n)%gridDesci(6) = 128
-            CGLSlai_struc(n)%gridDesci(7) = CGLSlai_struc(n)%lat_upper_right
-            CGLSlai_struc(n)%gridDesci(8) = CGLSlai_struc(n)%lon_upper_right
+            CGLSlai_struc(n)%gridDesci(7) = CGLSlai_struc(n)%latmin
+            CGLSlai_struc(n)%gridDesci(8) = CGLSlai_struc(n)%lonmax
             CGLSlai_struc(n)%gridDesci(9) = CGLSlai_struc(n)%dlat
             CGLSlai_struc(n)%gridDesci(10) = CGLSlai_struc(n)%dlon
             CGLSlai_struc(n)%gridDesci(20) = 64
@@ -503,9 +564,9 @@ contains
             CGLSlai_struc(n)%mi = CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr
 
             !-----------------------------------------------------------------------------
-            !   Use interpolation if LIS is running finer than native resolution.
+            !   Use interpolation if LIS is running finer than native resolution. 
             !-----------------------------------------------------------------------------
-            if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then
+            if(LIS_rc%obs_gridDesc(k,10).lt.CGLSlai_struc(n)%dlon) then 
 
                 allocate(CGLSlai_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(CGLSlai_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
@@ -519,7 +580,7 @@ contains
                 allocate(CGLSlai_struc(n)%w22(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create interpolation input for CGLS LAI'
+                     '[INFO] create interpolation input for CGLS LAI'       
 
                 call bilinear_interp_input_withgrid(CGLSlai_struc(n)%gridDesci(:), &
                      LIS_rc%obs_gridDesc(k,:),&
@@ -535,7 +596,7 @@ contains
                      CGLSlai_struc(n)%nc*CGLSlai_struc(n)%nr))
 
                 write(LIS_logunit,*)&
-                     '[INFO] create upscaling input for CGLS LAI'
+                     '[INFO] create upscaling input for CGLS LAI'       
 
                 call upscaleByAveraging_input(CGLSlai_struc(n)%gridDesci(:),&
                      LIS_rc%obs_gridDesc(k,:),&
@@ -543,13 +604,13 @@ contains
                      LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), CGLSlai_struc(n)%n11)
 
                 write(LIS_logunit,*)&
-                     '[INFO] finished creating upscaling input for CGLS LAI'
+                     '[INFO] finished creating upscaling input for CGLS LAI'       
             endif
 
             call LIS_registerAlarm("CGLS LAI read alarm",&
                  86400.0, 86400.0)
 
-            CGLSlai_struc(n)%startMode = .true.
+            CGLSlai_struc(n)%startMode = .true. 
 
             call ESMF_StateAdd(OBS_State(n),(/obsField(n)/),rc=status)
             call LIS_verify(status)

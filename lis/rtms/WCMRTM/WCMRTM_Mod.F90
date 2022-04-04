@@ -25,7 +25,7 @@ module WCMRTM_Mod
 !
 ! !HISTORY:
 ! 28 Aug 2020: Sara Modanesi
-!
+! 26 Mar 2021 Sara Modanesi: Added specifications for forward states
 ! !USES:        
 
 
@@ -120,18 +120,19 @@ contains
    do n=1,LIS_rc%nnest
 !allocate memory for all tile in current nest
 
-      allocate(wcm_struc(n)%AA_VV(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(wcm_struc(n)%BB_VV(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(wcm_struc(n)%CC_VV(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(wcm_struc(n)%DD_VV(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
 
-      allocate(wcm_struc(n)%AA_VH(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(wcm_struc(n)%BB_VH(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(wcm_struc(n)%CC_VH(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(wcm_struc(n)%DD_VH(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
+      allocate(wcm_struc(n)%AA_VV(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%BB_VV(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%CC_VV(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%DD_VV(LIS_rc%glbngrid(n)))
 
-      allocate(wcm_struc(n)%lone(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
-      allocate(wcm_struc(n)%late(LIS_rc%glbnpatch(n,LIS_rc%lsm_index)))
+      allocate(wcm_struc(n)%AA_VH(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%BB_VH(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%CC_VH(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%DD_VH(LIS_rc%glbngrid(n)))
+
+      allocate(wcm_struc(n)%lone(LIS_rc%glbngrid(n)))
+      allocate(wcm_struc(n)%late(LIS_rc%glbngrid(n)))
 
       allocate(wcm_struc(n)%Sig0VV(LIS_rc%npatch(n,LIS_rc%lsm_index)))
       allocate(wcm_struc(n)%Sig0VH(LIS_rc%npatch(n,LIS_rc%lsm_index)))
@@ -201,7 +202,7 @@ contains
          'failure opening AA_VV_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%AA_VV(t),wcm_struc(n)%lone(t),&
           wcm_struc(n)%late(t)
        enddo 
@@ -216,7 +217,7 @@ contains
          'failure opening BB_VV_PARM.TBL'
          CALL wrf_error_fatal ( message ) 
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%BB_VV(t)
        enddo
 
@@ -232,7 +233,7 @@ contains
          'failure opening CC_VV_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)  
+       do t=1,LIS_rc%glbngrid(n)  
            READ (19,*) wcm_struc(n)%CC_VV(t)
        enddo
 
@@ -248,7 +249,7 @@ contains
          'failure opening DD_VV_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*) wcm_struc(n)%DD_VV(t)
        enddo
 
@@ -266,7 +267,7 @@ contains
          'failure opening AA_VH_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%AA_VH(t)
        enddo 
        CLOSE (19)
@@ -280,7 +281,7 @@ contains
          'failure opening BB_VH_PARM.TBL'
          CALL wrf_error_fatal ( message ) 
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*)wcm_struc(n)%BB_VH(t)
        enddo
 
@@ -296,7 +297,7 @@ contains
          'failure opening CC_VH_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)  
+       do t=1,LIS_rc%glbngrid(n)  
            READ (19,*) wcm_struc(n)%CC_VH(t)
        enddo
 
@@ -312,7 +313,7 @@ contains
          'failure opening DD_VH_PARM.TBL'
          CALL wrf_error_fatal ( message )
        END IF
-       do t=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
+       do t=1,LIS_rc%glbngrid(n)
            READ (19,*) wcm_struc(n)%DD_VH(t)
        enddo
 
@@ -320,7 +321,41 @@ contains
        CLOSE (19)
    enddo
 
-   end subroutine WCMRTM_initialize 
+   do n=1,LIS_rc%nnest !added fields to State 26032021        
+       call add_fields_toState(n,LIS_forwardState(n),"WCM_Sig0VV")
+       call add_fields_toState(n,LIS_forwardState(n),"WCM_Sig0VH")
+   enddo
+
+   end subroutine WCMRTM_initialize
+
+   subroutine add_fields_toState(n, inState,varname) !added subroutine add-fields_toState 26032021
+
+    use LIS_logMod,   only : LIS_verify
+    use LIS_coreMod,  only : LIS_vecTile
+
+    implicit none
+
+    integer            :: n
+    type(ESMF_State)   :: inState
+    character(len=*)   :: varname
+
+    type(ESMF_Field)     :: varField
+    type(ESMF_ArraySpec) :: arrspec
+    integer              :: status
+    real :: sum
+    call ESMF_ArraySpecSet(arrspec,rank=1,typekind=ESMF_TYPEKIND_R4,&
+         rc=status)
+    call LIS_verify(status)
+
+    varField = ESMF_FieldCreate(arrayspec=arrSpec, &
+         grid=LIS_vecTile(n), name=trim(varname), &
+         rc=status)
+    call LIS_verify(status, 'Error in field_create of '//trim(varname))
+
+    call ESMF_StateAdd(inState, (/varField/), rc=status)
+    call LIS_verify(status, 'Error in StateAdd of '//trim(varname))
+
+   end subroutine add_fields_toState
 !!--------------------------------------------------------------------------------
 
    subroutine add_sfc_fields(n, sfcState,varname)
@@ -383,9 +418,10 @@ contains
                         tt_VV, tt_VH
 
    real                :: theta, ctheta
+   real, pointer       :: sig0val(:) !added for forward states 26032021
 
 
-   theta = 0.6458 !incidence angle in radians (37 deg)
+   theta = 0. !incidence angle in radians (i.e., rad(37° for backscatter or rad(0°) for gamma0)
    ctheta = cos(theta)
 
 
@@ -395,7 +431,6 @@ contains
    call getsfcvar(LIS_sfcState(n), "Leaf Area Index", &
          lai)
 
-
 !---------------------------------------------
 ! Tile loop 
 !--------------------------------------------
@@ -404,7 +439,7 @@ contains
        col = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%col
        lat = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lat
        lon = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lon
-       do p=1,LIS_rc%glbnpatch(n,LIS_rc%lsm_index)
+       do p=1,LIS_rc%glbngrid(n)
           lon1= wcm_struc(n)%lone(p)
           lat1= wcm_struc(n)%late(p)
           if (lon1 .eq. lon .and. lat1 .eq. lat) then
@@ -452,6 +487,12 @@ contains
           wcm_struc(n)%Sig0VH(t),             &
           vlevel=1, unit="dB",direction="-")
    enddo
+
+   call getsfcvar(LIS_forwardState(n), "WCM_Sig0VV", sig0val) !added for forward states 26032021
+   sig0val = wcm_struc(n)%Sig0VV
+
+   call getsfcvar(LIS_forwardState(n),"WCM_Sig0VH", sig0val)
+   sig0val = wcm_struc(n)%Sig0VH
 
    end subroutine WCMRTM_run
 
