@@ -36,11 +36,11 @@ subroutine noahmp401_getVODpred(n,k,obs_pred)
   integer, intent(in)    :: n
   integer, intent(in)    :: k
   real                   :: obs_pred(LIS_rc%obs_ngrid(k),LIS_rc%nensem(n))
-  integer                :: count1(LIS_rc%obs_ngrid(k),LIS_rc%nensem(n))
+  real                :: count1(LIS_rc%obs_ngrid(k),LIS_rc%nensem(n))
 !
 ! !DESCRIPTION:
 !
-!  Returns the Backscatter VV obs pred (model's estimate of 
+!  Returns the VOD obs pred (model's estimate of 
 !  observations) for data assimilation
 ! 
 !  The arguments are: 
@@ -58,10 +58,14 @@ subroutine noahmp401_getVODpred(n,k,obs_pred)
 !!call the forward model
 call LIS_RTM_run(n)
 
-  call ESMF_StateGet(LIS_forwardState(n), "VOD", varField, rc=status)
+  call ESMF_StateGet(LIS_forwardState(n), "VODLinFM_VOD", varField, rc=status)
 !LIS_histDAtaMod
   call LIS_verify(status, &
-       "Error in StateGet in noahmp401_getVODpred for VOD")
+       "Error in StateGet in noahmp401_getVODpred for VODLinFM_VOD")
+  
+  call ESMF_FieldGet(varField, localDE=0,farrayPtr=vod, rc=status)
+  call LIS_verify(status, &
+       'Error in FieldGet in noahmp401_getVODPred for VODLinFM_VOD')
 
   obs_pred = 0.0
   count1 = 0.0
@@ -69,14 +73,20 @@ call LIS_RTM_run(n)
      do m=1,LIS_rc%nensem(n)
         t = i+m-1
         gid = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%index
-        obs_pred(gid,m)= obs_pred(gid,m) + s0VV(t)
-        count1(gid,m) = count1(gid,m) +1
+        if (vod(t).ne.LIS_rc%udef) then
+            obs_pred(gid,m)= obs_pred(gid,m) + vod(t)
+            count1(gid,m) = count1(gid,m) + 1
+        endif
      enddo
   enddo
 
   do i=1,LIS_rc%obs_ngrid(k)
      do m=1,LIS_rc%nensem(n)
-        obs_pred(i,m) = obs_pred(i,m)/(count1(i,m))
+         if (obs_pred(i,m).eq.LIS_rc%udef) then
+             obs_pred(i,m) = LIS_rc%udef
+         else
+             obs_pred(i,m) = obs_pred(i,m)/(count1(i,m))
+         endif
      enddo
   enddo
 

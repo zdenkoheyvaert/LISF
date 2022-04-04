@@ -1012,25 +1012,17 @@ contains
         logical*1               :: obs_data_b(reader_struc(n)%nc*reader_struc(n)%nr)
         logical*1               :: observations_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         integer                 :: c,r,t
-        integer                 :: nid
+        integer                 :: nid, lid, latsize_file, lonsize_file
+        integer                 :: lat(reader_struc(n)%nr)
         integer                 :: obsid, flagid
         integer                 :: ios
         integer                 :: numvalidobs
-        real*8                  :: cornerlat(2), cornerlon(2)
 
 #if !(defined USE_NETCDF3 || defined USE_NETCDF4)
         write(LIS_logunit,*) "[ERR] read_CustomNetCDF requires NETCDF"
         call LIS_endrun
 #else
-        integer, dimension(nf90_max_var_dims)  :: dimIDs
-        integer                                :: numLons, numLats
-
         !values
-
-        cornerlat(1)=reader_struc(n)%gridDesci(4)
-        cornerlon(1)=reader_struc(n)%gridDesci(5)
-        cornerlat(2)=reader_struc(n)%gridDesci(7)
-        cornerlon(2)=reader_struc(n)%gridDesci(8)
 
         obs_data_b = .false.
 
@@ -1040,6 +1032,37 @@ contains
         write(LIS_logunit,*) '[INFO] Reading ',trim(fname)
         ios = nf90_open(path=trim(fname),mode=NF90_NOWRITE,ncid=nid)
         call LIS_verify(ios,'Error opening file '//trim(fname))
+
+        call LIS_verify(nf90_inq_dimid(nid, "lat",lid), &
+             "Error nf90_inq_dimid: lat")
+        call LIS_verify(nf90_inquire_dimension(nid, lid, len=latsize_file), &
+             "Error nf90_inquire_dimension:lat")
+
+        call LIS_verify(nf90_inq_dimid(nid, "lon",lid), &
+             "Error nf90_inq_dimid: lon")
+        call LIS_verify(nf90_inquire_dimension(nid, lid, len=lonsize_file), &
+             "Error nf90_inquire_dimension:lon")
+
+        ! check if the grid has the right size
+        if (latsize_file.ne.reader_struc(n)%nr.or.lonsize_file.ne.reader_struc(n)%nc) then
+            write(LIS_logunit,*) "[ERR] Dimension sizes not consistent with expectations"
+            write(LIS_logunit,*) 'lat size on file: ',latsize_file
+            write(LIS_logunit,*) 'lat size expected: ',reader_struc(n)%nr
+            write(LIS_logunit,*) 'lon size on file: ',lonsize_file
+            write(LIS_logunit,*) 'lon size expected: ',reader_struc(n)%nc
+            call LIS_endrun 
+        endif
+
+        ! make sure that latitude axis is inverted
+        ios = nf90_inq_varid(nid, "lat", lid)
+        call LIS_verify(ios, 'Error nf90_inq_varid: lat')
+        ios = nf90_get_var(nid, lid, lat)
+        call LIS_verify(ios, 'Error nf90_inquire_variable: lat')
+        if (lat(1) < lat(latsize_file)) then
+            write(LIS_logunit,*) "[ERR] Reader expects inverted latitude coordinate"
+            call LIS_endrun
+        endif
+
 
         ios = nf90_inq_varid(nid, trim(reader_struc(n)%nc_varname), obsid)
         call LIS_verify(ios, 'Error nf90_inq_varid: '//reader_struc(n)%nc_varname)

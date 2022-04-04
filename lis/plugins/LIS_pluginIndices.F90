@@ -284,6 +284,8 @@ module LIS_pluginIndices
         "CGLS LAI with soil moisture update"
    character*50, public,  parameter :: LIS_CustomLAIobsId      = &
         "Custom LAI"
+   character*50, public,  parameter :: LIS_CustomVODobsId      = &
+        "Custom VOD"
    character*50, public,  parameter :: LIS_GLASSalbedoobsId      = &
         "GLASS Albedo"
    character*50, public,  parameter :: LIS_SMAPNRTsmobsId        = &

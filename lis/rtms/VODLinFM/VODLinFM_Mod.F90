@@ -128,6 +128,7 @@ contains
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 3")
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 4")
 
+            call add_sfc_fields(n,LIS_forwardState(n),"VODLinFM_VOD")
         enddo
 
 
@@ -177,16 +178,15 @@ contains
             call read_coef_from_file(nid, ngrid, ntimes, "SM1_coef", &
                 vodlinfm_struc(n)%sm1coef)
             call read_coef_from_file(nid, ngrid, ntimes, "SM2_coef", &
-                vodlinfm_struc(n)%sm1coef)
+                vodlinfm_struc(n)%sm2coef)
             call read_coef_from_file(nid, ngrid, ntimes, "SM3_coef", &
-                vodlinfm_struc(n)%sm1coef)
+                vodlinfm_struc(n)%sm3coef)
             call read_coef_from_file(nid, ngrid, ntimes, "SM4_coef", &
-                vodlinfm_struc(n)%sm1coef)
+                vodlinfm_struc(n)%sm4coef)
         enddo
 
-        do n=1,LIS_rc%nnest
-            call add_fields_toState(n,LIS_forwardState(n),"VOD")
-        enddo
+
+        write(LIS_logunit,*) '[INFO] Finished VODLinFM setup'
 
     contains
 
@@ -219,6 +219,7 @@ contains
         subroutine gridvar_to_patchvar(n,m,gvar,tvar)
             ! Converts a variable in local gridspace (length LIS_rc%ngrid(n))
             ! to local patch space (length LIS_rc%npatch(n,m))
+            ! patch space = ensembles * ngrid
 
             implicit none
 
@@ -231,39 +232,14 @@ contains
             do t=1,LIS_rc%npatch(n,m)
                 r = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%row
                 c = LIS_surface(n, LIS_rc%lsm_index)%tile(t)%col
-                tvar(t) = gvar(LIS_domain(n)%gindex(c,r))
+                if (LIS_domain(n)%gindex(c,r).ge.0) then
+                    tvar(t) = gvar(LIS_domain(n)%gindex(c,r))
+                else
+                    tvar(t) = LIS_rc%udef
+                endif
             enddo
 
         end subroutine gridvar_to_patchvar
-
-        subroutine add_fields_toState(n, inState,varname)
-
-            use LIS_logMod,   only : LIS_verify
-            use LIS_coreMod,  only : LIS_vecTile
-
-            implicit none
-
-            integer            :: n
-            type(ESMF_State)   :: inState
-            character(len=*)   :: varname
-
-            type(ESMF_Field)     :: varField
-            type(ESMF_ArraySpec) :: arrspec
-            integer              :: status
-            real :: sum
-            call ESMF_ArraySpecSet(arrspec,rank=1,typekind=ESMF_TYPEKIND_R4,&
-                 rc=status)
-            call LIS_verify(status)
-
-            varField = ESMF_FieldCreate(arrayspec=arrSpec, &
-                 grid=LIS_vecTile(n), name=trim(varname), &
-                 rc=status)
-            call LIS_verify(status, "Error in field_create of "//trim(varname))
-
-            call ESMF_StateAdd(inState, (/varField/), rc=status)
-            call LIS_verify(status, "Error in StateAdd of "//trim(varname))
-
-        end subroutine add_fields_toState
 #endif
     end subroutine VODLinFM_initialize
     !!--------------------------------------------------------------------------------
@@ -322,6 +298,8 @@ contains
         integer             :: col,row
         real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
         real                :: intercept, laicoef, sm1coef, sm2coef, sm3coef, sm4coef
+        real, pointer       :: vodval(:)
+        logical             :: coefs_valid, values_valid
 
         !   map surface properties to SFC
         call getsfcvar(LIS_sfcState(n), "Leaf Area Index", lai)
@@ -344,33 +322,57 @@ contains
             call LIS_endrun
         endif
         do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
-            intercept = vodlinfm_struc(n)%intercept(t, t)
-            laicoef = vodlinfm_struc(n)%laicoef(t, t)
-            sm1coef = vodlinfm_struc(n)%sm1coef(t, t)
-            sm2coef = vodlinfm_struc(n)%sm2coef(t, t)
-            sm3coef = vodlinfm_struc(n)%sm3coef(t, t)
-            sm4coef = vodlinfm_struc(n)%sm4coef(t, t)
+            intercept = vodlinfm_struc(n)%intercept(t, timeidx)
+            laicoef = vodlinfm_struc(n)%laicoef(t, timeidx)
+            sm1coef = vodlinfm_struc(n)%sm1coef(t, timeidx)
+            sm2coef = vodlinfm_struc(n)%sm2coef(t, timeidx)
+            sm3coef = vodlinfm_struc(n)%sm3coef(t, timeidx)
+            sm4coef = vodlinfm_struc(n)%sm4coef(t, timeidx)
 
-            if(.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
-                 .and. .not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
-                 .and. .not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
-                 .and. .not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
-                 .and. .not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef) then
-                vodlinfm_struc(n)%VOD(t) = intercept + laicoef * lai(t)&
+            ! For some pixels no VOD was available and therefore no forward
+            ! model was fitted. No assimilation will take place over these
+            ! pixels anyways, so it's no problem to not predict anything here
+            coefs_valid = (.not.isnan(intercept).and.intercept.ne.LIS_rc%udef&
+                 .and..not.isnan(sm1coef).and.sm1coef.ne.LIS_rc%udef&
+                 .and..not.isnan(sm2coef).and.sm2coef.ne.LIS_rc%udef&
+                 .and..not.isnan(sm3coef).and.sm3coef.ne.LIS_rc%udef&
+                 .and..not.isnan(sm4coef).and.sm4coef.ne.LIS_rc%udef)
+
+            ! normally the modelled values should not be invalid, but just to
+            ! be on the safe side
+            values_valid = (.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef)
+
+            if (coefs_valid.and.values_valid) then
+                vodlinfm_struc(n)%VOD(t) = intercept&
+                     + laicoef * lai(t)&
                      + sm1coef * sm1(t)&
                      + sm2coef * sm2(t)&
                      + sm3coef * sm3(t)&
                      + sm4coef * sm4(t)
+                ! if (vodlinfm_struc(n)%VOD(t) .lt. 0.0) then
+                !     vodlinfm_struc(n)%VOD(t) = LIS_rc%udef
+                ! endif
             else
                 vodlinfm_struc(n)%VOD(t)=LIS_rc%udef
+            endif
+
+            if (vodlinfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodlinfm_struc(n)%VOD(t).lt.-10) then
+                write(LIS_logunit, *) "[WARN] VOD lower than -10"
             endif
 
             call LIS_diagnoseRTMOutputVar(n, t, LIS_MOC_RTM_VOD,&
                  value=vodlinfm_struc(n)%VOD(t),&
                  vlevel=1,&
                  unit="-",&
-                 direction="+")
+                 direction="-")
         enddo
+
+        call getsfcvar(LIS_forwardState(n),"VODLinFM_VOD", vodval)
+        vodval = vodlinfm_struc(n)%VOD
 
     end subroutine VODLinFM_run
 

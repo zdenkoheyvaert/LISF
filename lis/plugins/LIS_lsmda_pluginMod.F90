@@ -518,6 +518,10 @@ subroutine LIS_lsmda_plugin
    external NoahMP401_descale_laisoilm
    external NoahMP401_updatelaisoilm
 
+   ! VOD
+   external NoahMP401_getVODpred
+   external noahmp401_qc_VODobs
+
 #if ( defined DA_OBS_SNODEP )
 ! NoahMP-4.0.1 SNODEP
    external noahmp401_getsnodepvars
@@ -2810,6 +2814,7 @@ subroutine LIS_lsmda_plugin
         trim(LIS_CGLSlaismobsId)//char(0),noahmp401_descale_laisoilm)
 
    call register_noahmp401_laida(LIS_CustomLAIobsId)
+   call register_noahmp401_vodda(LIS_CustomVODobsId)
 
 ! Yeosang Yoon, SNODEP DA
 #if ( defined DA_OBS_SNODEP )
@@ -3983,16 +3988,41 @@ contains
             trim(obsId)//char(0),noahmp401_updatevegvars)
        call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
             trim(obsId)//char(0),noahmp401_qcveg)
+       call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_scale_veg)
+       call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_descale_veg)
 
        call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
             trim(obsId)//char(0),noahmp401_getLAIpred)
        call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
             trim(obsId)//char(0),noahmp401_qc_LAIobs)
-       call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
-            trim(obsId)//char(0),noahmp401_scale_veg)
-       call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
-            trim(obsId)//char(0),noahmp401_descale_veg)
     end subroutine register_noahmp401_laida
+
+    subroutine register_noahmp401_vodda(obsId)
+        implicit none
+        character*50, intent(in) :: obsId
+
+       call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_dalaisoilm_init)
+       call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_getlaisoilm)
+       call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_setlaisoilm)
+       call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_updatelaisoilm)
+       call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_qclaisoilm)
+       call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_scale_laisoilm)
+       call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_descale_laisoilm)
+
+       call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_getVODpred)
+       call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_qc_VODobs)
+    end subroutine register_noahmp401_vodda
 
 
 #endif  !endif for DA_DIRECT_INSERTION, DA_ENKS, or DA_ENKF
