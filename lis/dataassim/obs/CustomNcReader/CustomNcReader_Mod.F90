@@ -30,12 +30,26 @@
 !   Custom <varname> spatial resolution
 !       Spatial resolution of the product. It is assumed that the grid starts
 !       at -180 + res/2 longitude and -90 + res/2 latitude.
+!   Custom <varname> lat max:
+!      Maximum latitude value in case data has been resampled and cropped to a
+!      subdomain. (Optional)
+!   Custom <varname> lat min:
+!      Minimum latitude value in case data has been resampled and cropped to a
+!      subdomain. (Optional)
+!   Custom <varname> lon max:
+!      Maximum longitude value in case data has been resampled and cropped to a
+!      subdomain. (Optional)
+!   Custom <varname> lon min:
+!      Minimum longitude value in case data has been resampled and cropped to a
+!      subdomain. (Optional)
 !   Data assimilation scaling strategy:
 !       Options are "none", "CDF matching", "seasonal", "seasonal multiplicative"
 !   Custom <varname> model scaling file:
-!       Path to the model CDF/mean file (optional, only required if scaling is applied)
+!       Path to the model CDF/mean file (optional, only required if scaling is
+!       applied)
 !   Custom <varname> observation scaling file:
-!       Path to the observation CDF/mean file (optional, only required if scaling is applied)
+!       Path to the observation CDF/mean file (optional, only required if
+!       scaling is applied)
 !   Custom <varname> varname in model scaling file:
 !       Prefix of the names of the variables in the model scaling files,
 !       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
@@ -44,8 +58,9 @@
 !       Prefix of the names of the variables in the observation scaling files,
 !       e.g. <prefix>_mu, <prefix>_sigma, ... (optional, only required if
 !       scaling is applied)
-!   Custom <varname> number of bins in the CDF: (optional, only required if CDF scaling is applied)
-!       Number of bins in the CDFs.
+!   Custom <varname> number of bins in the CDF:
+!       Number of bins in the CDFs. (optional, only required if CDF scaling is
+!       applied)
 !
 !
 !
@@ -93,8 +108,7 @@ module CustomNcReader_Mod
         character*100          :: nc_prefix
         real*8                 :: spatialres
         real*8                 :: dlat, dlon
-        real*8                 :: lat_lower_left, lon_lower_left
-        real*8                 :: lat_upper_right, lon_upper_right
+        real*8                 :: latmax, latmin, lonmax, lonmin
         real,    allocatable   :: rlat(:)
         real,    allocatable   :: rlon(:)
         integer, allocatable   :: n11(:)
@@ -243,8 +257,38 @@ contains
         do n=1,LIS_rc%nnest
             call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%spatialres,&
                  rc=status)
-            call LIS_verify(status, 'Custom "//trim(varname)//" spatial resolution: is missing')
+            call LIS_verify(status, "Custom "//trim(varname)//" spatial resolution: is missing")
         enddo
+
+        do n=1,LIS_rc%nnest
+            reader_struc(n)%latmax = 90 - 0.5 * reader_struc(n)%spatialres
+            reader_struc(n)%latmin = -90 + 0.5 * reader_struc(n)%spatialres
+            reader_struc(n)%lonmax = 180 - 0.5 * reader_struc(n)%spatialres
+            reader_struc(n)%lonmin = -180 + 0.5 * reader_struc(n)%spatialres
+            reader_struc(n)%dlat = reader_struc(n)%spatialres
+            reader_struc(n)%dlon = reader_struc(n)%spatialres
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lat max:",&
+                 rc=status)
+            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%latmax,&
+                 rc=status)
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lat min:",&
+                 rc=status)
+            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%latmin,&
+                 rc=status)
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lon max:",&
+                 rc=status)
+            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lonmax,&
+                 rc=status)
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lon min:",&
+                 rc=status)
+            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lonmin,&
+                 rc=status)
+            reader_struc(n)%nr = nint((reader_struc(n)%latmax - reader_struc(n)%latmin)&
+                                       / reader_struc(n)%spatialres) + 1
+            reader_struc(n)%nc = nint((reader_struc(n)%lonmax - reader_struc(n)%lonmin)&
+                                       / reader_struc(n)%spatialres) + 1
+        enddo
+
 
         !------------------------------------------------------------
         ! Options for scaling
@@ -606,30 +650,20 @@ contains
         !------------------------------------------------------------
         do n=1,LIS_rc%nnest
 
-            if(LIS_rc%lis_obs_map_proj(k).eq."latlon") then
-                reader_struc(n)%lat_lower_left = 90 - 0.5 * reader_struc(n)%spatialres
-                reader_struc(n)%lat_upper_right = -90 + 0.5 * reader_struc(n)%spatialres
-                reader_struc(n)%lon_lower_left = -180 + 0.5 * reader_struc(n)%spatialres
-                reader_struc(n)%lon_upper_right = 180 - 0.5 * reader_struc(n)%spatialres
-                ! dlat is positive since LIS will figure out that latitude is decreasing
-                reader_struc(n)%dlat = reader_struc(n)%spatialres
-                reader_struc(n)%dlon = reader_struc(n)%spatialres
-                reader_struc(n)%nr = nint(180.0 / reader_struc(n)%spatialres)
-                reader_struc(n)%nc = 2 * reader_struc(n)%nr
-            else
-                write(unit=error_unit, fmt=*) &
-                     'The Custom_NcReader module only works with latlon projection'
-                stop 1
+            if(LIS_rc%lis_obs_map_proj(k).ne."latlon") then
+                write(LIS_logunit,*)&
+                     '[ERROR] The Custom reader module only works with latlon projection'       
+                call LIS_endrun
             endif
 
             reader_struc(n)%gridDesci(1) = 0  ! regular lat-lon grid
             reader_struc(n)%gridDesci(2) = reader_struc(n)%nc
             reader_struc(n)%gridDesci(3) = reader_struc(n)%nr
-            reader_struc(n)%gridDesci(4) = reader_struc(n)%lat_lower_left
-            reader_struc(n)%gridDesci(5) = reader_struc(n)%lon_lower_left
+            reader_struc(n)%gridDesci(4) = reader_struc(n)%latmax
+            reader_struc(n)%gridDesci(5) = reader_struc(n)%lonmin
             reader_struc(n)%gridDesci(6) = 128
-            reader_struc(n)%gridDesci(7) = reader_struc(n)%lat_upper_right
-            reader_struc(n)%gridDesci(8) = reader_struc(n)%lon_upper_right
+            reader_struc(n)%gridDesci(7) = reader_struc(n)%latmin
+            reader_struc(n)%gridDesci(8) = reader_struc(n)%lonmax
             reader_struc(n)%gridDesci(9) = reader_struc(n)%dlat
             reader_struc(n)%gridDesci(10) = reader_struc(n)%dlon
             reader_struc(n)%gridDesci(20) = 64
@@ -639,7 +673,7 @@ contains
             !-----------------------------------------------------------------------------
             !   Use interpolation if LIS is running finer than native resolution.
             !-----------------------------------------------------------------------------
-            if(LIS_rc%obs_gridDesc(k,10).lt.reader_struc(n)%dlon) then
+            if(LIS_rc%obs_gridDesc(k,10).le.reader_struc(n)%dlon) then
 
                 allocate(reader_struc(n)%rlat(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
                 allocate(reader_struc(n)%rlon(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
@@ -1078,7 +1112,7 @@ contains
             enddo
         enddo
 
-        if(LIS_rc%obs_gridDesc(k,10).lt.reader_struc(n)%dlon) then
+        if(LIS_rc%obs_gridDesc(k,10).le.reader_struc(n)%dlon) then
             write(LIS_logunit,*) '[INFO] interpolating Custom',&
                  trim(reader_struc(n)%varname),&
                  trim(fname)
