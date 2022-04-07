@@ -82,7 +82,7 @@ call LIS_RTM_run(n)
 
   do i=1,LIS_rc%obs_ngrid(k)
      do m=1,LIS_rc%nensem(n)
-         if (obs_pred(i,m).eq.LIS_rc%udef) then
+         if (obs_pred(i,m).eq.LIS_rc%udef.or.count1(i,m).eq.0) then
              obs_pred(i,m) = LIS_rc%udef
          else
              obs_pred(i,m) = obs_pred(i,m)/(count1(i,m))
