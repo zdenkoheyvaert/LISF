@@ -34,8 +34,39 @@ subroutine Ac70_main(n)
    !use other modules
     use ESMF
     use LIS_routingMod, only : LIS_runoff_state
-  
+    !!! MB_AC70
+    use ac_global, only: typeproject_typeprm, &
+                         typeproject_typepro, &
+                         GetRootZoneWC_Actual
+    use ac_kinds, only: intEnum
+    use aquacrop_wrap, only: AdvanceOneTimeStep, &
+                         FinalizeRun1, &
+                         FinalizeRun2, &
+                         FinalizeTheProgram, &
+                         FinalizeSimulation, &
+                         GetDayNri, &
+                         GetListProjectsFile, &
+                         GetNumberOfProjects, &
+                         GetProjectFileName, &
+                         GetProjectType, &
+                         GetSimulation_NrRuns, &
+                         GetSimulation_ToDayNr, &
+                         InitializeProject, &
+                         InitializeRun, &
+                         InitializeSimulation, &
+                         InitializeTheProgram, &
+                         WriteProjectsInfo
+    !!! MB_AC70
+
     implicit none
+
+    !!! MB_AC70
+    integer :: daynr, todaynr, iproject, nprojects, irun, nruns
+    integer(intEnum) :: TheProjectType
+    logical :: ListProjectFileExist
+    character(len=:), allocatable :: ListProjectsFile, TheProjectFile
+    !!! MB_AC70
+
 ! !ARGUMENTS:
     integer, intent(in)  :: n
     integer              :: t
@@ -942,6 +973,15 @@ subroutine Ac70_main(n)
             !Added by Chandana Gangodagamage
             AC70_struc(n)%ac70(t)%infxs1rt     = tmp_infxs1rt
             AC70_struc(n)%ac70(t)%soldrain1rt  = tmp_soldrain1rt
+
+            !!! MB_AC70
+            ! setting all global variables
+            !SetRootZoneWC_Actual(AC70_struc(n)%ac70(t)%smc(1))
+            ! ...
+            call AdvanceOneTimeStep()
+            AC70_struc(n)%ac70(t)%smc(1)=GetRootZoneWC_Actual()
+            !!! MB_AC70
+
 
             ![ 1] output variable: soil_temp (unit=K). ***  soil layer temperature
             soil_temp(1:AC70_struc(n)%nsoil) = AC70_struc(n)%ac70(t)%sstc(AC70_struc(n)%nsnow+1 : AC70_struc(n)%nsoil+AC70_struc(n)%nsnow)
