@@ -61,7 +61,7 @@ subroutine ac_driver_70(iloc, jloc, &
                             sfcheadrt)  ! out 
   
   ! use LIS_FORC_AttributesMod 
-  use module_sf_noahlsm_36, only: slcats, lucats, slpcats
+  use module_sf_noahaclsm_36, only: slcats, lucats, slpcats
   use ac_globals_70, only: dveg, opt_crs , opt_btr , opt_run ,      &
                                opt_sfc , opt_frz, opt_inf , opt_rad ,   &
                                opt_alb , opt_snf , opt_tbot, opt_stc,   & ! SY

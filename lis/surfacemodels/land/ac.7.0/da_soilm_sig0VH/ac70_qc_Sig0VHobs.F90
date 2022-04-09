@@ -8,15 +8,16 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
-! !ROUTINE: ac70_qc_soilmobs
-! \label{ac70_qc_soilmobs}
+! !ROUTINE: ac70_qc_Sig0VHobs
+! \label{ac70_qc_Sig0VHobs}
 !
 ! !REVISION HISTORY:
-! 25Feb2008: Sujay Kumar: Initial Specification
-! 1 Aug 2016: Mahdi Navari; Modified for Ac70 
+! 26/03/2021 Sara Modanesi: Initial specifications
+! 12/05/2021 Sara Modanesi: added specifications for Sig0VH S1 obs only and removed flag for veg. cover
+! 18/06/2021 Michel Bechtold: assimilation flag for urban and water grid cells
 !
 ! !INTERFACE:
-subroutine ac70_qc_soilmobs(n,k,OBS_State)
+subroutine ac70_qc_Sig0VHobs(n,k,OBS_State)
 ! !USES:
   use ESMF
   use LIS_coreMod
@@ -36,10 +37,9 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
 ! !DESCRIPTION:
 !
 !  This subroutine performs any model-based QC of the observation 
-!  prior to data assimilation. Here the soil moisture observations
+!  prior to data assimilation. Here the backscatter observations
 !  are flagged when LSM indicates that (1) rain is falling (2)
 !  soil is frozen or (3) ground is fully or partially covered 
-!  with snow MN:(4) ground is covered with vegatation (more than 50%). 
 !  
 !  The arguments are: 
 !  \begin{description}
@@ -48,9 +48,9 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
 !  \end{description}
 !
 !EOP
-  type(ESMF_Field)         :: obs_sm_field
+  type(ESMF_Field)         :: sigmaField
 
-  real, pointer            :: smobs(:)
+  real, pointer            :: obsl(:)
   integer                  :: t
   integer                  :: gid
   integer                  :: status
@@ -58,7 +58,7 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
 
 ! mn
   integer                 :: SOILTYP           ! soil type index [-]
- real                     :: smc1(LIS_rc%npatch(n,LIS_rc%lsm_index))
+  real                     :: smc1(LIS_rc%npatch(n,LIS_rc%lsm_index))
   real                     :: smc2(LIS_rc%npatch(n,LIS_rc%lsm_index))
   real                     :: smc3(LIS_rc%npatch(n,LIS_rc%lsm_index))
   real                     :: smc4(LIS_rc%npatch(n,LIS_rc%lsm_index))
@@ -77,7 +77,7 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
   real                     :: rainf_obs(LIS_rc%obs_ngrid(k))
   real                     :: sneqv_obs(LIS_rc%obs_ngrid(k))
   real                     :: sca_obs(LIS_rc%obs_ngrid(k))
-  real                     :: shdfac_obs(LIS_rc%obs_ngrid(k))
+!  real                     :: shdfac_obs(LIS_rc%obs_ngrid(k)) !commented for now
   real                     :: t1_obs(LIS_rc%obs_ngrid(k))
   real                     :: smcwlt_obs(LIS_rc%obs_ngrid(k))
   real                     :: smcmax_obs(LIS_rc%obs_ngrid(k))
@@ -95,15 +95,18 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
   real                     :: stc4_obs(LIS_rc%obs_ngrid(k))
   real                     :: vegt_obs(LIS_rc%obs_ngrid(k))
 
-
-  call ESMF_StateGet(OBS_State,"Observation01",obs_sm_field,&
-       rc=status)
+!-----this part is derived from ./lis/dataassim/obs/s1_sigma/read_S1_sigma.F90
+  call ESMF_StateGet(OBS_State,"Observation01",sigmaField,&
+       rc=status) !
   call LIS_verify(status,&
-       "ESMF_StateGet failed in ac70_qc_soilmobs")
-  call ESMF_FieldGet(obs_sm_field,localDE=0,farrayPtr=smobs,rc=status)
+       "ESMF_StateGet failed in ac70_qc_Sig0VHobs sigmaField")
+
+  call ESMF_FieldGet(sigmaField,localDE=0,farrayPtr=obsl,rc=status)
   call LIS_verify(status,& 
-       "ESMF_FieldGet failed in ac70_qc_soilmobs")
-  
+       "ESMF_FieldGet failed in ac70_qc_Sigobs obsl")
+
+!---------------------------------------------------------------------------  
+
   do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
      smc1(t) = ac70_struc(n)%ac70(t)%smc(1)
      smc2(t) = ac70_struc(n)%ac70(t)%smc(2)
@@ -119,14 +122,14 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
        !          temperature and then soil temeprature.
        !          But the number of snow layers changes from 0 to 3 
 !---------------------------------------------------------------------------------------------------------
-     stc1(t) = ac70_struc(n)%ac70(t)%sstc(AC70_struc(n)%nsnow+1)
-     stc2(t) = ac70_struc(n)%ac70(t)%sstc(AC70_struc(n)%nsnow+2)
-     stc3(t) = ac70_struc(n)%ac70(t)%sstc(AC70_struc(n)%nsnow+3)
-     stc4(t) = ac70_struc(n)%ac70(t)%sstc(AC70_struc(n)%nsnow+4)
+     stc1(t) = ac70_struc(n)%ac70(t)%sstc(ac70_struc(n)%nsnow+1)
+     stc2(t) = ac70_struc(n)%ac70(t)%sstc(ac70_struc(n)%nsnow+2)
+     stc3(t) = ac70_struc(n)%ac70(t)%sstc(ac70_struc(n)%nsnow+3)
+     stc4(t) = ac70_struc(n)%ac70(t)%sstc(ac70_struc(n)%nsnow+4)
 
      vegt(t) = ac70_struc(n)%ac70(t)%vegetype
 
-     SOILTYP = AC70_struc(n)%ac70(t)%soiltype        
+     SOILTYP = ac70_struc(n)%ac70(t)%soiltype        
      SMCMAX(t)  = MAXSMC (SOILTYP) 
      SMCWLT(t) = WLTSMC (SOILTYP)
   enddo
@@ -143,10 +146,10 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
        LIS_rc%lsm_index, &
        ac70_struc(n)%ac70(:)%fsno,&
        sca_obs)
-  call LIS_convertPatchSpaceToObsSpace(n,k,&
-       LIS_rc%lsm_index, &
-       ac70_struc(n)%ac70(:)%fveg,&
-       shdfac_obs)
+!  call LIS_convertPatchSpaceToObsSpace(n,k,&  !out-commented for now
+!       LIS_rc%lsm_index, &
+!       ac70_struc(n)%ac70(:)%fveg,&
+!       shdfac_obs)
   call LIS_convertPatchSpaceToObsSpace(n,k,&
        LIS_rc%lsm_index, &
        ac70_struc(n)%ac70(:)%tg,&
@@ -214,53 +217,58 @@ subroutine ac70_qc_soilmobs(n,k,OBS_State)
        vegt_obs)
 
   do t = 1,LIS_rc%obs_ngrid(k)
-
-     if(smobs(t).ne.LIS_rc%udef) then 
+!------------------start loop considering one obs--------------------------
+     if(obsl(t).ne.LIS_rc%udef) then 
 ! MN: check for rain
         if(rainf_obs(t).gt.3E-6) then   ! Var name Noah36 --> rainf 
-           smobs(t) = LIS_rc%udef
-!           print*, 'rainf ',gid,t,AC70_struc(n)%ac70(t)%prcp
+           obsl(t) = LIS_rc%udef
+!           print*, 'rainf ',gid,t,ac70_struc(n)%ac70(t)%prcp
 ! MN: check for frozen soil
         elseif(abs(smc1_obs(t)- &
              sh2o1_obs(t)).gt.0.0001) then
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(abs(smc2_obs(t)- &
              sh2o2_obs(t)).gt.0.0001) then
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(abs(smc3_obs(t)- &
              sh2o3_obs(t)).gt.0.0001) then
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(abs(smc4_obs(t)- &
              sh2o4_obs(t)).gt.0.0001) then
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc1_obs(t).le.LIS_CONST_TKFRZ) then
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc2_obs(t).le.LIS_CONST_TKFRZ) then
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc3_obs(t).le.LIS_CONST_TKFRZ) then
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
         elseif(stc4_obs(t).le.LIS_CONST_TKFRZ) then
-           smobs(t) = LIS_rc%udef 
+           obsl(t) = LIS_rc%udef 
         elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
-           smobs(t) = LIS_rc%udef
-        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
+!        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
+!           obsl(t) = LIS_rc%udef
+        elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah36 --> vegt
+           obsl(t) = LIS_rc%udef
+        elseif(vegt_obs(t).eq.17) then !urban ! Var name Noah36 --> vegt
+           obsl(t) = LIS_rc%udef
  ! MN: check for snow  
-       elseif(sneqv_obs(t).gt.0.001) then 
-           smobs(t) = LIS_rc%udef
+        elseif(sneqv_obs(t).gt.0.001) then 
+           obsl(t) = LIS_rc%udef
         elseif(sca_obs(t).gt.0.0001) then  ! Var name sca 
-           smobs(t) = LIS_rc%udef
- ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to 0.7 
-       elseif(shdfac_obs(t).gt.0.7) then  ! var name Noah36 shdfac 12-month green veg. frac.  
-           smobs(t) = LIS_rc%udef        
-!too close to the tails, could be due to scaling, so reject. 
-        elseif(smcmax_obs(t)-smobs(t).lt.0.02) then 
-           smobs(t) = LIS_rc%udef
-        elseif(smobs(t) - smcwlt_obs(t).lt.0.02) then 
-           smobs(t) = LIS_rc%udef
+           obsl(t) = LIS_rc%udef
+ ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to 0.7 !commented out for now
+ !      elseif(shdfac_obs(t).gt.0.7) then  ! var name Noah36 shdfac 12-month green veg. frac.  
+ !          obsl(t) = LIS_rc%udef        
+!too close to the tails, could be due to scaling, so reject. !commented out for
+!now. It was written for soil moisture
+!        elseif(smcmax_obs(t)-obsl(t).lt.0.02) then 
+!           obsl(t) = LIS_rc%udef
+!        elseif(obsl(t) - smcwlt_obs(t).lt.0.02) then 
+!           obsl(t) = LIS_rc%udef
         endif
      endif
   enddo
 
-end subroutine ac70_qc_soilmobs
+end subroutine ac70_qc_Sig0VHobs
 

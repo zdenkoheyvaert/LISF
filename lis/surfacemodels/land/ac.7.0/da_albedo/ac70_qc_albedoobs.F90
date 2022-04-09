@@ -23,7 +23,7 @@ subroutine ac70_qc_ALBEDOobs(n,k,OBS_State)
   use LIS_constantsMod, only : LIS_CONST_TKFRZ
   use LIS_DAobservationsMod
   use ac70_lsmMod
-  use module_sf_noahlsm_36  !, only: MAXSMC !MN
+  use module_sf_noahaclsm_36  !, only: MAXSMC !MN
 
 
   implicit none

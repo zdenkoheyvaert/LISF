@@ -12,7 +12,7 @@ module ac_globals_70
 use ESMF
 
   ! Maybe most of these can be moved to a REDPRM use statement?
-  use module_sf_noahlsm_36, only: &
+  use module_sf_noahaclsm_36, only: &
        &                       SLCATS,     &
        &                       LUCATS,     &
        &                       CSOIL_DATA, & 

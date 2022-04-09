@@ -21,7 +21,7 @@ subroutine ac70_settws(n, LSM_State)
   use LIS_coreMod
   use LIS_logMod
   use ac70_lsmMod
-  use module_sf_noahlsm_36
+  use module_sf_noahaclsm_36
 
   implicit none
 ! !ARGUMENTS:
@@ -144,7 +144,7 @@ subroutine ac70_settws(n, LSM_State)
 
      ! MN: NOTE: SMCMAX and SMCWLT are not stored in the data structure but we
      !       can get module variables MAXSMC and WLTSMC from the
-     !       module_sf_noahlsm_36
+     !       module_sf_noahaclsm_36
      SOILTYP = AC70_struc(n)%ac70(t)%soiltype
      MAX_THRESHOLD = MAXSMC (SOILTYP)
      !MIN_THRESHOLD = WLTSMC (SOILTYP)

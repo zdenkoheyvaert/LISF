@@ -8,14 +8,15 @@
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
 !BOP
-! !ROUTINE: ac70_setsoilm
-!  \label{ac70_setsoilm}
+! !ROUTINE: ac70_setsoilmLAI
+!  \label{ac70_setsoilmLAI}
 !
 ! !REVISION HISTORY:
 ! 27Feb2005: Sujay Kumar; Initial Specification
 ! 25Jun2006: Sujay Kumar: Updated for the ESMF design
-! 9 Sep 2016: Mahdi Navari: Modified for Ac70 
+! 9 Sep 2016: Mahdi Navari: Modified for ac70 
 ! 18Apr 2018: Mahdi Navari: Bug fixed
+! 18 Jun 2021: Michel Bechtold: SM and LAI updating with S1 backscatter w/ WCM
 ! 
 ! Apply the update if it met the update conditions
 ! Update conditions: 
@@ -31,13 +32,14 @@
 
 
 ! !INTERFACE:
-subroutine ac70_setsoilm(n, LSM_State)
+subroutine ac70_setsoilmLAI(n, LSM_State)
 ! !USES:
   use ESMF
   use LIS_coreMod
   use LIS_logMod
   use ac70_lsmMod
   use module_sf_noahaclsm_36  !MN
+  use AC_VEG_PARAMETERS_70
 
   implicit none
 ! !ARGUMENTS: 
@@ -46,7 +48,7 @@ subroutine ac70_setsoilm(n, LSM_State)
 !
 ! !DESCRIPTION:
 !  
-!  This routine assigns the soil moisture prognostic variables to noah's
+!  This routine assigns the soil moisture and LAI prognostic variables to noah's
 !  model space. 
 ! 
 !EOP
@@ -57,10 +59,13 @@ subroutine ac70_setsoilm(n, LSM_State)
   type(ESMF_Field)       :: sm2Field
   type(ESMF_Field)       :: sm3Field
   type(ESMF_Field)       :: sm4Field
+  type(ESMF_Field)       :: laiField,lfmassField
   real, pointer          :: soilm1(:)
   real, pointer          :: soilm2(:)
   real, pointer          :: soilm3(:)
   real, pointer          :: soilm4(:)
+  real, pointer          :: lai(:)
+  real                   :: lfmass
   integer                :: t, j,i, gid, m, t_unpert
   integer                :: status
   real                   :: delta(4)
@@ -90,29 +95,35 @@ subroutine ac70_setsoilm(n, LSM_State)
 
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
-       "ESMF_StateSet: Soil Moisture Layer 1 failed in ac70_setsoilm")
+       "ESMF_StateSet: Soil Moisture Layer 1 failed in ac70_setsoilmLAI")
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 2",sm2Field,rc=status)
   call LIS_verify(status,&
-       "ESMF_StateSet: Soil Moisture Layer 2 failed in ac70_setsoilm")
+       "ESMF_StateSet: Soil Moisture Layer 2 failed in ac70_setsoilmLAI")
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 3",sm3Field,rc=status)
   call LIS_verify(status,&
-       "ESMF_StateSet: Soil Moisture Layer 3 failed in ac70_setsoilm")
+       "ESMF_StateSet: Soil Moisture Layer 3 failed in ac70_setsoilmLAI")
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 4",sm4Field,rc=status)
   call LIS_verify(status,&
-       "ESMF_StateSet: Soil Moisture Layer 4 failed in ac70_setsoilm")
+       "ESMF_StateSet: Soil Moisture Layer 4 failed in ac70_setsoilmLAI")
+  call ESMF_StateGet(LSM_State,"LAI",laiField,rc=status)
+  call LIS_verify(status,&
+       "ESMF_StateSet: LAI failed in ac70_setsoilmLAI")
 
   call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_setsoilm")
+       "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_setsoilmLAI")
   call ESMF_FieldGet(sm2Field,localDE=0,farrayPtr=soilm2,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 2 failed in ac70_setsoilm")
+       "ESMF_FieldGet: Soil Moisture Layer 2 failed in ac70_setsoilmLAI")
   call ESMF_FieldGet(sm3Field,localDE=0,farrayPtr=soilm3,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 3 failed in ac70_setsoilm")
+       "ESMF_FieldGet: Soil Moisture Layer 3 failed in ac70_setsoilmLAI")
   call ESMF_FieldGet(sm4Field,localDE=0,farrayPtr=soilm4,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 4 failed in ac70_setsoilm")
+       "ESMF_FieldGet: Soil Moisture Layer 4 failed in ac70_setsoilmLAI")
+  call ESMF_FieldGet(laiField,localDE=0,farrayPtr=lai,rc=status)
+  call LIS_verify(status,&
+       "ESMF_FieldGet: LAI failed in ac70_setsoilmLAI")
 
   update_flag = .true. 
   update_flag_tile= .true. 
@@ -194,7 +205,7 @@ subroutine ac70_setsoilm(n, LSM_State)
   ! MN print 
   if(i.eq.66) then !i=66  ! --> domain's center  1376
   if(LIS_rc%hr.eq.12) then
-     write(2001,'(I4, 2x, 3(I2,x), 2x, 23(L1,2x))') &
+     write(2001,'(I4, 2x, 3(I2,x), 2x, 23(L1,2x))'),&
           i, LIS_rc%mo, LIS_rc%da, LIS_rc%hr,update_flag_tile&
           ((i-1)*LIS_rc%nensem(n)+1:(i)*LIS_rc%nensem(n)),&
           update_flag_ens(i), update_flag_new(i), update_flag(i) 
@@ -506,5 +517,15 @@ subroutine ac70_setsoilm(n, LSM_State)
   enddo
 
 
-end subroutine ac70_setsoilm
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+!     XLAI    = max(LFMASS*LAPM,laimin)
+
+     if(sla(AC70_struc(n)%ac70(t)%vegetype).ne.0) then 
+        AC70_struc(n)%ac70(t)%lai = lai(t)
+        lfmass = lai(t)/(sla(AC70_struc(n)%ac70(t)%vegetype)/1000.0)
+        AC70_struc(n)%ac70(t)%lfmass = lfmass
+     endif
+  enddo
+
+end subroutine ac70_setsoilmLAI
 

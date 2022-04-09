@@ -10,7 +10,7 @@
 !-----------------------------------------------------------------
         SUBROUTINE SOIL_VEG_GEN_PARM_70( VEG_TBL, SOIL_TBL, GEN_TBL, MMINLU, MMINSL)
 !-----------------------------------------------------------------
-        USE module_sf_noahlsm_36
+        USE module_sf_noahaclsm_36
         use LIS_logMod, only  : LIS_logunit
         use LIS_coreMod, only : LIS_masterproc
         IMPLICIT NONE

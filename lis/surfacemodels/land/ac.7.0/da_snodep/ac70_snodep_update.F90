@@ -19,7 +19,7 @@ subroutine ac70_snodep_update(n, t, dsneqv, dsnowh)
 
   use LIS_coreMod
   use Ac70_lsmMod
-  use module_sf_noahlsm_36 
+  use module_sf_noahaclsm_36 
   use AC_ROUTINES_70
   
   implicit none
