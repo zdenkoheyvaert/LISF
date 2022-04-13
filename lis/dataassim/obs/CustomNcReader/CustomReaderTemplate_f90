@@ -57,7 +57,7 @@
 #define CUSTOM_READER_WRITE CONCAT(write_,CUSTOM_READER_NAME)
 
 
-module CUSTOM_READER_MODNAME
+! module CUSTOM_READER_MODNAME
     ! !USES:
     use CustomNcReader_Mod, only: CustomNcReader_dec
 
@@ -117,7 +117,7 @@ contains
         call write_CustomNetCDF(n, k, OBS_State)
     end subroutine CUSTOM_READER_WRITE
 
-end module CUSTOM_READER_MODNAME
+! end module CUSTOM_READER_MODNAME
 
 #else
 #error "Some required template variables for Custom reader have not been defined"

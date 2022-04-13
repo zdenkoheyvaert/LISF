@@ -261,28 +261,42 @@ contains
         enddo
 
         do n=1,LIS_rc%nnest
-            reader_struc(n)%latmax = 90 - 0.5 * reader_struc(n)%spatialres
-            reader_struc(n)%latmin = -90 + 0.5 * reader_struc(n)%spatialres
-            reader_struc(n)%lonmax = 180 - 0.5 * reader_struc(n)%spatialres
-            reader_struc(n)%lonmin = -180 + 0.5 * reader_struc(n)%spatialres
-            reader_struc(n)%dlat = reader_struc(n)%spatialres
-            reader_struc(n)%dlon = reader_struc(n)%spatialres
             call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lat max:",&
                  rc=status)
-            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%latmax,&
-                 rc=status)
+            if (status .ne. 0) then
+                reader_struc(n)%latmax = 90 - 0.5 * reader_struc(n)%spatialres
+            else
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%latmax,&
+                     rc=status)
+            endif
+
             call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lat min:",&
                  rc=status)
-            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%latmin,&
-                 rc=status)
+            if (status .ne. 0) then
+                reader_struc(n)%latmin = -90 + 0.5 * reader_struc(n)%spatialres
+            else
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%latmin,&
+                     rc=status)
+            endif
             call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lon max:",&
                  rc=status)
-            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lonmax,&
-                 rc=status)
+            if (status .ne. 0) then
+                reader_struc(n)%lonmax = 180 - 0.5 * reader_struc(n)%spatialres
+            else
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lonmax,&
+                     rc=status)
+            endif
             call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" lon min:",&
                  rc=status)
-            call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lonmin,&
-                 rc=status)
+            if (status .ne. 0) then
+                reader_struc(n)%lonmin = -180 + 0.5 * reader_struc(n)%spatialres
+            else
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lonmin,&
+                     rc=status)
+            endif
+
+            reader_struc(n)%dlat = reader_struc(n)%spatialres
+            reader_struc(n)%dlon = reader_struc(n)%spatialres
             reader_struc(n)%nr = nint((reader_struc(n)%latmax - reader_struc(n)%latmin)&
                                        / reader_struc(n)%spatialres) + 1
             reader_struc(n)%nc = nint((reader_struc(n)%lonmax - reader_struc(n)%lonmin)&

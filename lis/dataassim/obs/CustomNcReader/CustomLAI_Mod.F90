@@ -1,4 +1,3 @@
-
 ! Custom LAI reader
 #define CUSTOM_READER_NAME CustomLAI
 #define CUSTOM_READER_OBSID "Custom LAI"
@@ -7,8 +6,10 @@
 #define CUSTOM_READER_MAXVAL 10.0
 #define CUSTOM_READER_QCMINVAL 0.0
 #define CUSTOM_READER_QCMAXVAL 100.0
-#include "CustomReaderTemplate_f90"
 
+module CustomLAI_Mod
+#include "CustomReaderTemplate_f90"
+end module CustomLAI_Mod
 
 #undef CUSTOM_READER_NAME
 #undef CUSTOM_READER_OBSID

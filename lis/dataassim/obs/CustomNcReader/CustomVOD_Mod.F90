@@ -6,7 +6,10 @@
 #define CUSTOM_READER_MAXVAL 4.0
 #define CUSTOM_READER_QCMINVAL 0.0
 #define CUSTOM_READER_QCMAXVAL 100.0
+
+module CustomVOD_Mod
 #include "CustomReaderTemplate_f90"
+end module CustomVOD_Mod
 
 
 #undef CUSTOM_READER_NAME
