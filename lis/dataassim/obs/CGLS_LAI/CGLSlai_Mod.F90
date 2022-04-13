@@ -242,28 +242,42 @@ contains
 
         do n=1,LIS_rc%nnest
             if (CGLSlai_struc(n)%isresampled.ne.0) then
-                CGLSlai_struc(n)%latmax = 90 - 0.5 * CGLSlai_struc(n)%spatialres
-                CGLSlai_struc(n)%latmin = -90 + 0.5 * CGLSlai_struc(n)%spatialres
-                CGLSlai_struc(n)%lonmax = 180 - 0.5 * CGLSlai_struc(n)%spatialres
-                CGLSlai_struc(n)%lonmin = -180 + 0.5 * CGLSlai_struc(n)%spatialres
-                CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
-                CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
                 call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lat max:",&
                      rc=status)
-                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmax,&
-                     rc=status)
+                if (status .ne. 0) then
+                    CGLSlai_struc(n)%latmax = 90 - 0.5 * CGLSlai_struc(n)%spatialres
+                else
+                    call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmax,&
+                         rc=status)
+                endif
+
                 call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lat min:",&
                      rc=status)
-                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmin,&
-                     rc=status)
+                if (status .ne. 0) then
+                    CGLSlai_struc(n)%latmin = -90 + 0.5 * CGLSlai_struc(n)%spatialres
+                else
+                    call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%latmin,&
+                         rc=status)
+                endif
                 call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lon max:",&
                      rc=status)
-                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmax,&
-                     rc=status)
+                if (status .ne. 0) then
+                    CGLSlai_struc(n)%lonmax = 180 - 0.5 * CGLSlai_struc(n)%spatialres
+                else
+                    call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmax,&
+                         rc=status)
+                endif
                 call ESMF_ConfigFindLabel(LIS_config,"CGLS LAI lon min:",&
                      rc=status)
-                call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmin,&
-                     rc=status)
+                if (status .ne. 0) then
+                    CGLSlai_struc(n)%lonmin = -180 + 0.5 * CGLSlai_struc(n)%spatialres
+                else
+                    call ESMF_ConfigGetAttribute(LIS_config,CGLSlai_struc(n)%lonmin,&
+                         rc=status)
+                endif
+
+                CGLSlai_struc(n)%dlat = CGLSlai_struc(n)%spatialres
+                CGLSlai_struc(n)%dlon = CGLSlai_struc(n)%spatialres
                 CGLSlai_struc(n)%nr = nint((CGLSlai_struc(n)%latmax - CGLSlai_struc(n)%latmin)&
                                            / CGLSlai_struc(n)%spatialres) + 1
                 CGLSlai_struc(n)%nc = nint((CGLSlai_struc(n)%lonmax - CGLSlai_struc(n)%lonmin)&
