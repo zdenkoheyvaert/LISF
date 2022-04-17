@@ -963,7 +963,7 @@ subroutine LIS_DAobs_plugin
         write_CGLSlai)
 #endif
 
-#if ( defined DA_OBS_CGLS_LAI_SM)
+#if ( defined DA_OBS_CGLS_LAI_SM )
    call registerdaobsclass(trim(LIS_CGLSlaismobsId),"LSM")
    call registerdaobssetup(trim(LIS_CGLSlaismobsId)//char(0),&
         CGLSlai_setup)
@@ -973,7 +973,7 @@ subroutine LIS_DAobs_plugin
         write_CGLSlai)
 #endif
 
-#if ( defined DA_OBS_CUSTOM_LAI)
+#if ( defined DA_OBS_CUSTOM_LAI )
    call registerdaobsclass(trim(LIS_CustomLAIobsId),"LSM")
    call registerdaobssetup(trim(LIS_CustomLAIobsId)//char(0),&
         CustomLAI_setup)
@@ -983,7 +983,7 @@ subroutine LIS_DAobs_plugin
         write_CustomLAI)
 #endif
 
-#if ( defined DA_OBS_CUSTOM_VOD)
+#if ( defined DA_OBS_CUSTOM_VOD )
    call registerdaobsclass(trim(LIS_CustomVODobsId),"LSM")
    call registerdaobssetup(trim(LIS_CustomVODobsId)//char(0),&
         CustomVOD_setup)
