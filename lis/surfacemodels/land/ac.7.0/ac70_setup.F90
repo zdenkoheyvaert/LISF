@@ -49,7 +49,24 @@ subroutine Ac70_setup()
 
     use Ac70_lsmMod
 
-    !!! 
+    !!! MB:
+    use ac_global, only: typeproject_typeprm, &
+                         typeproject_typepro
+    use ac_kinds, only: intEnum
+    use aquacrop_wrap, only: InitializeTheProgram, &
+                             GetListProjectsFile, &
+                             GetNumberOfProjects, &
+                             GetProjectFileName, &
+                             GetProjectType, &
+                             GetSimulation_NrRuns, &
+                             GetSimulation_ToDayNr, &
+                             InitializeProject, &
+                             InitializeRun, &
+                             InitializeSimulation, &
+                             InitializeTheProgram, &
+                             WriteProjectsInfo
+
+     !!! MB:
 !
 ! !DESCRIPTION:
 !
@@ -75,6 +92,45 @@ subroutine Ac70_setup()
     integer           :: col, row
     real, allocatable :: placeholder(:,:)
     
+    !!! MB_AC70
+    integer :: daynr, todaynr, iproject, nprojects, irun, nruns
+    integer(intEnum) :: TheProjectType
+    logical :: ListProjectFileExist
+    character(len=:), allocatable :: ListProjectsFile, TheProjectFile
+
+    ! Everything below is the equivalent of "StartTheProgram()"
+
+    call InitializeTheProgram()
+
+    ListProjectsFile = GetListProjectsFile()
+    inquire(file=trim(ListProjectsFile), exist=ListProjectFileExist)
+    nprojects = GetNumberOfProjects()
+
+    if (nprojects > 0) then
+        call WriteProjectsInfo('')
+        call WriteProjectsInfo('Projects handled:')
+    end if
+    
+    do iproject = 1, nprojects
+        TheProjectFile = GetProjectFileName(iproject)
+        call GetProjectType(TheProjectFile, TheProjectType)
+        call InitializeProject(iproject, TheProjectFile, TheProjectType)
+    
+        ! The remainder of this loop is the equivalent of "RunSimulation()"
+    
+        call InitializeSimulation(TheProjectFile, TheProjectType)
+
+        if (TheProjectType == typeproject_typepro) then
+            nruns = 1
+        elseif (TheProjectType == typeproject_typeprm) then
+            nruns = GetSimulation_NrRuns()
+        end if
+    
+        irun = 1
+        call InitializeRun(irun, TheProjectType);
+    end do
+    !!! MB_AC70
+
     mtype = LIS_rc%lsm_index
     
     do n=1, LIS_rc%nnest
