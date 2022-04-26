@@ -50,12 +50,12 @@ subroutine noahmp401_qc_LAIobs(n,k,OBS_State)
 
   type(ESMF_Field)         :: obs_field
   real, pointer            :: obs(:)
-  integer                  :: t
-  integer                  :: gid
+  integer                  :: t, gid, c, r
   integer                  :: status
-  real                     :: ninnov, mu, mu_old, std, count, val
-  real                     :: forecast(LIS_rc%ngrid(n))
-  real                     :: spread(LIS_rc%ngrid(n))
+  real                     :: innov, mu, mu_old, std, cnt, val
+  real                     :: forecast_gridspace(LIS_rc%lnc(n)*LIS_rc%lnr(n))
+  real                     :: spread_gridspace(LIS_rc%lnc(n)*LIS_rc%lnr(n))
+  real                     :: count_gridspace(LIS_rc%lnc(n)*LIS_rc%lnr(n))
   real                     :: forecast_obsspace(LIS_rc%obs_ngrid(k))
   real                     :: spread_obsspace(LIS_rc%obs_ngrid(k))
 
@@ -65,7 +65,7 @@ subroutine noahmp401_qc_LAIobs(n,k,OBS_State)
        rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet failed in NoahMP401_qc_LAIobs")
-  call ESMF_FieldGet(obs_sm_field,localDE=0,farrayPtr=obs,rc=status)
+  call ESMF_FieldGet(obs_field,localDE=0,farrayPtr=obs,rc=status)
   call LIS_verify(status,& 
        "ESMF_FieldGet failed in NoahMP401_qc_LAIobs")
 
@@ -73,60 +73,56 @@ subroutine noahmp401_qc_LAIobs(n,k,OBS_State)
   ! FORECAST AND SPREAD CALCULATION
   !-------------------------------------------------------------------
 
-  do i=1, LIS_rc%npatch(n,LIS_rc%lsm_index), LIS_rc%nensem
-     gid = LIS_domain(n)%gindex(&
-          LIS_surface(n,LIS_rc%lsm_index)%tile(i)%col,&
-          LIS_surface(n,LIS_rc%lsm_index)%tile(i)%row) 
-
-     ! calculate mean and standard deviation using Welford's algorithm
-     mu = 0
-     count = 0
-     std = 0
-     do m=1,LIS_rc%nensem(n)
-         t = i+m-1
-         val = noahmp401_struc(n)%noahmp401(t)%lai
-         if (val .ne. LIS_rc%udef) then
-             mu_old = mu
-             mu = mu + (val - mu) / count
-             std = std + (val - mu_old) * (val - mu)
-             count = count + 1
-         endif
-     enddo
-
-     if (count .ne. 0) then
-         forecast(gid) = mu
-         spread(gid) = std / (count - 1)
-     else
-         forecast(gid) = LIS_rc%udef
-         spread(gid) = LIS_rc%udef
-     endif
-
+  forecast_gridspace = 0.0
+  spread_gridspace = 0.0
+  count_gridspace = 0
+  do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
+      c = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%col
+      r = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row
+      gid = c+(r-1)*LIS_rc%lnc(n)
+      val = noahmp401_struc(n)%noahmp401(t)%lai
+      if (val .ne. LIS_rc%udef) then
+          ! calculating mean and variance using Welford's online algorithm
+          mu_old = forecast_gridspace(gid)
+          count_gridspace(gid) = count_gridspace(gid) + 1
+          forecast_gridspace(gid) = mu_old + (val-mu_old)/count_gridspace(gid)
+          spread_gridspace(gid) = spread_gridspace(gid)&
+              + (val - mu_old) * (val - forecast_gridspace(gid))
+      endif
   enddo
 
-  gridSpaceToObsSpace(n, k, forecast, forecast_obsspace)
-  gridSpaceToObsSpace(n, k, spread, spread_obsspace)
+  do gid=1,LIS_rc%lnc(n)*LIS_rc%lnr(n)
+      if (count_gridspace(gid) .gt. 1) then
+          spread_gridspace(gid) = sqrt(&
+              spread_gridspace(gid) / (count_gridspace(gid) - 1))
+      else
+          forecast_gridspace(gid) = LIS_rc%udef
+          spread_gridspace(gid) = LIS_rc%udef
+      endif
+  enddo
+
+  call gridSpaceToObsSpace(n, k, forecast_gridspace, forecast_obsspace)
+  call gridSpaceToObsSpace(n, k, spread_gridspace, spread_obsspace)
 
   !-------------------------------------------------------------------
   ! REJECT UPDATES WITH HIGH NINNOV VALUE
   !-------------------------------------------------------------------
-
   do t = 1,LIS_rc%obs_ngrid(k)
 
-      if (obs(t).ne.LIS_rc%udef.and.forecast_obsspace(t).ne.LIS_rc%udef &
-           .and.spread_obsspace(t).ne.LIS_rc%udef) then
-          ninnov = (obs(t) - forecast_obsspace(t)) / spread_obsspace(t)
-
-          if (ninnov > 10) then
+      if (obs(t).ne.LIS_rc%udef&
+          .and.forecast_obsspace(t).ne.LIS_rc%udef &
+          .and.spread_obsspace(t).ne.LIS_rc%udef.and.spread_obsspace(t).gt.1e-10) then
+          innov = obs(t) - forecast_obsspace(t)
+          if (abs(innov) > 10 * spread_obsspace(t)) then
               obs(t) = LIS_rc%udef
           endif
       endif
   enddo
 
-
 contains
 
     ! adapted from LIS_convertPatchSpaceToObsSpace
-    subroutine gridSpaceToObsSpace(
+    subroutine gridSpaceToObsSpace(&
        n,&
        k,&
        gvar, &
@@ -138,7 +134,7 @@ contains
     real                         :: gvar(LIS_rc%ngrid(n))
     real                         :: ovar(LIS_rc%obs_ngrid(k))
 
-    integer                      :: g
+    integer                      :: g, r, c
     logical*1                    :: li(LIS_rc%lnc(n)*LIS_rc%lnr(n))
     logical*1                    :: lo(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
     real                         :: obs_gvar(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
@@ -164,7 +160,7 @@ contains
             obs_gvar)
     else
        call neighbor_interp(LIS_rc%obs_gridDesc(k,:), &
-            li, lis_gvar, lo, obs_gvar,&
+            li, gvar, lo, obs_gvar,&
             LIS_rc%lnc(n)*LIS_rc%lnr(n), &
             LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
             LIS_obs_domain(n,k)%rlat, &
@@ -186,4 +182,3 @@ contains
 
 
 end subroutine noahmp401_qc_LAIobs
-

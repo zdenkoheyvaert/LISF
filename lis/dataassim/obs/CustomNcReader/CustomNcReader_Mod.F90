@@ -394,7 +394,7 @@ contains
         enddo
 
         write(LIS_logunit,*)&
-             '[INFO] read Custom "//trim(varname)//" data specifications'
+             "[INFO] read Custom "//trim(varname)//" data specifications"
 
         !------------------------------------------------------------
         ! Read perturbation settings
@@ -447,6 +447,10 @@ contains
 
                 ! Set obs err to be uniform (will be rescaled later for each grid point).
                 ssdev = obs_pert%ssdev(1)
+                reader_struc(n)%ssdev_inp = obs_pert%ssdev(1)
+                write(LIS_logunit,*)&
+                     "[INFO] observation perturbation size for "//trim(varname)//":",&
+                     reader_struc(n)%ssdev_inp
 
                 pertField(n) = ESMF_FieldCreate(arrayspec=pertArrSpec,&
                      grid=LIS_obsEnsOnGrid(n,k),name="Observation"//vid(1)//vid(2),&
@@ -964,7 +968,7 @@ contains
 
                 ! rescale perturbation standard deviations if rescaling of the
                 ! data is performed
-                if(LIS_rc%dascaloption(k).ne."none") then
+                if(LIS_rc%dascaloption(k).ne."none".and.reader_struc(n)%useSsdevScal.eq.1) then
                     call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
                          rc=status)
                     call LIS_verify(status, 'Error: StateGet Observation01')

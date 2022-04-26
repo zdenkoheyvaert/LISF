@@ -247,7 +247,7 @@ subroutine noahmp401_qc_VODobs(n,k,OBS_State)
            !           obsl(t) = LIS_rc%udef
        elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah401 --> vegt
            obsl(t) = LIS_rc%udef
-       elseif(vegt_obs(t).eq.17) then !urban ! Var name Noah401 --> vegt
+       elseif(vegt_obs(t).eq.17) then !water ! Var name Noah401 --> vegt
            obsl(t) = LIS_rc%udef
            ! MN: check for snow  
        elseif(sneqv_obs(t).gt.0.001) then 
