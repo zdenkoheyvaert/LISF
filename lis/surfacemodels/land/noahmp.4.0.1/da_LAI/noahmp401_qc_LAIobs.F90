@@ -113,7 +113,9 @@ subroutine noahmp401_qc_LAIobs(n,k,OBS_State)
           .and.forecast_obsspace(t).ne.LIS_rc%udef &
           .and.spread_obsspace(t).ne.LIS_rc%udef.and.spread_obsspace(t).gt.1e-10) then
           innov = obs(t) - forecast_obsspace(t)
-          if (abs(innov) > 10 * spread_obsspace(t)) then
+          ! reject observations if they are more than 50 standard deviations
+          ! away from the ensemble mean
+          if (abs(innov) > 50 * spread_obsspace(t)) then
               obs(t) = LIS_rc%udef
           endif
       endif

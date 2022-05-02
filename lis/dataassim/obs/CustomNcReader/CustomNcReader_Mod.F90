@@ -520,12 +520,6 @@ contains
                     call LIS_getCDFattributes(k,modelscalingfile(n),&
                          reader_struc(n)%ntimes, ngrid)
 
-                    if(reader_struc(n)%ntimes.eq.1) then
-                        timeidx = 1
-                    else
-                        timeidx = LIS_rc%mo
-                    endif
-
                     allocate(reader_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
                          reader_struc(n)%ntimes))
                     allocate(reader_struc(n)%model_sigma(LIS_rc%obs_ngrid(k),&
@@ -605,7 +599,6 @@ contains
                          LIS_rc%dascaloption(k).eq."seasonal multiplicative"
 
                     reader_struc(n)%ntimes = 366
-                    timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
 
                     allocate(reader_struc(n)%model_mu(LIS_rc%obs_ngrid(k),&
                          reader_struc(n)%ntimes))
@@ -645,6 +638,8 @@ contains
 
                     allocate(ssdev(LIS_rc%obs_ngrid(k)))
                     ssdev = obs_pert%ssdev(1)
+
+                    timeidx = CustomNcReader_timeidx(reader_struc(n)%ntimes)
 
                     call CustomNcReader_updateSsdev(k,&
                          reader_struc(n)%obs_sigma(:, timeidx),&
@@ -975,16 +970,7 @@ contains
 
                     ssdev = reader_struc(n)%ssdev_inp
 
-                    if (LIS_rc%dascaloption(k).eq."CDF matching") then
-                        if(reader_struc(n)%ntimes.eq.1) then
-                            timeidx = 1
-                        else
-                            timeidx = LIS_rc%mo
-                        endif
-                    elseif(LIS_rc%dascaloption(k).eq."seasonal"&
-                         .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative") then
-                        timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
-                    endif
+                    timeidx = CustomNcReader_timeidx(reader_struc(n)%ntimes)
 
                     call CustomNcReader_updateSsdev(k,&
                          reader_struc(n)%obs_sigma(:, timeidx),&
@@ -1589,5 +1575,28 @@ contains
         enddo
 
     end subroutine CustomNcReader_updateSsdev
+
+    function CustomNcReader_timeidx(ntimes)
+        use LIS_coreMod,  only : LIS_rc
+        use LIS_logMod
+        use LIS_timeMgrMod
+        implicit none
+
+        integer, intent(in) :: ntimes
+        integer :: CustomNcReader_timeidx
+
+        if (ntimes == 1) then
+            CustomNcReader_timeidx = 1
+        else if (ntimes == 12) then
+            CustomNcReader_timeidx = LIS_rc%mo
+        else if (ntimes == 366) then
+            CustomNcReader_timeidx = nint(LIS_get_curr_calday(LIS_rc, 0))
+        else
+            write(LIS_logunit,*)&
+                 "[ERR] Unexpected number of times in scaling file:", ntimes
+            call LIS_endrun
+        endif
+
+    end function CustomNcReader_timeidx
 
 end module CustomNcReader_Mod
