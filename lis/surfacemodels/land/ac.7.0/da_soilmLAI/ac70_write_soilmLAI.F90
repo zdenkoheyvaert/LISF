@@ -67,6 +67,26 @@ subroutine ac70_write_soilmLAI(ftn,n, LSM_State)
      tmp(t) = AC70_struc(n)%ac70(t)%smc(4)
   enddo
   call LIS_writevar_restart(ftn,n,1,tmp)
+
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+     tmp(t) = AC70_struc(n)%ac70(t)%ac70smc(1)
+  enddo  
+  call LIS_writevar_restart(ftn,n,1,tmp)
+
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+     tmp(t) = AC70_struc(n)%ac70(t)%ac70smc(2)
+  enddo
+  call LIS_writevar_restart(ftn,n,1,tmp)
+
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+     tmp(t) = AC70_struc(n)%ac70(t)%ac70smc(3)
+  enddo
+  call LIS_writevar_restart(ftn,n,1,tmp)
+
+  do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
+     tmp(t) = AC70_struc(n)%ac70(t)%ac70smc(4)
+  enddo
+  call LIS_writevar_restart(ftn,n,1,tmp)
   deallocate(tmp)
 
 end subroutine ac70_write_soilmLAI

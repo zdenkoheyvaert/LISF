@@ -194,7 +194,10 @@ module Ac70_lsmMod
         real               :: init_smcwtd
         real               :: init_deeprech
         real               :: init_rech
-        real               :: init_zlvl 
+        real               :: init_zlvl
+        !!! MB: AC70
+        integer            :: init_daynri
+
         !-------------------------------------------------------------------------
         ! Constant Parameter
         !-------------------------------------------------------------------------
@@ -229,6 +232,9 @@ module Ac70_lsmMod
         integer            :: sc_idx
         integer            :: iz0tlnd
         !real               :: zlvl
+        !!! MB: AC70
+        integer            :: daynrinextclimaterecord
+        !!! MB: AC70
         type(Ac70dec), pointer :: ac70(:)
     end type Ac70_type_dec
 
@@ -292,6 +298,11 @@ contains
                 allocate(AC70_struc(n)%ac70(t)%snowice(AC70_struc(n)%nsnow))
                 allocate(AC70_struc(n)%ac70(t)%snowliq(AC70_struc(n)%nsnow))
             enddo
+            !!! MB: AC70
+            do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
+                allocate(AC70_struc(n)%ac70(t)%ac70smc(AC70_struc(n)%nsoil))
+            enddo
+
 !            ! allocate memory for intiali state variables
 !            allocate(AC70_struc(n)%init_stc( AC70_struc(n)%nsoil))
 !            allocate(AC70_struc(n)%init_sh2o(AC70_struc(n)%nsoil))

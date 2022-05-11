@@ -43,6 +43,7 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
 !  \end{description}
 !EOP
   type(ESMF_Field)       :: sm1Field
+  type(ESMF_Field)       :: ac70sm1Field
 !  type(ESMF_Field)       :: sm2Field
 !  type(ESMF_Field)       :: sm3Field
 !  type(ESMF_Field)       :: sm4Field
@@ -50,12 +51,15 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
   integer                :: t
   integer                :: status
   real, pointer          :: soilm1(:)
+  real, pointer          :: ac70soilm1(:)
 !  real, pointer          :: soilm2(:)
 !  real, pointer          :: soilm3(:)
 !  real, pointer          :: soilm4(:)
   real, pointer          :: lai(:)
   real                   :: smmax1!,smmax2,smmax3,smmax4
   real                   :: smmin1!,smmin2,smmin3,smmin4
+  real                   :: ac70smmax1!,smmax2,smmax3,smmax4
+  real                   :: ac70smmin1!,smmin2,smmin3,smmin4
   real                   :: laimax
   real                   :: laimin
   integer                :: gid
@@ -84,6 +88,22 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
   call LIS_verify(status,&
        "ESMF_AttributeGet: Min Value failed in ac70_qcsoilmLAI")
 
+  call ESMF_StateGet(LSM_State,"AC70 Soil Moisture Layer 1",ac70sm1Field,rc=status)
+  call LIS_verify(status,&
+       "ESMF_StateGet for AC70 Soil Moisture Layer 1 failed in ac70_qcsoilmLAI")
+ 
+  call ESMF_FieldGet(ac70sm1Field,localDE=0,farrayPtr=ac70soilm1,rc=status)
+  call LIS_verify(status,&
+       "ESMF_FieldGet for AC70 Soil Moisture Layer 1 failed in ac70_qcsoilmLAI")
+
+  call ESMF_AttributeGet(ac70sm1Field,"Max Value",ac70smmax1,rc=status)
+  call LIS_verify(status,&
+       "ESMF_AttributeGet: AC70 Max Value failed in ac70_qcsoilmLAI")
+
+  call ESMF_AttributeGet(ac70sm1Field,"Min Value",ac70smmin1,rc=status)
+  call LIS_verify(status,&
+       "ESMF_AttributeGet: AC70 Min Value failed in ac70_qcsoilmLAI")
+
   call ESMF_StateGet(LSM_State,"LAI",laiField,rc=status)
   call LIS_verify(status,&
            "ESMF_StateGet for LAI failed in ac70_qcsoilmLAI")
@@ -101,9 +121,10 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
 
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
-
      if(soilm1(t).gt.smmax1) soilm1(t) = smmax1
      if(soilm1(t).lt.smmin1) soilm1(t) = smmin1
+     if(ac70soilm1(t).gt.ac70smmax1) ac70soilm1(t) = ac70smmax1
+     if(ac70soilm1(t).lt.ac70smmin1) ac70soilm1(t) = ac70smmin1
   enddo
 
   update_flag    = .true.

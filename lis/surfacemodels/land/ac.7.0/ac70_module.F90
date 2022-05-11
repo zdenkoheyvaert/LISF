@@ -450,6 +450,49 @@ module Ac70_module
 !  2/1/18: Soni Yatheendradas: Added calibratable parameters for OPT
 !
 !EOP
+  
+  use ac_global, only: rep_RootZoneWC,&
+                       rep_Content,&
+                       rep_EffectiveRain,&
+                       rep_sum,&
+                       rep_RootZoneSalt,&
+                       rep_sim,&
+                       rep_DayEventInt,&
+                       rep_Shapes,&
+                       rep_soil,&
+                       rep_Assimilates,&
+                       rep_Onset,&
+                       rep_EndSeason,&
+                       rep_EffectStress,&
+                       rep_IrriECw,&
+                       rep_clim,&
+                       rep_CropFileSet,&
+                       rep_Cuttings,&
+                       rep_Manag,&
+                       rep_param,&
+                       rep_IniSWC,&
+                       rep_storage,&
+                       rep_DayEventDbl,&
+                       rep_Crop,&
+                       rep_PerennialPeriod,&
+                       CompartmentIndividual,&
+                       SoilLayerIndividual,&
+                       GetNrCompartments,&
+                       GetSoil_NrSoilLayers
+
+  use ac_run, only:    repIrriInfoRecord,&
+                       rep_GwTable,&
+                       rep_plotPar,&
+                       rep_StressTot,&
+                       repCutInfoRecord,&
+                       rep_Transfer
+
+  use ac_kinds, only: dp,&
+                      int8,&
+                      int32,&
+                      intEnum,&
+                      sp
+
   implicit none
   private
   type, public :: ac70dec
@@ -679,6 +722,157 @@ module Ac70_module
      ! used for constraints on calibratable parameters for OPTUE ! SY
      !-------------------------------------------------------------------------
      real               :: smcdry ! SY: Not used by Ac70 from REDPRM, but read in from table
+
+     !!! MB: AC70
+     integer            :: daynri
+     !real, pointer      :: ac70_soilwc(:)
+     real               :: RootZoneWC_Actual
+     real               :: RootZoneWC_FC
+     real               :: RootZoneWC_WP
+     real               :: RootZoneWC_SAT
+     real               :: RootZoneWC_Leaf
+     real               :: RootZoneWC_Thresh
+     real               :: RootZoneWC_Sen
+     real               :: RootZoneWC_ZtopAct
+     real               :: RootZoneWC_ZtopFC
+     real               :: RootZoneWC_ZtopWP
+     real               :: RootZoneWC_ZtopThresh
+     type(rep_RootZoneWC) :: RootZoneWC
+     !type(CompartmentIndividual), dimension(GetNrCompartments()) :: Compartment
+     !type(SoilLayerIndividual), dimension(GetSoil_NrSoilLayers()) :: soillayer
+     type(rep_Content) :: TotalSaltContent
+     type(rep_Content) :: TotalWaterContent
+     type(rep_EffectiveRain) :: effectiverain
+     type(CompartmentIndividual), dimension(12) :: Compartment
+     type(SoilLayerIndividual), dimension(5) :: soillayer
+     type(rep_sum) :: SumWaBal
+     type(repIrriInfoRecord) :: IrriInfoRecord1, IrriInfoRecord2
+     type(rep_DayEventInt), dimension(5) :: IrriBeforeSeason
+     type(rep_DayEventInt), dimension(5) :: IrriAfterSeason
+     type(rep_IrriECw) :: IrriECw
+     type(rep_Manag) :: Management
+     type(rep_PerennialPeriod) :: perennialperiod
+     type(rep_param) :: simulparam
+     type(rep_Cuttings) :: Cuttings
+     type(rep_Onset) :: onset
+     type(rep_EndSeason) :: endseason
+     type(rep_Crop) :: crop
+     type(rep_soil) :: Soil
+     type(rep_clim)  :: TemperatureRecord, ClimRecord, RainRecord, EToRecord
+     integer :: IrriInterval
+     type(rep_RootZoneSalt) :: RootZoneSalt
+     type(rep_sim) :: Simulation
+
+    integer(intEnum) :: GenerateTimeMode
+    integer(intEnum) :: GenerateDepthMode
+    integer(intEnum) :: IrriMode
+    integer(intEnum) :: IrriMethod
+    integer(int32) :: DaySubmerged
+    integer(int32) :: MaxPlotNew
+    integer(int32) :: NrCompartments
+    integer(int32) :: IrriFirstDayNr
+    integer(int32) :: ZiAqua ! Depth of Groundwater table below
+                             ! soil surface in centimeter 
+    integer(int8) :: IniPercTAW ! Default Value for Percentage TAW for Initial
+                                ! Soil Water Content Menu
+    integer(int8) :: MaxPlotTr
+    integer(int8) :: OutputAggregate
+
+    logical :: EvapoEntireSoilSurface ! True of soil wetted by RAIN (false = IRRIGATION and fw < 1)
+    logical :: PreDay, OutDaily
+    logical :: Out1Wabal
+    logical :: Out2Crop
+    logical :: Out3Prof
+    logical :: Out4Salt
+    logical :: Out5CompWC
+    logical :: Out6CompEC
+    logical :: Out7Clim
+    logical :: Part1Mult,Part2Eval
+
+    real(dp) :: CCiActual
+    real(dp) :: CCiprev
+    real(dp) :: CCiTopEarlySen
+    real(dp) :: CRsalt ! gram/m2
+    real(dp) :: CRwater ! mm/day
+    real(dp) :: ECdrain ! EC drain water dS/m
+    real(dp) :: ECiAqua ! EC of the groundwater table in dS/m
+    real(dp) :: ECstorage !EC surface storage dS/m
+    real(dp) :: Eact ! mm/day
+    real(dp) :: Epot ! mm/day
+    real(dp) :: ETo ! mm/day
+    real(dp) :: Drain  ! mm/day
+    real(dp) :: Infiltrated ! mm/day
+    real(dp) :: Irrigation ! mm/day
+    real(dp) :: Rain  ! mm/day
+    real(dp) :: RootingDepth
+    real(dp) :: Runoff  ! mm/day
+    real(dp) :: SaltInfiltr ! salt infiltrated in soil profile Mg/ha
+    real(dp) :: Surf0 ! surface water [mm] begin day
+    real(dp) :: SurfaceStorage !mm/day
+    real(dp) :: Tact ! mm/day
+    real(dp) :: Tpot ! mm/day
+    real(dp) :: TactWeedInfested !mm/day
+    real(dp) :: AC70Tmax ! degC
+    real(dp) :: AC70Tmin ! degC
+
+    ! variables from run.f90
+    type(rep_GwTable) :: GwTable
+    type(rep_DayEventDbl), dimension(31) :: EToDataSet
+    type(rep_DayEventDbl), dimension(31) :: RainDataSet
+    type(rep_plotPar) :: PlotVarCrop
+    type(rep_StressTot) :: StressTot
+    type(repCutInfoRecord) :: CutInfoRecord1, CutInfoRecord2
+    type(rep_Transfer) :: Transfer
+    type(rep_DayEventDbl), dimension(31) :: TminDataSet, TmaxDataSet
+    type(rep_sum) :: PreviousSum
+
+    integer(int32) :: Tadj, GDDTadj
+    integer(int32) :: DayLastCut,NrCut,SumInterval
+    integer(int8)  :: PreviousStressLevel, StressSFadjNEW
+
+    real(dp) :: Bin
+    real(dp) :: Bout
+    real(dp) :: GDDayi
+    real(dp) :: CO2i
+    real(dp) :: FracBiomassPotSF
+    real(dp) :: SumETo,SumGDD, Ziprev,SumGDDPrev
+    real(dp) :: CCxWitheredTpot,CCxWitheredTpotNoS
+    real(dp) :: Coeffb0,Coeffb1,Coeffb2
+    real(dp) :: Coeffb0Salt,Coeffb1Salt,Coeffb2Salt
+    real(dp) :: StressLeaf,StressSenescence !! stress for leaf expansion and senescence
+    real(dp) :: DayFraction,GDDayFraction
+    real(dp) :: CGCref,GDDCGCref 
+    real(dp) :: TimeSenescence !! calendar days or GDDays
+    real(dp) :: SumKcTop, SumKcTopStress, SumKci
+    real(dp) :: CCoTotal, CCxTotal, CDCTotal, GDDCDCTotal, CCxCropWeedsNoSFstress
+    real(dp) :: WeedRCi, CCiActualWeedInfested, fWeedNoS, Zeval
+    real(dp) :: BprevSum, YprevSum, SumGDDcuts, HItimesBEF
+    real(dp) :: ScorAT1, ScorAT2, HItimesAT1, HItimesAT2, HItimesAT
+    real(dp) :: alfaHI, alfaHIAdj
+
+    !! DelayedGermination
+    integer(int32) :: NextSimFromDayNr !! the Simulation.FromDayNr for next run if delayed germination and KeepSWC
+
+    !! Evaluation
+    integer(int32) :: DayNr1Eval,DayNrEval
+    integer(int8)  :: LineNrEval
+
+    !! specific for StandAlone
+    real(dp) :: PreviousSumETo, PreviousSumGDD, PreviousBmob,PreviousBsto
+    integer(int8)  :: StageCode
+    integer(int32) :: PreviousDayNr
+    logical :: NoYear
+
+    character(len=:), allocatable :: fEval_filename
+
+    logical :: WaterTableInProfile, StartMode, NoMoreCrop, CGCadjustmentAfterCutting
+    logical :: GlobalIrriECw ! for versions before 3.2 where EC of 
+                             ! irrigation water was not yet recorded
+
+
+
+     ! OUTPUT
+     real, pointer      :: ac70smc(:)
 
   end type ac70dec
 end module Ac70_module

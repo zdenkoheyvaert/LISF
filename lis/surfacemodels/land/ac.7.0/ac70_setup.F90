@@ -51,7 +51,8 @@ subroutine Ac70_setup()
 
     !!! MB:
     use ac_global, only: typeproject_typeprm, &
-                         typeproject_typepro
+                         typeproject_typepro, &
+                         SetReadNextClimRecord
     use ac_kinds, only: intEnum
     use aquacrop_wrap, only: InitializeTheProgram, &
                              GetListProjectsFile, &
@@ -100,6 +101,7 @@ subroutine Ac70_setup()
 
     ! Everything below is the equivalent of "StartTheProgram()"
 
+    call SetReadNextClimRecord(0)
     call InitializeTheProgram()
 
     ListProjectsFile = GetListProjectsFile()

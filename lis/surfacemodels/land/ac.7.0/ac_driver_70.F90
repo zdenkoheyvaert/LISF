@@ -58,7 +58,8 @@ subroutine ac_driver_70(iloc, jloc, &
                             chleaf  , chuc    , chv2    , chb2    , fpice   , &
                             !ag (12Sep2019)
                             rivsto, fldsto, fldfrc, &
-                            sfcheadrt)  ! out 
+                            sfcheadrt &
+                            )  ! out 
   
   ! use LIS_FORC_AttributesMod 
   use module_sf_noahaclsm_36, only: slcats, lucats, slpcats
@@ -299,6 +300,22 @@ subroutine ac_driver_70(iloc, jloc, &
   real, intent(inout) :: fldsto               ! flood storage
   real, intent(inout) :: fldfrc               ! flood storage
   real, intent(inout) :: sfcheadrt            ! extra output for WRF-HYDRO [m] 
+
+  !!! MB: AC70
+  !real, intent(inout) :: RootZoneWC_Actual
+  !real, intent(inout) :: RootZoneWC_FC
+  !real, intent(inout) :: RootZoneWC_WP
+  !real, intent(inout) :: RootZoneWC_SAT
+  !real, intent(inout) :: RootZoneWC_Leaf
+  !real, intent(inout) :: RootZoneWC_Thresh
+  !real, intent(inout) :: RootZoneWC_Sen
+  !real, intent(inout) :: RootZoneWC_ZtopAct
+  !real, intent(inout) :: RootZoneWC_ZtopFC
+  !real, intent(inout) :: RootZoneWC_ZtopWP
+  !real, intent(inout) :: RootZoneWC_ZtopThresh
+
+  ! added by shugong 
+
 
   ! external function
   real, external      :: month_d_70
