@@ -53,19 +53,20 @@ subroutine Ac70_setup()
     use ac_global, only: typeproject_typeprm, &
                          typeproject_typepro, &
                          SetReadNextClimRecord
-    use ac_kinds, only: intEnum
-    use aquacrop_wrap, only: InitializeTheProgram, &
-                             GetListProjectsFile, &
-                             GetNumberOfProjects, &
-                             GetProjectFileName, &
-                             GetProjectType, &
-                             GetSimulation_NrRuns, &
-                             GetSimulation_ToDayNr, &
-                             InitializeProject, &
-                             InitializeRun, &
-                             InitializeSimulation, &
-                             InitializeTheProgram, &
-                             WriteProjectsInfo
+    use ac_kinds, only: intEnum, &
+                        int8
+    use ac_run, only:    GetSimulation_ToDayNr, &
+                         InitializeSimulation, &
+                         InitializeRun
+                         
+    use ac_startunit, only:  GetListProjectsFile, &
+                         GetNumberOfProjects, &
+                         GetProjectFileName, &
+                         GetProjectType, &
+                         GetSimulation_NrRuns, &
+                         InitializeTheProgram, &
+                         InitializeProject, &
+                         WriteProjectsInfo
 
      !!! MB:
 !
@@ -94,7 +95,8 @@ subroutine Ac70_setup()
     real, allocatable :: placeholder(:,:)
     
     !!! MB_AC70
-    integer :: daynr, todaynr, iproject, nprojects, irun, nruns
+    integer(int8) :: irun
+    integer :: daynr, todaynr, iproject, nprojects, nruns
     integer(intEnum) :: TheProjectType
     logical :: ListProjectFileExist
     character(len=:), allocatable :: ListProjectsFile, TheProjectFile

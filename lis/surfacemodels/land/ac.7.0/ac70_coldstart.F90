@@ -196,10 +196,10 @@ subroutine Ac70_coldstart(mtype)
                     GetWaterTableInProfile,&
                     GetStartMode,&
                     GetNoMoreCrop,&
-                    GetCGCadjustmentAfterCutting
+                    GetCGCadjustmentAfterCutting,&
+                    GetDayNri
               
               
-    use aquacrop_wrap, only:    GetDayNri
     use ac_kinds, only: dp
 !
 ! !DESCRIPTION:

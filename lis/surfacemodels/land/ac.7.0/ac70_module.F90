@@ -870,7 +870,6 @@ module Ac70_module
                              ! irrigation water was not yet recorded
 
 
-
      ! OUTPUT
      real, pointer      :: ac70smc(:)
 

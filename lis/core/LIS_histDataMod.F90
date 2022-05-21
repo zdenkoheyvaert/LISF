@@ -428,7 +428,10 @@ module LIS_histDataMod
   public ::   LIS_MOC_CHB2    
   public ::   LIS_MOC_FPICE   
   ! end Noahmp
- 
+
+  ! AC70
+  public :: LIS_MOC_AC70SOILMOIST 
+  
   ! RUC 
   public :: LIS_MOC_QVG
   public :: LIS_MOC_QCG
@@ -916,6 +919,9 @@ module LIS_histDataMod
     integer ::  LIS_MOC_CHB2    = -9999
     integer ::  LIS_MOC_FPICE   = -9999
 !  <- end Noah MP  ->
+
+!  <- AC70 ->
+   integer :: LIS_MOC_AC70SOILMOIST  = -9999
 
 !   <- RUC -> 
    integer :: LIS_MOC_QVG = -9999
@@ -4458,6 +4464,18 @@ contains
         call register_dataEntry(LIS_MOC_LSM_COUNT, LIS_MOC_ROOTMASS, &
             LIS_histData(n)%head_lsm_list,&
             n, 1, ntiles,(/"g/m2"/), 1, (/"-"/),1,1,1,&
+            model_patch=.true.)
+    endif
+    
+    call ESMF_ConfigFindLabel(modelSpecConfig,"AC70SoilMoist:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+         "AC70SoilMoist",&
+         "ac70soil_moisture_content",&
+         "ac70soil moisture content",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70SOILMOIST,&
+            LIS_histData(n)%head_lsm_list,&
+            n,2,ntiles,(/"kg/m2","m3/m3"/),1,(/"-"/),1,grib_depthlvl,0,&
             model_patch=.true.)
     endif
     

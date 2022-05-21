@@ -72,6 +72,8 @@ subroutine Ac70_main(n)
                          GetSumWaBal,&
                          GetRootZoneSalt,&
                          GetSimulation,&
+            GetSimulation_SumGDD,&
+            GetSimulation_SumGDDfromDay1,&
                          SetTotalSaltContent,&
                          SetTotalWaterContent,&
                          Seteffectiverain,&
@@ -374,30 +376,31 @@ subroutine Ac70_main(n)
                         SetWaterTableInProfile,&
                         SetStartMode,&
                         SetNoMoreCrop,&
-                        SetCGCadjustmentAfterCutting
+                        SetCGCadjustmentAfterCutting,&
+                        AdvanceOneTimeStep, &
+                         FinalizeRun1, &
+                         FinalizeRun2, &
+                         GetDayNri,&
+                         GetSimulation_ToDayNr, &
+                         FinalizeSimulation, &
+                         InitializeSimulation, &
+                         InitializeRun
+                         
+    use ac_startunit, only:  FinalizeTheProgram, &
+                         GetListProjectsFile, &
+                         GetNumberOfProjects, &
+                         GetProjectFileName, &
+                         GetProjectType, &
+                         GetSimulation_NrRuns, &
+                         InitializeTheProgram, &
+                         InitializeProject, &
+                         WriteProjectsInfo
 
 
     use ac_kinds, only: intEnum, &
                         int32, &
                         int8, &
                         dp
-    use aquacrop_wrap, only: AdvanceOneTimeStep, &
-                         FinalizeRun1, &
-                         FinalizeRun2, &
-                         FinalizeTheProgram, &
-                         FinalizeSimulation, &
-                         GetDayNri, &
-                         GetListProjectsFile, &
-                         GetNumberOfProjects, &
-                         GetProjectFileName, &
-                         GetProjectType, &
-                         GetSimulation_NrRuns, &
-                         GetSimulation_ToDayNr, &
-                         InitializeProject, &
-                         InitializeRun, &
-                         InitializeSimulation, &
-                         InitializeTheProgram, &
-                         WriteProjectsInfo
     !!! MB_AC70
 
     implicit none
@@ -1336,6 +1339,9 @@ subroutine Ac70_main(n)
             call Seteffectiverain(AC70_struc(n)%ac70(t)%effectiverain)
             call SetSumWaBal(AC70_struc(n)%ac70(t)%SumWaBal)
             call SetRootZoneSalt(AC70_struc(n)%ac70(t)%RootZoneSalt)
+            !!! MB temporary
+            AC70_struc(n)%ac70(t)%Simulation%SumGDD = GetSimulation_SumGDD()
+            AC70_struc(n)%ac70(t)%Simulation%SumGDDfromDay1 = GetSimulation_SumGDDfromDay1()
             call SetSimulation(AC70_struc(n)%ac70(t)%Simulation)
             call SetIrriInterval(AC70_struc(n)%ac70(t)%IrriInterval)
             call SetIrriInfoRecord1(AC70_struc(n)%ac70(t)%IrriInfoRecord1)
@@ -1427,7 +1433,7 @@ subroutine Ac70_main(n)
             call SetStressSFadjNEW(int(AC70_struc(n)%ac70(t)%StressSFadjNEW,kind=int32))
             call SetBin(AC70_struc(n)%ac70(t)%Bin)
             call SetBout(AC70_struc(n)%ac70(t)%Bout)
-            call SetGDDayi(AC70_struc(n)%ac70(t)%GDDayi)
+            !call SetGDDayi(AC70_struc(n)%ac70(t)%GDDayi)
             call SetCO2i(AC70_struc(n)%ac70(t)%CO2i)
             call SetFracBiomassPotSF(AC70_struc(n)%ac70(t)%FracBiomassPotSF)
             call SetSumETo(AC70_struc(n)%ac70(t)%SumETo)
@@ -1488,15 +1494,14 @@ subroutine Ac70_main(n)
             call SetNoMoreCrop(AC70_struc(n)%ac70(t)%NoMoreCrop)
             call SetCGCadjustmentAfterCutting(AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting)
 
-
             !call SetTmax(AC70_struc(n)%ac70(t)%AC70Tmax)
             !call SetTmin(AC70_struc(n)%ac70(t)%AC70Tmin)
 
-                        !if (AC70_struc(n)%ac70(t)%daynri == AC70_struc(n)%daynrinextclimaterecord) then
-                        if (AC70_struc(n)%daynrinextclimaterecord .eq. (LIS_rc%glbntiles(n))) then !*LIS_rc%nensem(n))) then
-                            call setreadnextclimrecord(1)
-                            write(*,*) "setreadnextclimrecord(1)"
-                            AC70_struc(n)%daynrinextclimaterecord = 1
+            !if (AC70_struc(n)%ac70(t)%daynri == AC70_struc(n)%daynrinextclimaterecord) then
+            if (AC70_struc(n)%daynrinextclimaterecord .eq. (LIS_rc%glbntiles(n))) then !*LIS_rc%nensem(n))) then
+                call setreadnextclimrecord(1)
+                write(*,*) "setreadnextclimrecord(1)"
+                AC70_struc(n)%daynrinextclimaterecord = 1
             else
                 AC70_struc(n)%daynrinextclimaterecord = AC70_struc(n)%daynrinextclimaterecord + 1
                 call setreadnextclimrecord(0)
@@ -1679,8 +1684,7 @@ subroutine Ac70_main(n)
                 AC70_struc(n)%ac70(t)%StartMode = GetStartMode()
                 AC70_struc(n)%ac70(t)%NoMoreCrop = GetNoMoreCrop()
                 AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting = GetCGCadjustmentAfterCutting()
-
-
+                
             !!! MB_AC70
 
 
