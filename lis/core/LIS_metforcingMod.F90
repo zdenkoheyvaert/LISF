@@ -1691,6 +1691,8 @@ contains
     integer            :: status, t
     type(ESMF_Field)   :: tmpField,q2Field,uField,vField,swdField,lwdField
     type(ESMF_Field)   :: psurfField,pcpField,cpcpField,snowfField
+    ! MB: AC_70
+    type(ESMF_Field)   :: PREC_ac_Field,TMIN_ac_Field,TMAX_ac_Field,ETo_ac_Field
     real,pointer       :: tmp(:),q2(:),uwind(:),vwind(:),snowf(:)
     real,pointer       :: swd(:),lwd(:),psurf(:),pcp(:),cpcp(:)
     integer            :: k 
@@ -2313,7 +2315,86 @@ contains
           enddo
        endif
 
+! MB: for ac70
+       if(LIS_FORC_PREC_ac%selectOpt.eq.1) then
+          do k=1,LIS_FORC_PREC_ac%vlevels
+             call ESMF_StateGet(LIS_FORC_State(n),(LIS_FORC_PREC_ac%varname(k)),&
+                  PREC_ac_Field,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_StateGet:PREC_ac in diagnoseForcingOutput')
+
+             call ESMF_FieldGet(PREC_ac_Field,localDE=0, farrayPtr=PREC_ac,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_FieldGet:PREC_ac in diagnoseForcingOutput')
+             
+             do t=1,LIS_rc%ntiles(n)
+                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_PREC_ac_FORC,value=&
+                     PREC_ac(t),vlevel=k,unit="kg m-2",direction="-", &
+                     valid_min = 0.0, valid_max=1000.0)
+             enddo
+          enddo
+       endif
+
+       if(LIS_FORC_TMIN_ac%selectOpt.eq.1) then
+          do k=1,LIS_FORC_TMIN_ac%vlevels
+             call ESMF_StateGet(LIS_FORC_State(n),(LIS_FORC_TMIN_ac%varname(k)),&
+                  TMIN_ac_Field,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_StateGet:TMIN_ac in diagnoseForcingOutput')
+
+             call ESMF_FieldGet(TMIN_ac_Field,localDE=0, farrayPtr=TMIN_ac,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_FieldGet:TMIN_ac in diagnoseForcingOutput')
+             
+             do t=1,LIS_rc%ntiles(n)
+                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_TMIN_ac_FORC,value=&
+                     TMIN_ac(t),vlevel=k,unit="kg m-2",direction="-", &
+                     valid_min = 0.0, valid_max=1000.0)
+             enddo
+          enddo
+       endif
+
+       if(LIS_FORC_TMAX_ac%selectOpt.eq.1) then
+          do k=1,LIS_FORC_TMAX_ac%vlevels
+             call ESMF_StateGet(LIS_FORC_State(n),(LIS_FORC_TMAX_ac%varname(k)),&
+                  TMAX_ac_Field,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_StateGet:TMAX_ac in diagnoseForcingOutput')
+
+             call ESMF_FieldGet(TMAX_ac_Field,localDE=0, farrayPtr=TMAX_ac,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_FieldGet:TMAX_ac in diagnoseForcingOutput')
+             
+             do t=1,LIS_rc%ntiles(n)
+                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_TMAX_ac_FORC,value=&
+                     TMAX_ac(t),vlevel=k,unit="kg m-2",direction="-", &
+                     valid_min = 0.0, valid_max=1000.0)
+             enddo
+          enddo
+       endif
+
+       if(LIS_FORC_ETo_ac%selectOpt.eq.1) then
+          do k=1,LIS_FORC_ETo_ac%vlevels
+             call ESMF_StateGet(LIS_FORC_State(n),(LIS_FORC_ETo_ac%varname(k)),&
+                  ETo_ac_Field,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_StateGet:ETo_ac in diagnoseForcingOutput')
+
+             call ESMF_FieldGet(ETo_ac_Field,localDE=0, farrayPtr=ETo_ac,rc=status)
+             call LIS_verify(status,&
+                  'error in ESMF_FieldGet:ETo_ac in diagnoseForcingOutput')
+             
+             do t=1,LIS_rc%ntiles(n)
+                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_ETo_ac_FORC,value=&
+                     ETo_ac(t),vlevel=k,unit="kg m-2",direction="-", &
+                     valid_min = 0.0, valid_max=1000.0)
+             enddo
+          enddo
+       endif
+
     endif
+
+
   end subroutine diagnoseForcingOutput
 
 end module LIS_metforcingMod

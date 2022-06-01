@@ -83,6 +83,22 @@ subroutine Ac70_f2t(n)
     type(ESMF_Field)  :: snowField
     real, pointer     :: snowf(:)
 
+    ! PREC_ac [mm/day]
+    type(ESMF_Field)  :: PREC_ac_Field
+    real, pointer     :: PREC_ac(:)
+ 
+    ! TMIN_ac [degC]
+    type(ESMF_Field)  :: TMIN_ac_Field
+    real, pointer     :: TMIN_ac(:)
+ 
+    ! TMAX_ac [degC]
+    type(ESMF_Field)  :: TMAX_ac_Field
+    real, pointer     :: TMAX_ac(:)
+ 
+    ! ETo_ac [mm/d]
+    type(ESMF_Field)  :: ETo_ac_Field
+    real, pointer     :: ETo_ac(:)
+
     integer, pointer   :: layer_h(:), layer_m(:)
  
     !!! GET FORCING FIELDS FROM LIS
@@ -150,8 +166,37 @@ subroutine Ac70_f2t(n)
         call ESMF_FieldGet(snowField, localDE = 0, farrayPtr = snowf, rc = status)
         call LIS_verify(status, "Ac70_f2t: error retrieving Snowf")
     endif 
-    
+
+! MB: AC_70 
+
+    ! get PREC_ac
+    call ESMF_StateGet(LIS_FORC_State(n), trim(LIS_FORC_PREC_AC%varname(1)), prec_ac_Field, rc=status)
+    call LIS_verify(status, "Ac70_f2t: error getting PREC_ac")
+
+    call ESMF_FieldGet(prec_ac_Field, localDE = 0, farrayPtr = prec_ac, rc = status)
+    call LIS_verify(status, "Ac70_f2t: error retrieving PREC_ac")
  
+    ! get TMIN_ac
+    call ESMF_StateGet(LIS_FORC_State(n), trim(LIS_FORC_Eto_AC%varname(1)), prec_ac_Field, rc=status)
+    call LIS_verify(status, "Ac70_f2t: error getting TMIN_ac")
+
+    call ESMF_FieldGet(prec_ac_Field, localDE = 0, farrayPtr = prec_ac, rc = status)
+    call LIS_verify(status, "Ac70_f2t: error retrieving TMIN_ac")
+
+    ! get TMAX_ac
+    call ESMF_StateGet(LIS_FORC_State(n), trim(LIS_FORC_Eto_AC%varname(1)), prec_ac_Field, rc=status)
+    call LIS_verify(status, "Ac70_f2t: error getting TMAX_ac")
+
+    call ESMF_FieldGet(prec_ac_Field, localDE = 0, farrayPtr = prec_ac, rc = status)
+    call LIS_verify(status, "Ac70_f2t: error retrieving TMAX_ac")
+
+    ! get ETo_ac
+    call ESMF_StateGet(LIS_FORC_State(n), trim(LIS_FORC_Eto_AC%varname(1)), prec_ac_Field, rc=status)
+    call LIS_verify(status, "Ac70_f2t: error getting ETo_ac")
+
+    call ESMF_FieldGet(prec_ac_Field, localDE = 0, farrayPtr = prec_ac, rc = status)
+    call LIS_verify(status, "Ac70_f2t: error retrieving ETo_ac")
+
     !!! set the forcing counter
     AC70_struc(n)%forc_count = AC70_struc(n)%forc_count + 1
  
