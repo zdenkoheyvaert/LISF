@@ -649,6 +649,7 @@ subroutine LIS_DAobs_plugin
 ! Hans Lievens added S1 snow depth case
 #if ( defined DA_OBS_S1_SNWD )
 !S1 SNWD snow obs 
+   call registerdaobsclass(trim(LIS_S1_SNWD_obsId),"LSM")
    call registerdaobssetup(trim(LIS_S1_SNWD_obsId)//char(0), &
         S1_SNWD_setup)
    call registerreaddaobs(trim(LIS_S1_SNWD_obsId)//char(0),  &
