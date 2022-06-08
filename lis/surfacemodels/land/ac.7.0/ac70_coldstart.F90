@@ -335,6 +335,7 @@ subroutine Ac70_coldstart(mtype)
                 AC70_struc(n)%ac70(t)%RainRecord = GetRainRecord()
                 AC70_struc(n)%ac70(t)%EToRecord = GetEToRecord()
                 AC70_struc(n)%ac70(t)%daynri = GetDayNri()
+                AC70_struc(n)%ac70(t)%irun = 1
                 !AC70_struc(n)%daynrinextclimaterecord = GetDayNri() + 1
                 AC70_struc(n)%daynrinextclimaterecord = 1
 
@@ -375,10 +376,8 @@ subroutine Ac70_coldstart(mtype)
                 AC70_struc(n)%ac70(t)%ECstorage = GetECstorage() !EC surface storage dS/m
                 AC70_struc(n)%ac70(t)%Eact = GetEact() ! mm/day
                 AC70_struc(n)%ac70(t)%Epot = GetEpot() ! mm/day
-                AC70_struc(n)%ac70(t)%ETo = GetETo() ! mm/day
                 AC70_struc(n)%ac70(t)%Drain = GetDrain()  ! mm/day
                 AC70_struc(n)%ac70(t)%Infiltrated = GetInfiltrated() ! mm/day
-                AC70_struc(n)%ac70(t)%Rain = GetRain()  ! mm/day
                 AC70_struc(n)%ac70(t)%RootingDepth = GetRootingDepth()
                 AC70_struc(n)%ac70(t)%Runoff = GetRunoff()  ! mm/day
                 AC70_struc(n)%ac70(t)%SaltInfiltr = GetSaltInfiltr() ! salt infiltrated in soil profile Mg/ha
@@ -387,9 +386,20 @@ subroutine Ac70_coldstart(mtype)
                 AC70_struc(n)%ac70(t)%Tact = GetTact() ! mm/day
                 AC70_struc(n)%ac70(t)%Tpot = GetTpot() ! mm/day
                 AC70_struc(n)%ac70(t)%TactWeedInfested = GetTactWeedInfested() !mm/day
-                AC70_struc(n)%ac70(t)%AC70Tmax = GetTmax() ! degC
-                AC70_struc(n)%ac70(t)%AC70Tmin =GetTmin() ! degC
 
+                if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
+                   AC70_struc(n)%ac70(t)%PREC_ac = 0.0  ! mm/day
+                   AC70_struc(n)%ac70(t)%Tmin_ac = 0.0 ! degC
+                   AC70_struc(n)%ac70(t)%Tmax_ac = 0.0 ! degC
+                   AC70_struc(n)%ac70(t)%ETo_ac = 0.0 ! mm/day
+                else
+                   AC70_struc(n)%ac70(t)%PREC_ac = GetRain()  ! mm/day
+                   AC70_struc(n)%ac70(t)%Tmin_ac =GetTmin() ! degC
+                   AC70_struc(n)%ac70(t)%Tmax_ac = GetTmax() ! degC
+                   AC70_struc(n)%ac70(t)%ETo_ac = GetETo() ! mm/day
+                end if
+
+                AC70_struc(n)%ac70(t)%InitializeRun = 1 ! gets 1 at end of year 
 
                 AC70_struc(n)%ac70(t)%GwTable = GetGwTable()
                 AC70_struc(n)%ac70(t)%PlotVarCrop = GetPlotVarCrop()

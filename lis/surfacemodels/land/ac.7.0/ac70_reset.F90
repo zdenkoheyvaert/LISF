@@ -50,6 +50,10 @@ subroutine Ac70_reset()
          AC70_struc(n)%ac70(tt)%qair = 0.0
          AC70_struc(n)%ac70(tt)%wind_e = 0.0
          AC70_struc(n)%ac70(tt)%wind_n = 0.0
+         AC70_struc(n)%ac70(tt)%PREC_ac = 0.0
+         AC70_struc(n)%ac70(tt)%TMIN_ac = 0.0
+         AC70_struc(n)%ac70(tt)%TMAX_ac = 0.0
+         AC70_struc(n)%ac70(tt)%ETo_ac = 0.0
      enddo ! end of tile (tt) loop
      AC70_struc(n)%forc_count = 0
      

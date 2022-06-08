@@ -173,7 +173,12 @@ module LIS_histDataMod
   public :: LIS_MOC_COSZENFORC  
   public :: LIS_MOC_ALBEDOFORC  
   public :: LIS_MOC_PARDRFORC  
-  public :: LIS_MOC_PARDFFORC  
+  public :: LIS_MOC_PARDFFORC 
+  ! MB: AC70 
+  public :: LIS_MOC_PREC_ac_FORC 
+  public :: LIS_MOC_TMIN_ac_FORC 
+  public :: LIS_MOC_TMAX_ac_FORC 
+  public :: LIS_MOC_ETo_ac_FORC 
 !<for vic>
   public :: LIS_MOC_SNOWFLAGFORC
   public :: LIS_MOC_DENSITYFORC
@@ -634,6 +639,12 @@ module LIS_histDataMod
    ! CLSM FORCING VARIABLES
    integer :: LIS_MOC_PARDRFORC  = -9999
    integer :: LIS_MOC_PARDFFORC  = -9999
+
+   ! AC70 FORCING VARIABLES
+   integer :: LIS_MOC_PREC_ac_FORC  = -9999
+   integer :: LIS_MOC_TMIN_ac_FORC  = -9999
+   integer :: LIS_MOC_TMAX_ac_FORC  = -9999
+   integer :: LIS_MOC_ETo_ac_FORC  = -9999
 
    ! PARAMETER OUTPUT - EXPERIMENTAL (USE W/WRF-WPS)
    integer :: LIS_MOC_LANDMASK   = -9999
@@ -2666,6 +2677,56 @@ contains
             n,1,ntiles,(/"Pa"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
+
+    ! MB: AC70
+    call ESMF_ConfigFindLabel(modelSpecConfig,"PREC_ac_f:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+         "PREC_ac_f",&
+         "precipitation kg m-2",&
+         "precipitation",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_PREC_ac_FORC,&
+            LIS_histData(n)%head_lsm_list,&
+            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            model_patch=.true.)
+    endif
+
+    call ESMF_ConfigFindLabel(modelSpecConfig,"TMIN_ac_f:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+         "TMIN_ac_f",&
+         "min temperature degC",&
+         "max temperature",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_TMIN_ac_FORC,&
+            LIS_histData(n)%head_lsm_list,&
+            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            model_patch=.true.)
+    endif
+
+    call ESMF_ConfigFindLabel(modelSpecConfig,"TMAX_ac_f:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+         "TMAX_ac_f",&
+         "max temperature degC",&
+         "min temperature",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_TMAX_ac_FORC,&
+            LIS_histData(n)%head_lsm_list,&
+            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            model_patch=.true.)
+    endif
+
+    call ESMF_ConfigFindLabel(modelSpecConfig,"ETo_ac_f:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+         "ETo_ac_f",&
+         "potential evaporation kg m-2",&
+         "potential evaporation",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_ETo_ac_FORC,&
+            LIS_histData(n)%head_lsm_list,&
+            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            model_patch=.true.)
+    endif
+    ! MB: AC70 
 
     call ESMF_ConfigFindLabel(modelSpecConfig,"SWdown_f:",rc=rc)
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &

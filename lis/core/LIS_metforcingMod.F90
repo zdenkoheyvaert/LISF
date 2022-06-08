@@ -344,6 +344,23 @@ contains
     call get_forcingvar_attributes(forcConfig,LIS_FORC_Forc_Hgt,&
          "Height of Forcing Variables", tnvars,status)
 
+! MB: for AC70
+    call ESMF_ConfigFindLabel(forcConfig,"PREC_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_PREC_ac,&
+         "precipitation", tnvars,status)
+
+    call ESMF_ConfigFindLabel(forcConfig,"TMIN_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_TMIN_ac,&
+         "min temperature", tnvars,status)
+
+    call ESMF_ConfigFindLabel(forcConfig,"TMAX_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_TMAX_ac,&
+         "max temperature", tnvars,status)
+
+    call ESMF_ConfigFindLabel(forcConfig,"ETo_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_ETo_ac,&
+         "potential evaporation", tnvars,status)
+
     call ESMF_ConfigFindLabel(forcConfig,"Ch:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_Ch,&
          "Surface Exchange Coefficient for Heat", tnvars,status)
@@ -578,6 +595,23 @@ contains
     call get_forcingvar_attributes(forcConfig,LIS_FORC_Forc_Hgt,&
          "Height of Forcing Variables", tnvars,status)
 
+! MB: for AC70
+    call ESMF_ConfigFindLabel(forcConfig,"PREC_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_PREC_ac,&
+         "precipitation", tnvars,status)
+
+    call ESMF_ConfigFindLabel(forcConfig,"TMIN_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_TMIN_ac,&
+         "min temperature", tnvars,status)
+
+    call ESMF_ConfigFindLabel(forcConfig,"TMAX_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_TMAX_ac,&
+         "max temperature", tnvars,status)
+
+    call ESMF_ConfigFindLabel(forcConfig,"ETo_ac:",rc=status)
+    call get_forcingvar_attributes(forcConfig,LIS_FORC_ETo_ac,&
+         "potential evaporation", tnvars,status)
+
     call ESMF_ConfigFindLabel(forcConfig,"Ch:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_Ch,&
          "Surface Exchange Coefficient for Heat", tnvars,status)
@@ -796,6 +830,17 @@ contains
        call add_forcing_fields(n,LIS_FORC_State(n),&
             LIS_FORC_Base_State(n,:),LIS_forc_o3)
 
+!<for ac70>
+
+!</for ac70>
+       call add_forcing_fields(n,LIS_FORC_State(n),&
+            LIS_FORC_Base_State(n,:),LIS_forc_PREC_ac)
+       call add_forcing_fields(n,LIS_FORC_State(n),&
+            LIS_FORC_Base_State(n,:),LIS_forc_TMIN_ac)
+       call add_forcing_fields(n,LIS_FORC_State(n),&
+            LIS_FORC_Base_State(n,:),LIS_forc_TMAX_ac)
+       call add_forcing_fields(n,LIS_FORC_State(n),&
+            LIS_FORC_Base_State(n,:),LIS_forc_ETo_ac)
 !<for vic>
        call add_forcing_fields(n,LIS_FORC_State(n),&
             LIS_FORC_Base_State(n,:),LIS_FORC_SNOWFLAG)
@@ -1695,6 +1740,7 @@ contains
     type(ESMF_Field)   :: PREC_ac_Field,TMIN_ac_Field,TMAX_ac_Field,ETo_ac_Field
     real,pointer       :: tmp(:),q2(:),uwind(:),vwind(:),snowf(:)
     real,pointer       :: swd(:),lwd(:),psurf(:),pcp(:),cpcp(:)
+    real,pointer       :: PREC_ac(:),TMIN_ac(:),TMAX_ac(:),ETo_ac(:)
     integer            :: k 
     type(ESMF_Field)   :: swdirField,swdifField,hField,chField,cmField
     type(ESMF_Field)   :: emissField,mixField,coszField,albField

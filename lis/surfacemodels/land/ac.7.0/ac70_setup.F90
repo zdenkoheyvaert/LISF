@@ -51,13 +51,19 @@ subroutine Ac70_setup()
 
     !!! MB:
     use ac_global, only: typeproject_typeprm, &
-                         typeproject_typepro, &
-                         SetReadNextClimRecord
+                         typeproject_typepro
     use ac_kinds, only: intEnum, &
-                        int8
+                        int8,&
+                        dp
     use ac_run, only:    GetSimulation_ToDayNr, &
                          InitializeSimulation, &
-                         InitializeRun
+                         InitializeRunPart1,&
+                         InitializeRunPart2,&
+                         SetRain,& 
+                         SetTmin,&
+                         SetTmax,& 
+                         SetETo,&
+                         InitializeClimate
                          
     use ac_startunit, only:  GetListProjectsFile, &
                          GetNumberOfProjects, &
@@ -95,15 +101,13 @@ subroutine Ac70_setup()
     real, allocatable :: placeholder(:,:)
     
     !!! MB_AC70
-    integer(int8) :: irun
-    integer :: daynr, todaynr, iproject, nprojects, nruns
+    integer :: daynr, todaynr, iproject, nprojects, NrRuns
     integer(intEnum) :: TheProjectType
     logical :: ListProjectFileExist
     character(len=:), allocatable :: ListProjectsFile, TheProjectFile
 
     ! Everything below is the equivalent of "StartTheProgram()"
 
-    call SetReadNextClimRecord(0)
     call InitializeTheProgram()
 
     ListProjectsFile = GetListProjectsFile()
@@ -125,13 +129,13 @@ subroutine Ac70_setup()
         call InitializeSimulation(TheProjectFile, TheProjectType)
 
         if (TheProjectType == typeproject_typepro) then
-            nruns = 1
+            NrRuns = 1
         elseif (TheProjectType == typeproject_typeprm) then
-            nruns = GetSimulation_NrRuns()
+            NrRuns = GetSimulation_NrRuns()
         end if
-    
-        irun = 1
-        call InitializeRun(irun, TheProjectType);
+        
+        ! 
+
     end do
     !!! MB_AC70
 
@@ -373,6 +377,10 @@ subroutine Ac70_setup()
             AC70_struc(n)%ac70(t)%WRRAT = WRRAT(AC70_struc(n)%ac70(t)%vegetype)
             AC70_struc(n)%ac70(t)%MRP = MRP(AC70_struc(n)%ac70(t)%vegetype)
             ! SY: End lines following those in read_mp_veg_parameters
+            
+            ! MB:
+            AC70_struc(n)%ac70(t)%NrRuns = NrRuns
+            AC70_struc(n)%ac70(t)%TheProjectType = TheProjectType
 
         enddo ! do t = 1, LIS_rc%npatch(n, mtype)
         ! SY: End for enabling OPTUE 

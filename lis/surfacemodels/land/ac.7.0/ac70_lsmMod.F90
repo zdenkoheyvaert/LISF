@@ -321,6 +321,10 @@ contains
                 AC70_struc(n)%ac70(t)%qair = 0.0
                 AC70_struc(n)%ac70(t)%wind_e = 0.0
                 AC70_struc(n)%ac70(t)%wind_n = 0.0
+                AC70_struc(n)%ac70(t)%PREC_ac = 0.0
+                AC70_struc(n)%ac70(t)%TMIN_ac = 0.0
+                AC70_struc(n)%ac70(t)%TMAX_ac = 0.0
+                AC70_struc(n)%ac70(t)%ETo_ac = 0.0
                 !Added by Chandana Gangodagamage
 #if WRF_HYDRO
                 AC70_struc(n)%ac70(t)%sfcheadrt = 0.0

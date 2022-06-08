@@ -84,6 +84,7 @@ subroutine read_merra2_ac(n, month, findex,          &
   integer   :: prectotId, precconId, swgdnId, lwgabId, emisId
   integer   :: precsnoId, hlmlID
   integer   :: swlandId, pardrId, pardfId
+  integer   :: PREC_ac_Id, TMIN_ac_Id, TMAX_ac_Id, ETo_ac_Id
   integer   :: nr_index, nc_index
   logical   :: file_exists, file_exists1
   integer   :: c,r,t,k,iret
@@ -151,6 +152,21 @@ subroutine read_merra2_ac(n, month, findex,          &
         enddo
      enddo
   enddo
+  call interp_merra2_ac_var(n,findex,month,tair,  1, .false., merraforc)
+  call interp_merra2_ac_var(n,findex,month,qair,  2, .false., merraforc)
+  call interp_merra2_ac_var(n,findex,month,swgdn, 3, .false.,merraforc)
+  call interp_merra2_ac_var(n,findex,month,lwgab, 4, .false.,merraforc)
+  call interp_merra2_ac_var(n,findex,month,uwind,  5, .false., merraforc)
+  call interp_merra2_ac_var(n,findex,month,vwind,  6, .false., merraforc)
+  call interp_merra2_ac_var(n,findex,month,ps,  7, .false., merraforc)
+  call interp_merra2_ac_var(n,findex,month,prectot,  8, .true., merraforc)
+  call interp_merra2_ac_var(n,findex,month,preccon,  9, .true., merraforc)
+  call interp_merra2_ac_var(n,findex,month,precsno,  10, .true., merraforc)
+  call interp_merra2_ac_var(n,findex,month,swland,11,.false.,merraforc)
+  call interp_merra2_ac_var(n,findex,month,pardr,12,.false.,merraforc)
+  call interp_merra2_ac_var(n,findex,month,pardf,13,.false.,merraforc)
+  call interp_merra2_ac_var(n,findex,month,hlml,  14, .false.,merraforc)
+
 ! Read single layer file (*) fields:
   inquire(file=ac70_daily_name,exist=file_exists) 
   if(file_exists) then 
@@ -163,8 +179,6 @@ subroutine read_merra2_ac(n, month, findex,          &
           'nf90_inq_varid failed for PREC_ac in read_merra2_ac')
      call LIS_verify(nf90_get_var(ftn,PREC_ac_Id, PREC_ac2D), &
           'nf90_get_var failed for ps in read_merra2_ac') 
-     call LIS_verify(nf90_close(ftn), &
-          'failed to close file in read_merra2_ac')
      do t=1,24
        PREC_ac(:,:,t) = PREC_ac2D
      enddo
@@ -175,8 +189,6 @@ subroutine read_merra2_ac(n, month, findex,          &
           'nf90_inq_varid failed for TMIN_ac in read_merra2_ac')
      call LIS_verify(nf90_get_var(ftn,TMIN_ac_Id, TMIN_ac2D), &
           'nf90_get_var failed for ps in read_merra2_ac') 
-     call LIS_verify(nf90_close(ftn), &
-          'failed to close file in read_merra2_ac')
      do t=1,24
        TMIN_ac(:,:,t) = TMIN_ac2D
      enddo
@@ -187,8 +199,6 @@ subroutine read_merra2_ac(n, month, findex,          &
           'nf90_inq_varid failed for TMAX_ac in read_merra2_ac')
      call LIS_verify(nf90_get_var(ftn,TMAX_ac_Id, TMAX_ac2D), &
           'nf90_get_var failed for ps in read_merra2_ac') 
-     call LIS_verify(nf90_close(ftn), &
-          'failed to close file in read_merra2_ac')
      do t=1,24
        TMAX_ac(:,:,t) = TMAX_ac2D
      enddo
@@ -199,13 +209,14 @@ subroutine read_merra2_ac(n, month, findex,          &
           'nf90_inq_varid failed for ETo_ac in read_merra2_ac')
      call LIS_verify(nf90_get_var(ftn,ETo_ac_Id, ETo_ac2D), &
           'nf90_get_var failed for ps in read_merra2_ac') 
-     call LIS_verify(nf90_close(ftn), &
-          'failed to close file in read_merra2_ac')
      do t=1,24
        ETo_ac(:,:,t) = ETo_ac2D
      enddo
      call interp_merra2_ac_var(n,findex,month,ETo_ac,  18, .false., merraforc)
-
+     
+     ! close file
+     call LIS_verify(nf90_close(ftn), &
+          'failed to close file in read_merra2_ac')
 
   else
      write(LIS_logunit,*) '[ERR] ',trim(ac70_daily_name)//' does not exist'
@@ -349,7 +360,7 @@ subroutine interp_merra2_ac_var(n,findex,month, input_var,  var_index, &
      enddo
      if ( pcp_flag .and. merra2_ac_struc(n)%usescalef==1 ) then 
 
-        call rescaleWithCDFmatching(&
+        call rescaleWithCDFmatching_ac(&
              merra2_ac_struc(n)%ncold,&
              merra2_ac_struc(n)%nrold,&
              merra2_ac_struc(n)%nbins,&
@@ -596,11 +607,11 @@ end subroutine interp_merra2_ac_var
 
 !BOP
 ! 
-! !ROUTINE: rescaleWithCDFmatching
-! \label{rescaleWithCDFmatching}
+! !ROUTINE: rescaleWithCDFmatching_ac
+! \label{rescaleWithCDFmatching_ac}
 !
 ! !INTERFACE:
-  subroutine rescaleWithCDFmatching(&
+  subroutine rescaleWithCDFmatching_ac(&
        nc,            & 
        nr,            & 
        nbins,         & 
@@ -756,5 +767,5 @@ end subroutine interp_merra2_ac_var
           endif
     enddo
  enddo
-end subroutine rescaleWithCDFmatching
+end subroutine rescaleWithCDFmatching_ac
 

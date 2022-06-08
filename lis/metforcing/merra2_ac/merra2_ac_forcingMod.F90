@@ -187,7 +187,7 @@ contains
     merra2_ac_struc%reset_flag = .false.
 
     do n=1, LIS_rc%nnest
-       merra2_ac_struc(n)%ts = 3600  !check
+       merra2_ac_struc(n)%ts = 86400  !check
        call LIS_update_timestep(LIS_rc, n, merra2_ac_struc(n)%ts)
     enddo
 

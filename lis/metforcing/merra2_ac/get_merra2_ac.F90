@@ -165,10 +165,11 @@ subroutine get_merra2_ac(n, findex)
   integer           :: c, r,kk
   integer           :: yr1, mo1, da1, hr1, mn1, ss1, doy1
   integer           :: yr2, mo2, da2, hr2, mn2, ss2, doy2
-  real*8            :: time1, time2, timenow
-  real              :: gmt1, gmt2
+  integer           :: yr_ac, mo_ac, da_ac, hr_ac, mn_ac, ss_ac, doy_ac
+  real*8            :: time1, time2, timenow, time_merra2_ac
+  real              :: gmt1, gmt2, gmt_ac
   real              :: ts1, ts2
-
+    
   integer           :: hr_int1, hr_int2
   integer           :: movetime  ! Flag to move bookend2 files to bookend1
 
@@ -200,13 +201,14 @@ subroutine get_merra2_ac(n, findex)
      hr1=0
      mn1=0
      ss1=0
-     if ( LIS_rc%hr == 0 .and. LIS_rc%mn < 30 ) then
-        ! initialize ringtime to today at 00:30z
-        ts1=30*60
-     else
-        ! initialize ringtime to tomorrow at 00:30z
-        ts1=86400 + 30*60 ! 1 day plus 30 minutes
-     endif
+     !if ( LIS_rc%hr == 0 .and. LIS_rc%mn < 30 ) then
+     !   ! initialize ringtime to today at 00:30z
+     !   ts1=30*60
+     !else
+     !   ! initialize ringtime to tomorrow at 00:30z
+     !   ts1=86400 + 30*60 ! 1 day plus 30 minutes
+     !endif
+     ts1=86400 ! 1 day
      call LIS_tick(merra2_ac_struc(n)%ringtime,doy1,gmt1,&
                    yr1,mo1,da1,hr1,mn1,ss1,ts1)
   endif
@@ -217,11 +219,25 @@ subroutine get_merra2_ac(n, findex)
   yr1=LIS_rc%yr
   mo1=LIS_rc%mo
   da1=LIS_rc%da
-  hr1=LIS_rc%hr
-  mn1=LIS_rc%mn
+  hr1=0
+  mn1=0
   ss1=0
   call LIS_tick(timenow,doy1,gmt1,&
                 yr1,mo1,da1,hr1,mn1,ss1,0.0)
+
+  ! MERRA2_AC daily files --> climate of the last 24 hours before 00:00
+   ts1= -86400 ! 1 day 
+  call LIS_tick(time_merra2_ac,doy1,gmt1,&
+                yr1,mo1,da1,hr1,mn1,ss1,ts1)
+  call LIS_time2date(time_merra2_ac,doy_ac,gmt_ac,yr_ac,mo_ac,da_ac,hr_ac,mn_ac)
+  
+  ! Read MERRA2 - Bookend 1 files:
+     do kk= merra2_ac_struc(n)%st_iterid, merra2_ac_struc(n)%en_iterid
+        call merra2files_ac(n,merra2_ac_struc(n)%merra2dir, yr_ac, mo_ac, da_ac, ac70_daily_name)
+        call read_merra2_ac(n, mo1, &
+             findex, ac70_daily_name,&
+             merra2_ac_struc(n)%merraforc1(kk,:,:,:), ferror)
+     enddo
 
  ! reset ringtime to tomorrow at 00:30z
  yr1=LIS_rc%yr
@@ -230,88 +246,15 @@ subroutine get_merra2_ac(n, findex)
  hr1=0
  mn1=0
  ss1=0
- ts1=86400 + 30*60 ! 1 day plus 30 minutes
+ ts1=86400 ! 1 day 
  call LIS_tick(merra2_ac_struc(n)%ringtime,doy1,gmt1,&
                yr1,mo1,da1,hr1,mn1,ss1,ts1)
 
-             ! MB:
-  ! Read MERRA2 - Bookend 1 files:
-     do kk= merra2_ac_struc(n)%st_iterid, merra2_ac_struc(n)%en_iterid
-        call merra2files(n,merra2_ac_struc(n)%merra2dir, yr1, mo1, da1)
-        call read_merra2_ac(n, mo1, &
-             findex, ac70_daily_name,&
-             merra2_ac_struc(n)%merraforc1(kk,:,:,:), ferror)
-     enddo
-
-
-  if ( timenow >= merra2_ac_struc(n)%merra2time2 ) then
-     yr1 = LIS_rc%yr
-     mo1 = LIS_rc%mo
-     da1 = LIS_rc%da
-     hr1 = LIS_rc%hr
-     mn1 = 0
-     ss1 = 0
-
-     yr2 = LIS_rc%yr
-     mo2 = LIS_rc%mo
-     da2 = LIS_rc%da
-     hr2 = LIS_rc%hr
-     mn2 = 0
-     ss2 = 0
-
-     if ( LIS_rc%mn < 30 ) then
-        ts1 = -30*60
-        ts2 =  30*60
-     else
-        ts1 = 30*60
-        ts2 = 90*60
-     endif
 
      call LIS_tick(time1,doy1,gmt1,yr1,mo1,da1,hr1,mn1,ss1,ts1)
-     call LIS_tick(time2,doy2,gmt2,yr2,mo2,da2,hr2,mn2,ss2,ts2)
-
-     if( LIS_rc%nts(n) == 3600 ) then   ! == 1-hr timestep
-        if ( LIS_rc%hr == 23 ) then
-           order = 1
-           hr_int1 = 23
-           hr_int2 = 24
-        elseif ( LIS_rc%hr == 0 ) then
-           order = 2
-           hr_int1 = 24
-           hr_int2 = 1
-        else
-           order = 1
-           hr_int1 = hr1+1
-           hr_int2 = hr2+1
-        endif
-     else  ! Timesteps < 1 hour
-        if (LIS_rc%hr.eq.23) then
-           if (LIS_rc%mn.ge.30) then
-              order = 2
-              hr_int1 = 24
-              hr_int2 = 1
-           else    ! If at hour 23 and LIS minute < 30:
-              order = 1
-              hr_int1 = 23
-              hr_int2 = 24
-           endif
-        ! For all other hours (0-22Z):
-        else
-           ! If at hour=0Z and minute < 30:   ! Should this be done when hourly time step run??
-           if ((LIS_rc%hr.eq.0).and.(LIS_rc%mn.lt.30)) then
-              order = 2
-              hr_int1 = 24
-              hr_int2 = 1
-           ! If at any other hour (unless 0 hr .and. >= 30 minutes):
-           else
-              order = 1
-              hr_int1 = hr1+1
-              hr_int2 = hr2+1
-           endif
-        endif
-     endif
 
      ! Assign MERRA2 forcing fields to two LIS time-interp placeholders (metdata1,2):
+     do r=1,LIS_rc%lnr(n)
         do c=1,LIS_rc%lnc(n)
            if (LIS_domain(n)%gindex(c,r).ne.-1) then
 
@@ -324,20 +267,19 @@ subroutine get_merra2_ac(n, findex)
       enddo
 
       ! Assign the hourly times:
-      merra2_ac_struc(n)%merra2time2 = time2
       merra2_ac_struc(n)%merra2time1 = time1
+      merra2_ac_struc(n)%merra2time2 = time1
 
-  endif
 
 end subroutine get_merra2_ac
 
 
 !BOP
-! !ROUTINE: merra2files
+! !ROUTINE: merra2files_ac
 ! \label{merra2files}
 !
 ! !INTERFACE:
-subroutine merra2files(n, merra2dir, yr, mo, da)
+subroutine merra2files_ac(n, merra2dir, yr, mo, da, ac70_daily_name)
 
 ! !USES:
   use LIS_coreMod
@@ -406,5 +348,5 @@ subroutine merra2files(n, merra2dir, yr, mo, da)
      ! Daily fields:
      ac70_daily_name = trim(merra2dir)//'/'//prefix//cdate//'.nc'
      
-end subroutine merra2files
+end subroutine merra2files_ac
 

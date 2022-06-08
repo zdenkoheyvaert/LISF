@@ -70,7 +70,7 @@ subroutine timeinterp_merra2_ac(n,findex)
   real,pointer       :: tmp(:),q2(:),uwind(:),vwind(:),hlml(:)
   real,pointer       :: swd(:),lwd(:),psurf(:),pcp(:),cpcp(:)
   real,pointer       :: swnet(:),pardr(:),pardf(:),snowf(:)
-  real,pointer       :: PREC_ac(:),TMIN(:),TMAX(:),ETo(:)
+  real,pointer       :: PREC_ac(:),TMIN_ac(:),TMAX_ac(:),ETo_ac(:)
   real               :: tmp_real(2)
 
   btime=merra2_ac_struc(n)%merra2time1
@@ -258,6 +258,8 @@ subroutine timeinterp_merra2_ac(n,findex)
      call LIS_verify(status)
   endif
 
+
+  if (LIS_FORC_PREC_ac%selectOpt.eq.1) then
   call ESMF_FieldGet(PREC_ac_Field,localDE=0,farrayPtr=PREC_ac,rc=status)
   call LIS_verify(status)
 
@@ -269,6 +271,7 @@ subroutine timeinterp_merra2_ac(n,findex)
 
   call ESMF_FieldGet(ETo_ac_Field,localDE=0,farrayPtr=ETo_ac,rc=status)
   call LIS_verify(status)
+  endif
 
   mfactor = LIS_rc%nensem(n)/merra2_ac_struc(n)%nIter
 

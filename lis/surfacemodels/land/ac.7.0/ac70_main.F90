@@ -61,7 +61,6 @@ subroutine Ac70_main(n)
                          SetRootZoneWC_ZtopFC,&
                          SetRootZoneWC_ZtopWP,&
                          SetRootZoneWC_ZtopThresh,&
-                         setreadnextclimrecord,&
                          GetCompartment,&
                          SetCompartment,&
                          GetSoilLayer,&
@@ -110,6 +109,7 @@ subroutine Ac70_main(n)
                          SetClimRecord,&
                          SetRainRecord,&
                          SetEToRecord,&
+                         GetSimulParam_GDDMethod,&
 
                          GetGenerateTimeMode,&
                         GetGenerateDepthMode,&
@@ -212,8 +212,13 @@ subroutine Ac70_main(n)
                         GetIrriBeforeSeason,&
                         SetIrriBeforeSeason,&
                         GetIrriAfterSeason,&
-                        SetIrriAfterSeason
-
+                        SetIrriAfterSeason,&
+                        GetCrop_Day1,&
+                        DegreesDay,&
+                         GetSimulation_ToDayNr, &
+                         SetSimulation_ToDayNr, &
+                        SetSimulation_SumGDDfromDay1,&
+                        SetSimulation_SumGDD
            !!! MB_AC70
 
     use ac_run, only:    SetDayNri,&
@@ -223,7 +228,7 @@ subroutine Ac70_main(n)
                          SetIrriInterval,&
                          SetIrriInfoRecord1,&
                          SetIrriInfoRecord2,&
-
+                         GetTheProjectFile,&
                         GetGwTable,&
                         GetPlotVarCrop,&
                         GetStressTot,&
@@ -378,13 +383,18 @@ subroutine Ac70_main(n)
                         SetNoMoreCrop,&
                         SetCGCadjustmentAfterCutting,&
                         AdvanceOneTimeStep, &
+                        ReadClimateNextDay, &
+                        SetGDDVariablesNextDay, &
                          FinalizeRun1, &
                          FinalizeRun2, &
                          GetDayNri,&
-                         GetSimulation_ToDayNr, &
+                         GetCrop_Tbase, &
+                         GetCrop_Tupper, &
                          FinalizeSimulation, &
-                         InitializeSimulation, &
-                         InitializeRun
+                         InitializeSimulation ,&
+                         InitializeRunPart1 ,&
+                         InitializeRunPart2 ,&
+                         InitializeClimate
                          
     use ac_startunit, only:  FinalizeTheProgram, &
                          GetListProjectsFile, &
@@ -400,16 +410,17 @@ subroutine Ac70_main(n)
     use ac_kinds, only: intEnum, &
                         int32, &
                         int8, &
-                        dp
+                        dp,&
+                        sp
     !!! MB_AC70
 
     implicit none
 
     !!! MB_AC70
-    integer :: daynr, todaynr, iproject, nprojects, irun, nruns
-    integer(intEnum) :: TheProjectType
+    integer :: daynr, todaynr, iproject, nprojects
     logical :: ListProjectFileExist
     character(len=:), allocatable :: ListProjectsFile, TheProjectFile
+
     !!! MB_AC70
 
 ! !ARGUMENTS:
@@ -667,6 +678,12 @@ subroutine Ac70_main(n)
     real                 :: tmp_WRRAT          !     wood to non-wood ratio
     real                 :: tmp_MRP            !     microbial respiration parameter [umol co2 /kg c/ s]
     
+    !MB: AC70
+    real                 :: tmp_PREC_ac        ! 
+    real                 :: tmp_TMIN_ac        ! 
+    real                 :: tmp_TMAX_ac        ! 
+    real                 :: tmp_ETo_ac        ! 
+
     ! SY: End corresponding to read_mp_veg_parameters
     ! SY: End for enabling OPTUE
 
@@ -744,6 +761,15 @@ subroutine Ac70_main(n)
             ! prcp: precipitation Rate
             tmp_prcp       = AC70_struc(n)%ac70(t)%prcp   / AC70_struc(n)%forc_count
             
+            ! PREC_ac
+            tmp_PREC_ac      = AC70_struc(n)%ac70(t)%PREC_ac  / AC70_struc(n)%forc_count
+            ! TMIN_ac
+            tmp_TMIN_ac      = AC70_struc(n)%ac70(t)%TMIN_ac  / AC70_struc(n)%forc_count
+            ! TMAX_ac
+            tmp_TMAX_ac      = AC70_struc(n)%ac70(t)%TMAX_ac  / AC70_struc(n)%forc_count
+            ! ETo_ac
+            tmp_ETo_ac      = AC70_struc(n)%ac70(t)%ETo_ac  / AC70_struc(n)%forc_count
+
             !ag(18Sep2019)
             ! rivsto/fldsto: River storage and flood storage
             ! AC70_struc(n)%ac70(t)%rivsto and AC70_struc(n)%ac70(t)%fldsto
@@ -1321,6 +1347,8 @@ subroutine Ac70_main(n)
             AC70_struc(n)%ac70(t)%soldrain1rt  = tmp_soldrain1rt
 
             !!! MB_AC70
+
+
             ! setting all global variables
             call SetRootZoneWC_Actual(REAL(AC70_struc(n)%ac70(t)%RootZoneWC_Actual,8))
             call SetRootZoneWC_FC(REAL(AC70_struc(n)%ac70(t)%RootZoneWC_FC,8))
@@ -1339,9 +1367,6 @@ subroutine Ac70_main(n)
             call Seteffectiverain(AC70_struc(n)%ac70(t)%effectiverain)
             call SetSumWaBal(AC70_struc(n)%ac70(t)%SumWaBal)
             call SetRootZoneSalt(AC70_struc(n)%ac70(t)%RootZoneSalt)
-            !!! MB temporary
-            AC70_struc(n)%ac70(t)%Simulation%SumGDD = GetSimulation_SumGDD()
-            AC70_struc(n)%ac70(t)%Simulation%SumGDDfromDay1 = GetSimulation_SumGDDfromDay1()
             call SetSimulation(AC70_struc(n)%ac70(t)%Simulation)
             call SetIrriInterval(AC70_struc(n)%ac70(t)%IrriInterval)
             call SetIrriInfoRecord1(AC70_struc(n)%ac70(t)%IrriInfoRecord1)
@@ -1404,10 +1429,8 @@ subroutine Ac70_main(n)
             call SetECstorage(AC70_struc(n)%ac70(t)%ECstorage)
             call SetEact(AC70_struc(n)%ac70(t)%Eact)
             call SetEpot(AC70_struc(n)%ac70(t)%Epot)
-            !call SetETo(AC70_struc(n)%ac70(t)%ETo)
             call SetDrain(AC70_struc(n)%ac70(t)%Drain)
             call SetInfiltrated(AC70_struc(n)%ac70(t)%Infiltrated)
-            !call SetRain(AC70_struc(n)%ac70(t)%Rain)
             call SetRootingDepth(AC70_struc(n)%ac70(t)%RootingDepth)
             call SetRunoff(AC70_struc(n)%ac70(t)%Runoff)
             call SetSaltInfiltr(AC70_struc(n)%ac70(t)%SaltInfiltr)
@@ -1433,7 +1456,6 @@ subroutine Ac70_main(n)
             call SetStressSFadjNEW(int(AC70_struc(n)%ac70(t)%StressSFadjNEW,kind=int32))
             call SetBin(AC70_struc(n)%ac70(t)%Bin)
             call SetBout(AC70_struc(n)%ac70(t)%Bout)
-            !call SetGDDayi(AC70_struc(n)%ac70(t)%GDDayi)
             call SetCO2i(AC70_struc(n)%ac70(t)%CO2i)
             call SetFracBiomassPotSF(AC70_struc(n)%ac70(t)%FracBiomassPotSF)
             call SetSumETo(AC70_struc(n)%ac70(t)%SumETo)
@@ -1493,23 +1515,104 @@ subroutine Ac70_main(n)
             call SetStartMode(AC70_struc(n)%ac70(t)%StartMode)
             call SetNoMoreCrop(AC70_struc(n)%ac70(t)%NoMoreCrop)
             call SetCGCadjustmentAfterCutting(AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting)
+            !call SetSimulation_ToDayNr(AC70_struc(n)%ac70(t)%Simulation%ToDayNr)
+            call SetGDDayi(AC70_struc(n)%ac70(t)%GDDayi)
 
-            !call SetTmax(AC70_struc(n)%ac70(t)%AC70Tmax)
-            !call SetTmin(AC70_struc(n)%ac70(t)%AC70Tmin)
+            !!! initialize run (year)
 
-            !if (AC70_struc(n)%ac70(t)%daynri == AC70_struc(n)%daynrinextclimaterecord) then
-            if (AC70_struc(n)%daynrinextclimaterecord .eq. (LIS_rc%glbntiles(n))) then !*LIS_rc%nensem(n))) then
-                call setreadnextclimrecord(1)
-                write(*,*) "setreadnextclimrecord(1)"
-                AC70_struc(n)%daynrinextclimaterecord = 1
-            else
-                AC70_struc(n)%daynrinextclimaterecord = AC70_struc(n)%daynrinextclimaterecord + 1
-                call setreadnextclimrecord(0)
-                write(*,*) "setreadnextclimrecord(0)"
-            end if
+     if (AC70_struc(n)%ac70(t)%InitializeRun .eq. 1) then
+        call InitializeRunPart1(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
+        if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
+          !call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
+          !call SetTmin(real(AC70_struc(n)%ac70(t)%TMIN_ac,kind=dp))
+          !call SetTmax(real(AC70_struc(n)%ac70(t)%TMAX_ac,kind=dp))
+          !call SetETo(real(AC70_struc(n)%ac70(t)%ETo_ac,kind=dp))
+          ! intialize with 0.0 
+              call SetRain(real(tmp_PREC_ac,kind=dp))
+              call SetTmin(real(tmp_TMIN_ac,kind=dp))
+              call SetTmax(real(tmp_TMAX_ac,kind=dp))
+              call SetETo(real(tmp_ETo_ac,kind=dp))
+          !call SetRain(0.0_dp)
+          !call SetTmin(0.0_dp)
+          !call SetTmax(0.0_dp)
+          !call SetETo(0.0_dp)
+        else ! read from AC input
+          call InitializeClimate();
+        end if
+        call InitializeRunPart2(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
+        AC70_struc(n)%ac70(t)%InitializeRun = 0
+    end if
+
+
+
             !SetRootZoneWC_Actual(AC70_struc(n)%ac70(t)%smc(1))
             ! ...
-            call AdvanceOneTimeStep()
+            ! for MERRA2_AC --> first set climate variables then advanceonetimestep
+            if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
+              !call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
+              !call SetTmin(real(AC70_struc(n)%ac70(t)%TMIN_ac,kind=dp))
+              !call SetTmax(real(AC70_struc(n)%ac70(t)%TMAX_ac,kind=dp))
+              !call SetETo(real(AC70_struc(n)%ac70(t)%ETo_ac,kind=dp))
+              call SetRain(real(tmp_PREC_ac,kind=dp))
+              call SetTmin(real(tmp_TMIN_ac,kind=dp))
+              call SetTmax(real(tmp_TMAX_ac,kind=dp))
+              call SetETo(real(tmp_ETo_ac,kind=dp))
+              !call SetRain(AC70_struc(n)%ac70(t)%PREC_ac)
+              !call SetTmin(AC70_struc(n)%ac70(t)%TMIN_ac)
+              !call SetTmax(AC70_struc(n)%ac70(t)%TMAX_ac)
+              !call SetETo(AC70_struc(n)%ac70(t)%ETo_ac)
+              ! Sum of GDD at end of first day
+              call SetGDDayi(DegreesDay(GetCrop_Tbase(), GetCrop_Tupper(), GetTmin(), &
+                   GetTmax(), GetSimulParam_GDDMethod()))
+              if (GetDayNri() >= GetCrop_Day1()) then
+                 if (GetDayNri() == GetCrop_Day1()) then
+                    call SetSimulation_SumGDD(GetSimulation_SumGDD() + GetGDDayi())
+                 end if
+                 call SetSimulation_SumGDDfromDay1(GetSimulation_SumGDDfromDay1() + &
+                    GetGDDayi())
+              end if
+              call AdvanceOneTimeStep()
+            else ! read from AC input
+              call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
+              call SetTmin(real(AC70_struc(n)%ac70(t)%TMIN_ac,kind=dp))
+              call SetTmax(real(AC70_struc(n)%ac70(t)%TMAX_ac,kind=dp))
+              call SetETo(real(AC70_struc(n)%ac70(t)%ETo_ac,kind=dp))
+              call AdvanceOneTimeStep()
+              if (AC70_struc(n)%daynrinextclimaterecord .eq. 1) then
+                 call ReadClimateNextDay()
+                 AC70_struc(n)%ac70(t)%PREC_ac = real(GetRain(),kind=sp)
+                 AC70_struc(n)%ac70(t)%TMIN_ac = real(GetTmin(),kind=sp)
+                 AC70_struc(n)%ac70(t)%TMAX_ac = real(GetTmax(),kind=sp)
+                 AC70_struc(n)%ac70(t)%ETo_ac = real(GetETo(),kind=sp)
+                 write(*,*) "setreadnextclimrecord(1)"
+             else
+                 AC70_struc(n)%ac70(t)%PREC_ac = AC70_struc(n)%ac70(1)%PREC_ac
+                 AC70_struc(n)%ac70(t)%TMIN_ac = AC70_struc(n)%ac70(1)%TMIN_ac
+                 AC70_struc(n)%ac70(t)%TMAX_ac = AC70_struc(n)%ac70(1)%TMAX_ac
+                 AC70_struc(n)%ac70(t)%ETo_ac = AC70_struc(n)%ac70(1)%ETo_ac
+                 call SetRain(real(AC70_struc(n)%ac70(1)%PREC_ac,kind=dp))
+                 call SetTmin(real(AC70_struc(n)%ac70(1)%TMIN_ac,kind=dp))
+                 call SetTmax(real(AC70_struc(n)%ac70(1)%TMAX_ac,kind=dp))
+                 call SetETo(real(AC70_struc(n)%ac70(1)%ETo_ac,kind=dp))
+              end if
+              if (AC70_struc(n)%daynrinextclimaterecord .eq. (LIS_rc%glbntiles(n))) then !*LIS_rc%nensem(n))) then
+                 AC70_struc(n)%daynrinextclimaterecord = 1
+              else
+                 AC70_struc(n)%daynrinextclimaterecord = AC70_struc(n)%daynrinextclimaterecord + 1
+                 write(*,*) "setreadnextclimrecord(0)"
+              end if
+              !The following section is in call SetGDDVariablesNextDay()
+              if (GetDayNri() <= GetSimulation_ToDayNr()) then
+                 call SetGDDayi(DegreesDay(GetCrop_Tbase(), GetCrop_Tupper(), &
+                     GetTmin(), GetTmax(), GetSimulParam_GDDMethod()))
+                 if (GetDayNri() >= GetCrop_Day1()) then
+                     call SetSimulation_SumGDD(GetSimulation_SumGDD() + GetGDDayi())
+                     call SetSimulation_SumGDDfromDay1(GetSimulation_SumGDDfromDay1() &
+                          + GetGDDayi())
+                 end if
+              end if
+            end if
+
             !AC70_struc(n)%ac70(t)%smc(1)= GetRootZoneWC_ZtopAct()/(GetSimulParam_ThicknessTopSWC()*10._dp)
             AC70_struc(n)%ac70(t)%RootZoneWC_Actual = GetRootZoneWC_Actual()
             AC70_struc(n)%ac70(t)%RootZoneWC_FC = GetRootZoneWC_FC()
@@ -1592,10 +1695,10 @@ subroutine Ac70_main(n)
                 AC70_struc(n)%ac70(t)%ECstorage = GetECstorage() !EC surface storage dS/m
                 AC70_struc(n)%ac70(t)%Eact = GetEact() ! mm/day
                 AC70_struc(n)%ac70(t)%Epot = GetEpot() ! mm/day
-                AC70_struc(n)%ac70(t)%ETo = GetETo() ! mm/day
+                AC70_struc(n)%ac70(t)%ETo_ac = GetETo() ! mm/day
                 AC70_struc(n)%ac70(t)%Drain = GetDrain()  ! mm/day
                 AC70_struc(n)%ac70(t)%Infiltrated = GetInfiltrated() ! mm/day
-                AC70_struc(n)%ac70(t)%Rain = GetRain()  ! mm/day
+                AC70_struc(n)%ac70(t)%PREC_ac = GetRain()  ! mm/day
                 AC70_struc(n)%ac70(t)%RootingDepth = GetRootingDepth()
                 AC70_struc(n)%ac70(t)%Runoff = GetRunoff()  ! mm/day
                 AC70_struc(n)%ac70(t)%SaltInfiltr = GetSaltInfiltr() ! salt infiltrated in soil profile Mg/ha
@@ -1604,8 +1707,8 @@ subroutine Ac70_main(n)
                 AC70_struc(n)%ac70(t)%Tact = GetTact() ! mm/day
                 AC70_struc(n)%ac70(t)%Tpot = GetTpot() ! mm/day
                 AC70_struc(n)%ac70(t)%TactWeedInfested = GetTactWeedInfested() !mm/day
-                AC70_struc(n)%ac70(t)%AC70Tmax = GetTmax() ! degC
-                AC70_struc(n)%ac70(t)%AC70Tmin =GetTmin() ! degC
+                AC70_struc(n)%ac70(t)%Tmax_ac = GetTmax() ! degC
+                AC70_struc(n)%ac70(t)%Tmin_ac =GetTmin() ! degC
 
 
                 AC70_struc(n)%ac70(t)%GwTable = GetGwTable()
@@ -1685,6 +1788,12 @@ subroutine Ac70_main(n)
                 AC70_struc(n)%ac70(t)%NoMoreCrop = GetNoMoreCrop()
                 AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting = GetCGCadjustmentAfterCutting()
                 
+    if ((LIS_rc%mo .eq. 12) .AND. (LIS_rc%da .eq. 31)) then
+        AC70_struc(n)%ac70(t)%InitializeRun = 1
+        call FinalizeRun1(AC70_struc(n)%ac70(t)%irun, GetTheProjectFile(), AC70_struc(n)%ac70(t)%TheProjectType)
+        call FinalizeRun2(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType)
+        AC70_struc(n)%ac70(t)%irun = AC70_struc(n)%ac70(t)%irun + 1
+    end if
             !!! MB_AC70
 
 
@@ -2225,6 +2334,11 @@ subroutine Ac70_main(n)
             AC70_struc(n)%ac70(t)%swdown = 0.0
             AC70_struc(n)%ac70(t)%lwdown = 0.0
             AC70_struc(n)%ac70(t)%prcp = 0.0
+
+            AC70_struc(n)%ac70(t)%PREC_ac = 0.0
+            AC70_struc(n)%ac70(t)%TMIN_ac = 0.0
+            AC70_struc(n)%ac70(t)%TMAX_ac = 0.0
+            AC70_struc(n)%ac70(t)%ETo_ac = 0.0
         enddo ! end of tile (t) loop
         ! reset forcing counter to be zero
         AC70_struc(n)%forc_count = 0 

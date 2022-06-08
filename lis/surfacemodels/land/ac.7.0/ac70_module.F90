@@ -508,6 +508,10 @@ module Ac70_module
      real               :: swdown
      real               :: lwdown
      real               :: prcp
+     real               :: PREC_ac
+     real               :: TMIN_ac
+     real               :: TMAX_ac
+     real               :: ETo_ac
      !-------------------------------------------------------------------------
      ! spatial parameter
      !-------------------------------------------------------------------------
@@ -778,6 +782,11 @@ module Ac70_module
     integer(int8) :: MaxPlotTr
     integer(int8) :: OutputAggregate
 
+    integer(int32) :: NrRuns
+    integer(int8) :: irun
+    integer(int32) :: InitializeRun
+    integer(intEnum) :: TheProjectType
+
     logical :: EvapoEntireSoilSurface ! True of soil wetted by RAIN (false = IRRIGATION and fw < 1)
     logical :: PreDay, OutDaily
     logical :: Out1Wabal
@@ -799,11 +808,11 @@ module Ac70_module
     real(dp) :: ECstorage !EC surface storage dS/m
     real(dp) :: Eact ! mm/day
     real(dp) :: Epot ! mm/day
-    real(dp) :: ETo ! mm/day
+    !real(dp) :: ETo_ac ! mm/day
     real(dp) :: Drain  ! mm/day
     real(dp) :: Infiltrated ! mm/day
     real(dp) :: Irrigation ! mm/day
-    real(dp) :: Rain  ! mm/day
+    !real(dp) :: PREC_ac  ! mm/day
     real(dp) :: RootingDepth
     real(dp) :: Runoff  ! mm/day
     real(dp) :: SaltInfiltr ! salt infiltrated in soil profile Mg/ha
@@ -812,8 +821,8 @@ module Ac70_module
     real(dp) :: Tact ! mm/day
     real(dp) :: Tpot ! mm/day
     real(dp) :: TactWeedInfested !mm/day
-    real(dp) :: AC70Tmax ! degC
-    real(dp) :: AC70Tmin ! degC
+    !real(dp) :: Tmax_ac ! degC
+    !real(dp) :: Tmin_ac ! degC
 
     ! variables from run.f90
     type(rep_GwTable) :: GwTable
@@ -868,7 +877,6 @@ module Ac70_module
     logical :: WaterTableInProfile, StartMode, NoMoreCrop, CGCadjustmentAfterCutting
     logical :: GlobalIrriECw ! for versions before 3.2 where EC of 
                              ! irrigation water was not yet recorded
-
 
      ! OUTPUT
      real, pointer      :: ac70smc(:)
