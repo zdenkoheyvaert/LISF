@@ -120,7 +120,7 @@ subroutine LIS_DAobs_plugin
 !EOP
 #if ( ( defined DA_DIRECT_INSERTION ) || \
       ( defined DA_ENKS )             || \
-      ( defined DA_ENKF )    
+      ( defined DA_ENKF ) )    
 
    use LIS_pluginIndices
 
@@ -701,6 +701,7 @@ subroutine LIS_DAobs_plugin
         read_S1_SNWD)
    call registerwritedaobs(trim(LIS_S1_SNWD_obsId)//char(0), &
         write_S1_SNWDobs)
+#endif
 
 #if ( defined DA_OBS_S1_sigmaVVSM )
 !S1 backscatter obs VVSM
