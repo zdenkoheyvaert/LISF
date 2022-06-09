@@ -118,11 +118,9 @@ contains
 ! !INTERFACE:
 subroutine LIS_DAobs_plugin
 !EOP
-! Hans Lievens added DA_PF
 #if ( ( defined DA_DIRECT_INSERTION ) || \
       ( defined DA_ENKS )             || \
-      ( defined DA_ENKF )             || \
-      ( defined DA_PF ) )     
+      ( defined DA_ENKF )    
 
    use LIS_pluginIndices
 
