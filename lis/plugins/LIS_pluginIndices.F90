@@ -30,6 +30,7 @@ module LIS_pluginIndices
 !  27 Jan 2014: Shugong Wang, added HRAP projection
 !   4 Nov 2014: Jonathan Case, added support for daily NESDIS/VIIRS GVF for Noah
 !  16 Aug 2016: Mahdi Navari, added PILDAS  
+!  28 Aug 2020: Sara Modanesi, added WCM in Radiative Transfer Models
 !
 !EOP
   PRIVATE
@@ -239,6 +240,11 @@ module LIS_pluginIndices
    character*50, public,  parameter :: LIS_SMMRSNWDsnowobsId   = "SMMR snow depth"
 ! Hans Lievens added S1
    character*50, public,  parameter :: LIS_S1_SNWD_obsId       = "S1 snow depth"
+   character*50, public,  parameter :: LIS_S1_sigmaVVSM_obsId      = "S1 backscatter VVSM"
+   character*50, public,  parameter :: LIS_S1_sigmaVVSMLAI_obsId      = "S1 backscatter VVSMLAI"
+   character*50, public,  parameter :: LIS_S1_sigmaVHSM_obsId      = "S1 backscatter VHSM"
+   character*50, public,  parameter :: LIS_S1_sigmaVHSMLAI_obsId      = "S1 backscatter VHSMLAI"
+   character*50, public,  parameter :: LIS_S1_sigmaVVVHSMLAI_obsId      = "S1 backscatter VVVHSMLAI"
    character*50, public,  parameter :: LIS_SSMISNWDsnowobsId   = "SSMI snow depth"
    character*50, public,  parameter :: LIS_AMSREsweobsId       = "AMSR-E SWE"
 !   character*50, public,  parameter :: LIS_AMSREsnowobsId      = "AMSR-E snow" !yliu
@@ -278,6 +284,8 @@ module LIS_pluginIndices
         "MODIS SPoRT LAI"
    character*50, public,  parameter :: LIS_MCD15A2HlaiobsId      = &
         "MCD15A2H LAI"
+   character*50, public,  parameter :: LIS_CGLSlaiobsId          = &
+        "CGLS LAI"
    character*50, public,  parameter :: LIS_GLASSalbedoobsId      = &
         "GLASS Albedo"
    character*50, public,  parameter :: LIS_SMAPNRTsmobsId        = &
@@ -343,6 +351,7 @@ module LIS_pluginIndices
    character*50, public, parameter :: LIS_crtm2EMId = "CRTM2EM"
    character*50, public, parameter :: LIS_cmem3Id = "CMEM"
    character*50, public, parameter :: LIS_tauomegaRTMId = "Tau Omega"
+   character*50, public, parameter :: LIS_wcmRTMId = "WCM"
 !-------------------------------------------------------------------------
 ! Land Slide Models
 !-------------------------------------------------------------------------
