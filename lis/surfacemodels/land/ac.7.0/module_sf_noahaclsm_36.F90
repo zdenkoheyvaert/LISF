@@ -36,7 +36,9 @@ MODULE module_sf_noahaclsm_36
         INTEGER, PARAMETER :: NSLTYPE=30
         CHARACTER(LEN=256) SLTYPE
         REAL, DIMENSION (1:NSLTYPE) :: BB,DRYSMC,F11,                           &
-        MAXSMC, REFSMC,SATPSI,SATDK,SATDW, WLTSMC,QTZ
+        MAXSMC, REFSMC,SATPSI,SATDK,SATDW, WLTSMC,QTZ,                          &
+        !! MB: AC70
+        OC, WP, SAT, FC, INFRATE, SD, CL, SI
 
 ! LSM GENERAL PARAMETERS
         INTEGER :: SLPCATS
@@ -2294,6 +2296,7 @@ CONTAINS
       SMCMAX = MAXSMC (SOILTYP)
       SMCREF = REFSMC (SOILTYP)
       SMCWLT = WLTSMC (SOILTYP)
+
 ! ----------------------------------------------------------------------
 ! Set-up universal parameters (not dependent on SOILTYP, VEGTYP or
 ! SLOPETYP)

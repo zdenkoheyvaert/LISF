@@ -26,6 +26,15 @@ use ESMF
        &                       MAXSMC,     &
        &                       REFSMC,     &
        &                       WLTSMC,     &
+       ! MB: AC70
+       &                       OC,         &
+       &                       WP,         &
+       &                       SAT,        &
+       &                       FC,         &
+       &                       INFRATE,    &
+       &                       SD,         &
+       &                       CL,         &
+       &                       SI,         &
        &                       RSTBL,      &
        &                       RGLTBL,     &
        &                       HSTBL,      &

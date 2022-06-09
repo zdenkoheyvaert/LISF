@@ -31,6 +31,8 @@ subroutine Ac70_setup()
     use MODULE_SF_ACLSM_70, only: read_mp_veg_parameters, &
            SLCATS, LUCATS, CSOIL_DATA, BB, SATDK, SATDW, &
            SATPSI, QTZ, MAXSMC, REFSMC, WLTSMC, &
+           ! MB: AC70
+           OC, WP, SAT, FC, INFRATE, SD, CL, SI, & 
            CZIL_DATA, FRZK_DATA, REFDK_DATA, REFKDT_DATA, SLOPE_DATA, &
            TOPT_DATA, RGLTBL, RSMAX_DATA, RSTBL, HSTBL, NROTBL, &
            CH2OP, DLEAF, Z0MVT, HVT, HVB, RC, RHOL, RHOS, TAUL, TAUS, &
@@ -99,6 +101,9 @@ subroutine Ac70_setup()
     integer           :: t, k, n
     integer           :: col, row
     real, allocatable :: placeholder(:,:)
+    ! MB
+    real              :: Z_surf, cl_tmp, si_tmp, sd_tmp, InfRate_tmp
+    integer           :: REW, descr
     
     !!! MB_AC70
     integer :: daynr, todaynr, iproject, nprojects, NrRuns
@@ -279,6 +284,92 @@ subroutine Ac70_setup()
             AC70_struc(n)%ac70(t)%smcref = REFSMC(AC70_struc(n)%ac70(t)%soiltype)
             AC70_struc(n)%ac70(t)%smcwlt = WLTSMC(AC70_struc(n)%ac70(t)%soiltype)
             ! SY: End SOIL PARAMETERS
+
+            ! MB: AC70
+            ! set AC70 soil parameters based on soiltype
+            ! AC70_struc(n)%ac70(t)%SoilLayer(1)%oc = OC(AC70_struc(n)%ac70(t)%soiltype) * 100
+            AC70_struc(n)%ac70(t)%SoilLayer(1)%wp = WP(AC70_struc(n)%ac70(t)%soiltype) * 100
+            AC70_struc(n)%ac70(t)%SoilLayer(1)%sat = SAT(AC70_struc(n)%ac70(t)%soiltype) * 100
+            AC70_struc(n)%ac70(t)%SoilLayer(1)%fc = FC(AC70_struc(n)%ac70(t)%soiltype) * 100
+            AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate = INFRATE(AC70_struc(n)%ac70(t)%soiltype) * 86400000
+            sd_tmp = sd(AC70_struc(n)%ac70(t)%soiltype)
+            cl_tmp = cl(AC70_struc(n)%ac70(t)%soiltype)
+            si_tmp = si(AC70_struc(n)%ac70(t)%soiltype)
+                
+            ! define default CN
+            if (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>864) then
+                AC70_struc(n)%ac70(t)%Soil%CNvalue = 46
+            elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=347) then
+                AC70_struc(n)%ac70(t)%Soil%CNvalue = 61
+            elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=36) then
+                AC70_struc(n)%ac70(t)%Soil%CNvalue = 72
+            else
+                AC70_struc(n)%ac70(t)%Soil%CNvalue = 77
+            endif
+            
+            ! define default REW (only top layer will be used)
+            Z_surf = 0.04_dp
+            REW=nint(10.0_dp*(AC70_struc(n)%ac70(t)%SoilLayer(1)%fc-(AC70_struc(n)%ac70(t)%SoilLayer(1)%wp/2.0))*Z_surf)
+            if (REW < 0) REW = 0
+            if (REW > 15) REW = 15
+            AC70_struc(n)%ac70(t)%Soil%REW = REW
+
+            !  associate soil class with USDA soil type for soil description
+            if ((1.5 * cl_tmp + si_tmp) < 15.0) then
+                descr = 0
+            elseif (((1.5 * cl_tmp + si_tmp) >= 15) .and. ((2 * cl_tmp + si_tmp) <= 30)) then
+                descr = 1
+            elseif ((cl_tmp >= 7 .and. cl_tmp < 20 .and. sd_tmp >= 52) .and. (2 * cl_tmp + si_tmp >= 30)) then
+                descr = 2
+            elseif ((cl_tmp < 7) .and. (si_tmp < 50) .and. (2 * cl_tmp + si_tmp >= 30)) then
+                descr = 2
+            elseif ((cl_tmp >= 7) .and. (cl_tmp < 27) .and. (si_tmp >= 28) .and. (si_tmp < 50) .and. (sd_tmp < 52)) then
+                descr = 3
+            elseif ((si_tmp >= 50) .and. (cl_tmp >= 12) .and. (cl_tmp < 27)) then
+                descr = 4
+            elseif ((si_tmp >= 50) .and. (si_tmp < 80) .and. (cl_tmp < 12)) then
+                descr = 4
+            elseif ((si_tmp >= 80) .and. (cl_tmp < 12)) then
+                descr = 5
+            elseif ((cl_tmp >= 20) .and. (cl_tmp < 35) .and. (si_tmp < 28) .and. (sd_tmp > 45)) then
+                descr = 6
+            elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp >= 20) .and. (sd_tmp < 45)) then
+                descr = 7
+            elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp < 20)) then
+                descr = 8
+            elseif ((cl_tmp >= 35) .and. (cl_tmp < 55) .and. (sd_tmp >= 45) .and. (sd_tmp < 65)) then
+                descr = 9
+            elseif ((cl_tmp >= 40) .and. (si_tmp >= 40)) then
+                descr = 10
+            elseif ((cl_tmp >= 40) .and. (sd_tmp < 45) .and. (si_tmp < 40)) then
+                descr = 11
+            else
+               write(LIS_logunit, *) 'no soil texture found'
+               write(LIS_logunit, *) 'program stopping ...'
+               call LIS_endrun
+            end if
+            ! soil_type = ['sand', 'loamy sand', 'sandy loam', 'loam', 'silt loam', 'silt', 'sandy clay loam',
+            !              'clay loam',
+            !              'silty clay loam', 'sandy clay', 'silty clay', 'clay']
+            InfRate_tmp = AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate
+            if ((descr == 0) .or. (descr == 1) .or. (descr == 2)) then
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.3112-10**(-5)*InfRate_tmp
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.4936+0.2416*log(InfRate_tmp)
+            elseif ((descr == 3) .or. (descr == 4) .or. (descr == 5)) then
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.4986-9*10**(-5)*InfRate_tmp
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -2.1320+0.4778*log(InfRate_tmp)
+            elseif ((descr == 6) .or. (descr == 7) .or. (descr == 9)) then
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.5677-4*10**(-5)*InfRate_tmp
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -3.7189+0.5922*log(InfRate_tmp)
+            elseif ((descr == 8) .or. (descr == 10) .or. (descr == 11)) then
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.6366+8*10**(-4)*InfRate_tmp
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.9165+0.7063*log(InfRate_tmp)
+            endif
+            AC70_struc(n)%ac70(t)%SoilLayer(1)%Description = 'soil type from LIS'
+
+            AC70_struc(n)%ac70(t)%SoilLayer(2) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+
+            ! MB:
 
             ! SY: Begin SOIL PARAMETER CONSTRAINT
             AC70_struc(n)%ac70(t)%smcdry = DRYSMC(AC70_struc(n)%ac70(t)%soiltype)

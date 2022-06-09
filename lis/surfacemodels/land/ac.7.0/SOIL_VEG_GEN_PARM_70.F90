@@ -170,7 +170,15 @@
            SIZE(SATPSI) < SLCATS .OR. &
            SIZE(SATDK ) < SLCATS .OR. &
            SIZE(SATDW ) < SLCATS .OR. &
-           SIZE(WLTSMC) < SLCATS .OR. &
+           SIZE(WLTSMC) < SLCATS .OR. & 
+           SIZE(OC) < SLCATS .OR. & 
+           SIZE(WP) < SLCATS .OR. & 
+           SIZE(SAT) < SLCATS .OR. & 
+           SIZE(FC) < SLCATS .OR. & 
+           SIZE(INFRATE) < SLCATS .OR. & 
+           SIZE(SD) < SLCATS .OR. & 
+           SIZE(CL) < SLCATS .OR. & 
+           SIZE(SI) < SLCATS .OR. & 
            SIZE(QTZ   ) < SLCATS  ) THEN
          CALL wrf_error_fatal('Table sizes too small for value of SLCATS in module_sf_noahdrv.F')
       ENDIF
@@ -178,7 +186,9 @@
         DO LC=1,SLCATS
             READ (19,*) IINDEX,BB(LC),DRYSMC(LC),F11(LC),MAXSMC(LC),&
                       REFSMC(LC),SATPSI(LC),SATDK(LC), SATDW(LC),   &
-                      WLTSMC(LC), QTZ(LC)
+                      WLTSMC(LC), QTZ(LC), &
+                      !MB
+                      wp(LC), sat(LC), fc(LC), infrate(LC), sd(LC), cl(LC), si(LC), OC(LC)
         ENDDO
       ENDIF
 
