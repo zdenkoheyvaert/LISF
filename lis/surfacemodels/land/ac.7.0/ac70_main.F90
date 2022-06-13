@@ -391,9 +391,10 @@ subroutine Ac70_main(n)
                          GetCrop_Tbase, &
                          GetCrop_Tupper, &
                          FinalizeSimulation, &
-                         InitializeSimulation ,&
-                         InitializeRunPart1 ,&
-                         InitializeRunPart2 ,&
+                         InitializeSimulation, &
+                         InitializeRunPart1, &
+                         InitializeRunPart2, &
+                         InitializeSimulationRunPart2, &
                          InitializeClimate
                          
     use ac_startunit, only:  FinalizeTheProgram, &
@@ -1521,6 +1522,13 @@ subroutine Ac70_main(n)
             !!! initialize run (year)
 
      if (AC70_struc(n)%ac70(t)%InitializeRun .eq. 1) then
+        ! Replaces LoadSimulationRunProject in LoadSimulationRunProject
+        !call SetSimulation_YearSeason(YearSeason_temp)
+        !call SetCrop_Day1(TempInt)
+        !call SetCrop_DayN(TempInt)
+        !SetCO2FileFull
+
+        ! Run InitializeRunPart1 ( in future without LoadSimulationRunProject)
         call InitializeRunPart1(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
         if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
           !call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
@@ -1539,7 +1547,8 @@ subroutine Ac70_main(n)
         else ! read from AC input
           call InitializeClimate();
         end if
-        call InitializeRunPart2(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
+        !call InitializeRunPart2(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
+        call InitializeSimulationRunPart2()
         AC70_struc(n)%ac70(t)%InitializeRun = 0
     end if
 
@@ -1644,149 +1653,149 @@ subroutine Ac70_main(n)
                  AC70_struc(n)%ac70(t)%ac70smc(l) = GetCompartment_theta(l)
             enddo
             !write(*,'(e23.15e3)') AC70_struc(n)%ac70(t)%ac70smc(1)
-                AC70_struc(n)%ac70(t)%IrriECw = GetIrriECw()
-                AC70_struc(n)%ac70(t)%Management = GetManagement()
-                AC70_struc(n)%ac70(t)%PerennialPeriod = GetPerennialPeriod()
-                AC70_struc(n)%ac70(t)%simulparam = GetSimulParam()
-                AC70_struc(n)%ac70(t)%Cuttings = GetManagement_Cuttings()
-                AC70_struc(n)%ac70(t)%onset = GetOnset()
-                AC70_struc(n)%ac70(t)%endseason = GetEndSeason()
-                AC70_struc(n)%ac70(t)%crop = GetCrop()
-                AC70_struc(n)%ac70(t)%Soil = GetSoil()
-                AC70_struc(n)%ac70(t)%TemperatureRecord = GetTemperatureRecord()
-                AC70_struc(n)%ac70(t)%ClimRecord = GetClimRecord()
-                AC70_struc(n)%ac70(t)%RainRecord = GetRainRecord()
-                AC70_struc(n)%ac70(t)%EToRecord = GetEToRecord()
+            AC70_struc(n)%ac70(t)%IrriECw = GetIrriECw()
+            AC70_struc(n)%ac70(t)%Management = GetManagement()
+            AC70_struc(n)%ac70(t)%PerennialPeriod = GetPerennialPeriod()
+            AC70_struc(n)%ac70(t)%simulparam = GetSimulParam()
+            AC70_struc(n)%ac70(t)%Cuttings = GetManagement_Cuttings()
+            AC70_struc(n)%ac70(t)%onset = GetOnset()
+            AC70_struc(n)%ac70(t)%endseason = GetEndSeason()
+            AC70_struc(n)%ac70(t)%crop = GetCrop()
+            AC70_struc(n)%ac70(t)%Soil = GetSoil()
+            AC70_struc(n)%ac70(t)%TemperatureRecord = GetTemperatureRecord()
+            AC70_struc(n)%ac70(t)%ClimRecord = GetClimRecord()
+            AC70_struc(n)%ac70(t)%RainRecord = GetRainRecord()
+            AC70_struc(n)%ac70(t)%EToRecord = GetEToRecord()
 
-                AC70_struc(n)%ac70(t)%GenerateTimeMode = GetGenerateTimeMode()
-                AC70_struc(n)%ac70(t)%GenerateDepthMode = GetGenerateDepthMode()
-                AC70_struc(n)%ac70(t)%IrriMode = GetIrriMode()
-                AC70_struc(n)%ac70(t)%IrriMethod = GetIrriMethod()
-                AC70_struc(n)%ac70(t)%DaySubmerged = GetDaySubmerged()
-                AC70_struc(n)%ac70(t)%MaxPlotNew = GetMaxPlotNew()
-                AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()
-                AC70_struc(n)%ac70(t)%IrriFirstDayNr = GetIrriFirstDayNr()
-                AC70_struc(n)%ac70(t)%ZiAqua = GetZiAqua()
-                AC70_struc(n)%ac70(t)%IniPercTAW = GetIniPercTAW()
-                AC70_struc(n)%ac70(t)%MaxPlotTr = GetMaxPlotTr()
-                AC70_struc(n)%ac70(t)%OutputAggregate = GetOutputAggregate()
+            AC70_struc(n)%ac70(t)%GenerateTimeMode = GetGenerateTimeMode()
+            AC70_struc(n)%ac70(t)%GenerateDepthMode = GetGenerateDepthMode()
+            AC70_struc(n)%ac70(t)%IrriMode = GetIrriMode()
+            AC70_struc(n)%ac70(t)%IrriMethod = GetIrriMethod()
+            AC70_struc(n)%ac70(t)%DaySubmerged = GetDaySubmerged()
+            AC70_struc(n)%ac70(t)%MaxPlotNew = GetMaxPlotNew()
+            AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()
+            AC70_struc(n)%ac70(t)%IrriFirstDayNr = GetIrriFirstDayNr()
+            AC70_struc(n)%ac70(t)%ZiAqua = GetZiAqua()
+            AC70_struc(n)%ac70(t)%IniPercTAW = GetIniPercTAW()
+            AC70_struc(n)%ac70(t)%MaxPlotTr = GetMaxPlotTr()
+            AC70_struc(n)%ac70(t)%OutputAggregate = GetOutputAggregate()
 
-                AC70_struc(n)%ac70(t)%EvapoEntireSoilSurface = GetEvapoEntireSoilSurface()
-                AC70_struc(n)%ac70(t)%PreDay = GetPreDay()
-                AC70_struc(n)%ac70(t)%OutDaily = GetOutDaily()
-                AC70_struc(n)%ac70(t)%Out1Wabal = GetOut1Wabal()
-                AC70_struc(n)%ac70(t)%Out2Crop = GetOut2Crop()
-                AC70_struc(n)%ac70(t)%Out3Prof = GetOut3Prof()
-                AC70_struc(n)%ac70(t)%Out4Salt = GetOut4Salt()
-                AC70_struc(n)%ac70(t)%Out5CompWC = GetOut5CompWC()
-                AC70_struc(n)%ac70(t)%Out6CompEC = GetOut6CompEC()
-                AC70_struc(n)%ac70(t)%Out7Clim = GetOut7Clim()
-                AC70_struc(n)%ac70(t)%Part1Mult = GetPart1Mult()
-                AC70_struc(n)%ac70(t)%Part2Eval = GetPart2Eval()
+            AC70_struc(n)%ac70(t)%EvapoEntireSoilSurface = GetEvapoEntireSoilSurface()
+            AC70_struc(n)%ac70(t)%PreDay = GetPreDay()
+            AC70_struc(n)%ac70(t)%OutDaily = GetOutDaily()
+            AC70_struc(n)%ac70(t)%Out1Wabal = GetOut1Wabal()
+            AC70_struc(n)%ac70(t)%Out2Crop = GetOut2Crop()
+            AC70_struc(n)%ac70(t)%Out3Prof = GetOut3Prof()
+            AC70_struc(n)%ac70(t)%Out4Salt = GetOut4Salt()
+            AC70_struc(n)%ac70(t)%Out5CompWC = GetOut5CompWC()
+            AC70_struc(n)%ac70(t)%Out6CompEC = GetOut6CompEC()
+            AC70_struc(n)%ac70(t)%Out7Clim = GetOut7Clim()
+            AC70_struc(n)%ac70(t)%Part1Mult = GetPart1Mult()
+            AC70_struc(n)%ac70(t)%Part2Eval = GetPart2Eval()
 
-                !
-                AC70_struc(n)%ac70(t)%CCiActual = GetCCiActual()
-                AC70_struc(n)%ac70(t)%CCiprev = GetCCiprev()
-                AC70_struc(n)%ac70(t)%CCiTopEarlySen = GetCCiTopEarlySen()
-                AC70_struc(n)%ac70(t)%CRsalt = GetCRsalt () ! gram/m2
-                AC70_struc(n)%ac70(t)%CRwater = GetCRwater() ! mm/day
-                AC70_struc(n)%ac70(t)%ECdrain = GetECdrain() ! EC drain water dS/m
-                AC70_struc(n)%ac70(t)%ECiAqua = GetECiAqua() ! EC of the groundwater table in dS/m
-                AC70_struc(n)%ac70(t)%ECstorage = GetECstorage() !EC surface storage dS/m
-                AC70_struc(n)%ac70(t)%Eact = GetEact() ! mm/day
-                AC70_struc(n)%ac70(t)%Epot = GetEpot() ! mm/day
-                AC70_struc(n)%ac70(t)%ETo_ac = GetETo() ! mm/day
-                AC70_struc(n)%ac70(t)%Drain = GetDrain()  ! mm/day
-                AC70_struc(n)%ac70(t)%Infiltrated = GetInfiltrated() ! mm/day
-                AC70_struc(n)%ac70(t)%PREC_ac = GetRain()  ! mm/day
-                AC70_struc(n)%ac70(t)%RootingDepth = GetRootingDepth()
-                AC70_struc(n)%ac70(t)%Runoff = GetRunoff()  ! mm/day
-                AC70_struc(n)%ac70(t)%SaltInfiltr = GetSaltInfiltr() ! salt infiltrated in soil profile Mg/ha
-                AC70_struc(n)%ac70(t)%Surf0 = GetSurf0()  ! surface water [mm] begin day
-                AC70_struc(n)%ac70(t)%SurfaceStorage = GetSurfaceStorage() !mm/day
-                AC70_struc(n)%ac70(t)%Tact = GetTact() ! mm/day
-                AC70_struc(n)%ac70(t)%Tpot = GetTpot() ! mm/day
-                AC70_struc(n)%ac70(t)%TactWeedInfested = GetTactWeedInfested() !mm/day
-                AC70_struc(n)%ac70(t)%Tmax_ac = GetTmax() ! degC
-                AC70_struc(n)%ac70(t)%Tmin_ac =GetTmin() ! degC
+            !
+            AC70_struc(n)%ac70(t)%CCiActual = GetCCiActual()
+            AC70_struc(n)%ac70(t)%CCiprev = GetCCiprev()
+            AC70_struc(n)%ac70(t)%CCiTopEarlySen = GetCCiTopEarlySen()
+            AC70_struc(n)%ac70(t)%CRsalt = GetCRsalt () ! gram/m2
+            AC70_struc(n)%ac70(t)%CRwater = GetCRwater() ! mm/day
+            AC70_struc(n)%ac70(t)%ECdrain = GetECdrain() ! EC drain water dS/m
+            AC70_struc(n)%ac70(t)%ECiAqua = GetECiAqua() ! EC of the groundwater table in dS/m
+            AC70_struc(n)%ac70(t)%ECstorage = GetECstorage() !EC surface storage dS/m
+            AC70_struc(n)%ac70(t)%Eact = GetEact() ! mm/day
+            AC70_struc(n)%ac70(t)%Epot = GetEpot() ! mm/day
+            AC70_struc(n)%ac70(t)%ETo_ac = GetETo() ! mm/day
+            AC70_struc(n)%ac70(t)%Drain = GetDrain()  ! mm/day
+            AC70_struc(n)%ac70(t)%Infiltrated = GetInfiltrated() ! mm/day
+            AC70_struc(n)%ac70(t)%PREC_ac = GetRain()  ! mm/day
+            AC70_struc(n)%ac70(t)%RootingDepth = GetRootingDepth()
+            AC70_struc(n)%ac70(t)%Runoff = GetRunoff()  ! mm/day
+            AC70_struc(n)%ac70(t)%SaltInfiltr = GetSaltInfiltr() ! salt infiltrated in soil profile Mg/ha
+            AC70_struc(n)%ac70(t)%Surf0 = GetSurf0()  ! surface water [mm] begin day
+            AC70_struc(n)%ac70(t)%SurfaceStorage = GetSurfaceStorage() !mm/day
+            AC70_struc(n)%ac70(t)%Tact = GetTact() ! mm/day
+            AC70_struc(n)%ac70(t)%Tpot = GetTpot() ! mm/day
+            AC70_struc(n)%ac70(t)%TactWeedInfested = GetTactWeedInfested() !mm/day
+            AC70_struc(n)%ac70(t)%Tmax_ac = GetTmax() ! degC
+            AC70_struc(n)%ac70(t)%Tmin_ac =GetTmin() ! degC
 
 
-                AC70_struc(n)%ac70(t)%GwTable = GetGwTable()
-                AC70_struc(n)%ac70(t)%PlotVarCrop = GetPlotVarCrop()
-                AC70_struc(n)%ac70(t)%StressTot = GetStressTot()
-                AC70_struc(n)%ac70(t)%CutInfoRecord1 = GetCutInfoRecord1()
-                AC70_struc(n)%ac70(t)%CutInfoRecord2 = GetCutInfoRecord2()
-                AC70_struc(n)%ac70(t)%Transfer = GetTransfer()
-                AC70_struc(n)%ac70(t)%PreviousSum = GetPreviousSum()
-                AC70_struc(n)%ac70(t)%Tadj = GetTadj()
-                AC70_struc(n)%ac70(t)%GDDTadj = GetGDDTadj()
-                AC70_struc(n)%ac70(t)%DayLastCut = GetDayLastCut()
-                AC70_struc(n)%ac70(t)%NrCut = GetNrCut()
-                AC70_struc(n)%ac70(t)%SumInterval = GetSumInterval()
-                AC70_struc(n)%ac70(t)%PreviousStressLevel = GetPreviousStressLevel()
-                AC70_struc(n)%ac70(t)%StressSFadjNEW = GetStressSFadjNEW()
-                AC70_struc(n)%ac70(t)%Bin = GetBin()
-                AC70_struc(n)%ac70(t)%Bout = GetBout()
-                AC70_struc(n)%ac70(t)%GDDayi = GetGDDayi()
-                AC70_struc(n)%ac70(t)%CO2i = GetCO2i()
-                AC70_struc(n)%ac70(t)%FracBiomassPotSF = GetFracBiomassPotSF()
-                AC70_struc(n)%ac70(t)%SumETo = GetSumETo()
-                AC70_struc(n)%ac70(t)%SumGDD = GetSumGDD()
-                AC70_struc(n)%ac70(t)%Ziprev = GetZiprev()
-                AC70_struc(n)%ac70(t)%SumGDDPrev = GetSumGDDPrev()
-                AC70_struc(n)%ac70(t)%CCxWitheredTpot = GetCCxWitheredTpot()
-                AC70_struc(n)%ac70(t)%CCxWitheredTpotNoS = GetCCxWitheredTpotNoS()
-                AC70_struc(n)%ac70(t)%Coeffb0 = GetCoeffb0()
-                AC70_struc(n)%ac70(t)%Coeffb1 = GetCoeffb1()
-                AC70_struc(n)%ac70(t)%Coeffb2 = GetCoeffb2()
-                AC70_struc(n)%ac70(t)%Coeffb0Salt = GetCoeffb0Salt()
-                AC70_struc(n)%ac70(t)%Coeffb1Salt = GetCoeffb1Salt()
-                AC70_struc(n)%ac70(t)%Coeffb2Salt = GetCoeffb2Salt()
-                AC70_struc(n)%ac70(t)%StressLeaf = GetStressLeaf()
-                AC70_struc(n)%ac70(t)%StressSenescence = GetStressSenescence ()
-                AC70_struc(n)%ac70(t)%DayFraction = GetDayFraction()
-                AC70_struc(n)%ac70(t)%GDDayFraction = GetGDDayFraction()
-                AC70_struc(n)%ac70(t)%CGCref = GetCGCref()
-                AC70_struc(n)%ac70(t)%GDDCGCref = GetGDDCGCref ()
-                AC70_struc(n)%ac70(t)%TimeSenescence = GetTimeSenescence ()
-                AC70_struc(n)%ac70(t)%SumKcTop = GetSumKcTop()
-                AC70_struc(n)%ac70(t)%SumKcTopStress = GetSumKcTopStress()
-                AC70_struc(n)%ac70(t)%SumKci = GetSumKci()
-                AC70_struc(n)%ac70(t)%CCoTotal = GetCCoTotal()
-                AC70_struc(n)%ac70(t)%CCxTotal = GetCCxTotal()
-                AC70_struc(n)%ac70(t)%CDCTotal = GetCDCTotal()
-                AC70_struc(n)%ac70(t)%GDDCDCTotal = GetGDDCDCTotal()
-                AC70_struc(n)%ac70(t)%CCxCropWeedsNoSFstress = GetCCxCropWeedsNoSFstress()
-                AC70_struc(n)%ac70(t)%WeedRCi = GetWeedRCi()
-                AC70_struc(n)%ac70(t)%CCiActualWeedInfested = GetCCiActualWeedInfested()
-                AC70_struc(n)%ac70(t)%fWeedNoS = GetfWeedNoS()
-                AC70_struc(n)%ac70(t)%Zeval = GetZeval()
-                AC70_struc(n)%ac70(t)%BprevSum = GetBprevSum()
-                AC70_struc(n)%ac70(t)%YprevSum = GetYprevSum()
-                AC70_struc(n)%ac70(t)%SumGDDcuts = GetSumGDDcuts()
-                AC70_struc(n)%ac70(t)%HItimesBEF = GetHItimesBEF()
-                AC70_struc(n)%ac70(t)%ScorAT1 = GetScorAT1()
-                AC70_struc(n)%ac70(t)%ScorAT2 = GetScorAT2()
-                AC70_struc(n)%ac70(t)%HItimesAT1 = GetHItimesAT1()
-                AC70_struc(n)%ac70(t)%HItimesAT2 = GetHItimesAT2()
-                AC70_struc(n)%ac70(t)%HItimesAT = GetHItimesAT()
-                AC70_struc(n)%ac70(t)%alfaHI = GetalfaHI()
-                AC70_struc(n)%ac70(t)%alfaHIAdj = GetalfaHIAdj()
-                AC70_struc(n)%ac70(t)%NextSimFromDayNr = GetNextSimFromDayNr ()
-                AC70_struc(n)%ac70(t)%DayNr1Eval = GetDayNr1Eval()
-                AC70_struc(n)%ac70(t)%DayNrEval = GetDayNrEval()
-                AC70_struc(n)%ac70(t)%LineNrEval = GetLineNrEval()
-                AC70_struc(n)%ac70(t)%PreviousSumETo = GetPreviousSumETo()
-                AC70_struc(n)%ac70(t)%PreviousSumGDD = GetPreviousSumGDD()
-                AC70_struc(n)%ac70(t)%PreviousBmob = GetPreviousBmob()
-                AC70_struc(n)%ac70(t)%PreviousBsto = GetPreviousBsto()
-                AC70_struc(n)%ac70(t)%StageCode = GetStageCode()
-                AC70_struc(n)%ac70(t)%PreviousDayNr = GetPreviousDayNr()
-                AC70_struc(n)%ac70(t)%NoYear = GetNoYear()
-                AC70_struc(n)%ac70(t)%WaterTableInProfile = GetWaterTableInProfile()
-                AC70_struc(n)%ac70(t)%StartMode = GetStartMode()
-                AC70_struc(n)%ac70(t)%NoMoreCrop = GetNoMoreCrop()
-                AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting = GetCGCadjustmentAfterCutting()
+            AC70_struc(n)%ac70(t)%GwTable = GetGwTable()
+            AC70_struc(n)%ac70(t)%PlotVarCrop = GetPlotVarCrop()
+            AC70_struc(n)%ac70(t)%StressTot = GetStressTot()
+            AC70_struc(n)%ac70(t)%CutInfoRecord1 = GetCutInfoRecord1()
+            AC70_struc(n)%ac70(t)%CutInfoRecord2 = GetCutInfoRecord2()
+            AC70_struc(n)%ac70(t)%Transfer = GetTransfer()
+            AC70_struc(n)%ac70(t)%PreviousSum = GetPreviousSum()
+            AC70_struc(n)%ac70(t)%Tadj = GetTadj()
+            AC70_struc(n)%ac70(t)%GDDTadj = GetGDDTadj()
+            AC70_struc(n)%ac70(t)%DayLastCut = GetDayLastCut()
+            AC70_struc(n)%ac70(t)%NrCut = GetNrCut()
+            AC70_struc(n)%ac70(t)%SumInterval = GetSumInterval()
+            AC70_struc(n)%ac70(t)%PreviousStressLevel = GetPreviousStressLevel()
+            AC70_struc(n)%ac70(t)%StressSFadjNEW = GetStressSFadjNEW()
+            AC70_struc(n)%ac70(t)%Bin = GetBin()
+            AC70_struc(n)%ac70(t)%Bout = GetBout()
+            AC70_struc(n)%ac70(t)%GDDayi = GetGDDayi()
+            AC70_struc(n)%ac70(t)%CO2i = GetCO2i()
+            AC70_struc(n)%ac70(t)%FracBiomassPotSF = GetFracBiomassPotSF()
+            AC70_struc(n)%ac70(t)%SumETo = GetSumETo()
+            AC70_struc(n)%ac70(t)%SumGDD = GetSumGDD()
+            AC70_struc(n)%ac70(t)%Ziprev = GetZiprev()
+            AC70_struc(n)%ac70(t)%SumGDDPrev = GetSumGDDPrev()
+            AC70_struc(n)%ac70(t)%CCxWitheredTpot = GetCCxWitheredTpot()
+            AC70_struc(n)%ac70(t)%CCxWitheredTpotNoS = GetCCxWitheredTpotNoS()
+            AC70_struc(n)%ac70(t)%Coeffb0 = GetCoeffb0()
+            AC70_struc(n)%ac70(t)%Coeffb1 = GetCoeffb1()
+            AC70_struc(n)%ac70(t)%Coeffb2 = GetCoeffb2()
+            AC70_struc(n)%ac70(t)%Coeffb0Salt = GetCoeffb0Salt()
+            AC70_struc(n)%ac70(t)%Coeffb1Salt = GetCoeffb1Salt()
+            AC70_struc(n)%ac70(t)%Coeffb2Salt = GetCoeffb2Salt()
+            AC70_struc(n)%ac70(t)%StressLeaf = GetStressLeaf()
+            AC70_struc(n)%ac70(t)%StressSenescence = GetStressSenescence ()
+            AC70_struc(n)%ac70(t)%DayFraction = GetDayFraction()
+            AC70_struc(n)%ac70(t)%GDDayFraction = GetGDDayFraction()
+            AC70_struc(n)%ac70(t)%CGCref = GetCGCref()
+            AC70_struc(n)%ac70(t)%GDDCGCref = GetGDDCGCref ()
+            AC70_struc(n)%ac70(t)%TimeSenescence = GetTimeSenescence ()
+            AC70_struc(n)%ac70(t)%SumKcTop = GetSumKcTop()
+            AC70_struc(n)%ac70(t)%SumKcTopStress = GetSumKcTopStress()
+            AC70_struc(n)%ac70(t)%SumKci = GetSumKci()
+            AC70_struc(n)%ac70(t)%CCoTotal = GetCCoTotal()
+            AC70_struc(n)%ac70(t)%CCxTotal = GetCCxTotal()
+            AC70_struc(n)%ac70(t)%CDCTotal = GetCDCTotal()
+            AC70_struc(n)%ac70(t)%GDDCDCTotal = GetGDDCDCTotal()
+            AC70_struc(n)%ac70(t)%CCxCropWeedsNoSFstress = GetCCxCropWeedsNoSFstress()
+            AC70_struc(n)%ac70(t)%WeedRCi = GetWeedRCi()
+            AC70_struc(n)%ac70(t)%CCiActualWeedInfested = GetCCiActualWeedInfested()
+            AC70_struc(n)%ac70(t)%fWeedNoS = GetfWeedNoS()
+            AC70_struc(n)%ac70(t)%Zeval = GetZeval()
+            AC70_struc(n)%ac70(t)%BprevSum = GetBprevSum()
+            AC70_struc(n)%ac70(t)%YprevSum = GetYprevSum()
+            AC70_struc(n)%ac70(t)%SumGDDcuts = GetSumGDDcuts()
+            AC70_struc(n)%ac70(t)%HItimesBEF = GetHItimesBEF()
+            AC70_struc(n)%ac70(t)%ScorAT1 = GetScorAT1()
+            AC70_struc(n)%ac70(t)%ScorAT2 = GetScorAT2()
+            AC70_struc(n)%ac70(t)%HItimesAT1 = GetHItimesAT1()
+            AC70_struc(n)%ac70(t)%HItimesAT2 = GetHItimesAT2()
+            AC70_struc(n)%ac70(t)%HItimesAT = GetHItimesAT()
+            AC70_struc(n)%ac70(t)%alfaHI = GetalfaHI()
+            AC70_struc(n)%ac70(t)%alfaHIAdj = GetalfaHIAdj()
+            AC70_struc(n)%ac70(t)%NextSimFromDayNr = GetNextSimFromDayNr ()
+            AC70_struc(n)%ac70(t)%DayNr1Eval = GetDayNr1Eval()
+            AC70_struc(n)%ac70(t)%DayNrEval = GetDayNrEval()
+            AC70_struc(n)%ac70(t)%LineNrEval = GetLineNrEval()
+            AC70_struc(n)%ac70(t)%PreviousSumETo = GetPreviousSumETo()
+            AC70_struc(n)%ac70(t)%PreviousSumGDD = GetPreviousSumGDD()
+            AC70_struc(n)%ac70(t)%PreviousBmob = GetPreviousBmob()
+            AC70_struc(n)%ac70(t)%PreviousBsto = GetPreviousBsto()
+            AC70_struc(n)%ac70(t)%StageCode = GetStageCode()
+            AC70_struc(n)%ac70(t)%PreviousDayNr = GetPreviousDayNr()
+            AC70_struc(n)%ac70(t)%NoYear = GetNoYear()
+            AC70_struc(n)%ac70(t)%WaterTableInProfile = GetWaterTableInProfile()
+            AC70_struc(n)%ac70(t)%StartMode = GetStartMode()
+            AC70_struc(n)%ac70(t)%NoMoreCrop = GetNoMoreCrop()
+            AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting = GetCGCadjustmentAfterCutting()
                 
     if ((LIS_rc%mo .eq. 12) .AND. (LIS_rc%da .eq. 31)) then
         AC70_struc(n)%ac70(t)%InitializeRun = 1
@@ -1830,6 +1839,7 @@ subroutine Ac70_main(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i)*tmp_sldpth(i)*LIS_CONST_RHOFW,  &
                                                   vlevel=i, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
             end do
+            ! MB: AC70
             ![ 4] output variable: smc (unit=m^3 m-3 ). ***  volumetric soil moisture, ice + liquid 
             do i=1, AC70_struc(n)%nsoil
                 call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%ac70smc(i), &
@@ -1838,7 +1848,11 @@ subroutine Ac70_main(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%ac70smc(i)*0.1*LIS_CONST_RHOFW,  &
                                                   vlevel=i, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
             end do
-            
+            ![ 4] output variable: biomass (unit=t/ha). ***  leaf area index 
+            call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70BIOMASS, value = real(AC70_struc(n)%ac70(t)%SumWaBal%Biomass,kind=sp), &
+                                              vlevel=1, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
+            !call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70BIOMASS, value = real(AC70_struc(n)%ac70(t)%SumWaBal%Biomass,kind=sp), &
+            !                                  vlevel=1, unit="t h-1", direction="-", surface_type = LIS_rc%lsm_index)
             
             ![ 5] output variable: tah (unit=K  ). ***  canopy air temperature 
             call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_CANOPY_TEMP, value = AC70_struc(n)%ac70(t)%tah, &

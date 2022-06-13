@@ -234,6 +234,12 @@ module Ac70_lsmMod
         !real               :: zlvl
         !!! MB: AC70
         integer            :: daynrinextclimaterecord
+        character(len=256) :: PathNameOutp
+        character(len=256) :: PathNameSimul
+        character(len=256) :: PathNameList
+        character(len=256) :: PathNameParam
+        integer            :: NrSoilLayers
+        real, pointer      :: Thickness(:)
         !!! MB: AC70
         type(Ac70dec), pointer :: ac70(:)
     end type Ac70_type_dec

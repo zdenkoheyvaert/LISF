@@ -1333,24 +1333,6 @@ contains
         END DO
         ERRWAT = END_WB-BEG_WB-(PRCP-ECAN-ETRAN-EDIR-RUNSRF-RUNSUB)*DT
 
-#ifndef WRF_HYDRO
-        IF(ABS(ERRWAT) > 0.1) THEN
-           if (ERRWAT > 0) then
-              call wrf_message ('The model is gaining water (ERRWAT is positive)')
-           else
-              call wrf_message('The model is losing water (ERRWAT is negative)')
-           endif
-           write(message, *) 'ERRWAT =',ERRWAT, "kg m{-2} timestep{-1}"
-           call wrf_message(trim(message))
-           WRITE(message, &
-           '("    I      J     END_WB     BEG_WB       PRCP       ECAN       EDIR      ETRAN      RUNSRF     RUNSUB")')
-           call wrf_message(trim(message))
-           WRITE(message,'(i6,1x,i6,1x,2f15.3,9f11.5)')ILOC,JLOC,END_WB,BEG_WB,PRCP*DT,ECAN*DT,&
-                EDIR*DT,ETRAN*DT,RUNSRF*DT,RUNSUB*DT,ZWT
-           call wrf_message(trim(message))
-           call wrf_error_fatal("Water budget problem in AC LSM")
-        END IF
-#endif
    ELSE                 !KWM
       ERRWAT = 0.0      !KWM
    ENDIF

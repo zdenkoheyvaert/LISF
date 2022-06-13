@@ -52,6 +52,7 @@ subroutine Ac70_finalize(n)
 
         ! free momory for constant parameter 
         deallocate(AC70_struc(n)%sldpth)
+        deallocate(AC70_struc(n)%Thickness)
 
         ! free momory for initial state variable
         deallocate(AC70_struc(n)%init_stc)

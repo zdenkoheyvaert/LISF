@@ -387,17 +387,17 @@ subroutine Ac70_coldstart(mtype)
                 AC70_struc(n)%ac70(t)%Tpot = GetTpot() ! mm/day
                 AC70_struc(n)%ac70(t)%TactWeedInfested = GetTactWeedInfested() !mm/day
 
-                if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
-                   AC70_struc(n)%ac70(t)%PREC_ac = 0.0  ! mm/day
-                   AC70_struc(n)%ac70(t)%Tmin_ac = 0.0 ! degC
-                   AC70_struc(n)%ac70(t)%Tmax_ac = 0.0 ! degC
-                   AC70_struc(n)%ac70(t)%ETo_ac = 0.0 ! mm/day
-                else
-                   AC70_struc(n)%ac70(t)%PREC_ac = GetRain()  ! mm/day
-                   AC70_struc(n)%ac70(t)%Tmin_ac =GetTmin() ! degC
-                   AC70_struc(n)%ac70(t)%Tmax_ac = GetTmax() ! degC
-                   AC70_struc(n)%ac70(t)%ETo_ac = GetETo() ! mm/day
-                end if
+                !if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
+                !   AC70_struc(n)%ac70(t)%PREC_ac = 0.0  ! mm/day
+                !   AC70_struc(n)%ac70(t)%Tmin_ac = 0.0 ! degC
+                !   AC70_struc(n)%ac70(t)%Tmax_ac = 0.0 ! degC
+                !   AC70_struc(n)%ac70(t)%ETo_ac = 0.0 ! mm/day
+                !else
+                !   AC70_struc(n)%ac70(t)%PREC_ac = GetRain()  ! mm/day
+                !   AC70_struc(n)%ac70(t)%Tmin_ac =GetTmin() ! degC
+                !   AC70_struc(n)%ac70(t)%Tmax_ac = GetTmax() ! degC
+                !   AC70_struc(n)%ac70(t)%ETo_ac = GetETo() ! mm/day
+                !end if
 
                 AC70_struc(n)%ac70(t)%InitializeRun = 1 ! gets 1 at end of year 
 

@@ -78,8 +78,17 @@ subroutine Ac70_readcrd()
         call LIS_verify(rc, "Aquacrop.7.0 number of soil layers: not defined")
     enddo
  
+    ! MM: AC70
+    ! number of soil layers
+    call ESMF_ConfigFindLabel(LIS_config, "NrSoilLayers:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, AC70_struc(n)%NrSoilLayers, rc=rc)
+        call LIS_verify(rc, "NrSoilLayers: not defined")
+    enddo
+ 
     ! allocate memory for sldpth using nsoil as dimension
     do n=1, LIS_rc%nnest
+        allocate(AC70_struc(n)%Thickness(AC70_struc(n)%NrSoilLayers))
         allocate(AC70_struc(n)%sldpth(AC70_struc(n)%nsoil))
         allocate(AC70_struc(n)%init_stc( AC70_struc(n)%nsoil))
         allocate(AC70_struc(n)%init_sh2o(AC70_struc(n)%nsoil))
@@ -91,6 +100,49 @@ subroutine Ac70_readcrd()
        AC70_struc(n)%nsnow  = 3
     enddo
  
+    ! MB: AC70
+    ! PathNameOutp
+    call ESMF_ConfigFindLabel(LIS_config, "PathNameOutp:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%PathNameOutp, rc=rc)
+        call LIS_verify(rc, "PathNameOutp: not defined")
+    enddo
+ 
+    ! PathNameSimul
+    call ESMF_ConfigFindLabel(LIS_config, "PathNameSimul:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%PathNameSimul, rc=rc)
+        call LIS_verify(rc, "PathNameSimul: not defined")
+    enddo
+ 
+    ! PathNameList
+    call ESMF_ConfigFindLabel(LIS_config, "PathNameList:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%PathNameList, rc=rc)
+        call LIS_verify(rc, "PathNameList: not defined")
+    enddo
+ 
+    ! PathNameParam
+    call ESMF_ConfigFindLabel(LIS_config, "PathNameParam:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%PathNameParam, rc=rc)
+        call LIS_verify(rc, "PathNameParam: not defined")
+    enddo
+
+    !! NumberSimulationRuns
+    !call ESMF_ConfigFindLabel(LIS_config, "NumberSimulationRuns:", rc = rc)
+    !do n=1, LIS_rc%nnest
+    !    call ESMF_ConfigGetAttribute(LIS_config, &
+    !        AC70_struc(n)%NumberSimulationRuns, rc=rc)
+    !    call LIS_verify(rc, "NumberSimulationRuns: not defined")
+    !enddo
+
+    ! MB: AC70
+
  
     ! Noah model landuse parameter table
     call ESMF_ConfigFindLabel(LIS_config, "Aquacrop.7.0 landuse parameter table:", rc = rc)
@@ -260,6 +312,16 @@ subroutine Ac70_readcrd()
         do i = 1, AC70_struc(n)%nsoil
             call ESMF_ConfigGetAttribute(LIS_config, AC70_struc(n)%sldpth(i), rc=rc)
             call LIS_verify(rc, 'Aquacrop.7.0 soil layer thickness: not defined')
+        enddo
+    enddo
+ 
+    ! MB: AC70
+    ! thickness of soil layers
+    call ESMF_ConfigFindLabel(LIS_config, "Thickness:", rc = rc)
+    do n=1, LIS_rc%nnest
+        do i = 1, AC70_struc(n)%NrSoilLayers
+            call ESMF_ConfigGetAttribute(LIS_config, AC70_struc(n)%Thickness(i), rc=rc)
+            call LIS_verify(rc, 'Thickness: not defined')
         enddo
     enddo
  

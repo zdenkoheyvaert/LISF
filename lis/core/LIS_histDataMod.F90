@@ -436,6 +436,7 @@ module LIS_histDataMod
 
   ! AC70
   public :: LIS_MOC_AC70SOILMOIST 
+  public :: LIS_MOC_AC70BIOMASS
   
   ! RUC 
   public :: LIS_MOC_QVG
@@ -933,6 +934,7 @@ module LIS_histDataMod
 
 !  <- AC70 ->
    integer :: LIS_MOC_AC70SOILMOIST  = -9999
+   integer :: LIS_MOC_AC70BIOMASS  = -9999
 
 !   <- RUC -> 
    integer :: LIS_MOC_QVG = -9999
@@ -4528,6 +4530,7 @@ contains
             model_patch=.true.)
     endif
     
+    ! MB: AC70
     call ESMF_ConfigFindLabel(modelSpecConfig,"AC70SoilMoist:",rc=rc)
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "AC70SoilMoist",&
@@ -4539,7 +4542,21 @@ contains
             n,2,ntiles,(/"kg/m2","m3/m3"/),1,(/"-"/),1,grib_depthlvl,0,&
             model_patch=.true.)
     endif
-    
+
+    call ESMF_ConfigFindLabel(modelSpecConfig,"AC70BIOMASS:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+         "AC70BIOMASS",&
+         "AC70_BIOMASS",&
+         "AC70 Biomass",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70BIOMASS,&
+            LIS_histData(n)%head_lsm_list,&
+            n,1,ntiles,(/"kg/m2"/),1,(/"-"/),1,1,1,&
+            model_patch=.true.)
+    endif
+
+    ! MB: AC70
+
     Call ESMF_ConfigFindLabel(modelSpecConfig, "StemMass:", rc = rc)
     Call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "StemMass", &

@@ -878,6 +878,62 @@ module Ac70_module
     logical :: GlobalIrriECw ! for versions before 3.2 where EC of 
                              ! irrigation water was not yet recorded
 
+
+character(len=:), allocatable :: RainFile
+character(len=:), allocatable :: RainFileFull
+character(len=:), allocatable :: RainDescription
+character(len=:), allocatable :: EToFile
+character(len=:), allocatable :: EToFileFull
+character(len=:), allocatable :: EToDescription
+character(len=:), allocatable :: CalendarFile
+character(len=:), allocatable :: CalendarFileFull
+character(len=:), allocatable :: CalendarDescription
+character(len=:), allocatable :: CO2File
+character(len=:), allocatable :: CO2FileFull
+character(len=:), allocatable :: CO2Description
+character(len=:), allocatable :: IrriFile
+character(len=:), allocatable :: IrriFileFull
+character(len=:), allocatable :: CropFile
+character(len=:), allocatable :: CropFileFull
+character(len=:), allocatable :: CropDescription
+character(len=:), allocatable :: PathNameProg
+character(len=:), allocatable :: PathNameOutp
+character(len=:), allocatable :: PathNameSimul
+character(len=:), allocatable :: ProfFile
+character(len=:), allocatable :: ProfFilefull
+character(len=:), allocatable :: ProfDescription
+character(len=:), allocatable :: ManFile
+character(len=:), allocatable :: ManFilefull
+character(len=:), allocatable :: ObservationsFile
+character(len=:), allocatable :: ObservationsFilefull
+character(len=:), allocatable :: ObservationsDescription
+character(len=:), allocatable :: OffSeasonFile
+character(len=:), allocatable :: OffSeasonFilefull
+character(len=:), allocatable :: OutputName
+character(len=:), allocatable :: GroundWaterFile
+character(len=:), allocatable :: GroundWaterFilefull
+character(len=:), allocatable :: ClimateFile
+character(len=:), allocatable :: ClimateFileFull
+character(len=:), allocatable :: ClimateDescription
+character(len=:), allocatable :: IrriDescription
+character(len=:), allocatable :: ClimFile
+character(len=:), allocatable :: SWCiniFile
+character(len=:), allocatable :: SWCiniFileFull
+character(len=:), allocatable :: SWCiniDescription
+character(len=:), allocatable :: ProjectDescription
+character(len=:), allocatable :: ProjectFile
+character(len=:), allocatable :: ProjectFileFull
+character(len=:), allocatable :: MultipleProjectDescription
+character(len=:), allocatable :: MultipleProjectFile
+character(len=:), allocatable :: TemperatureFile
+character(len=:), allocatable :: TemperatureFileFull
+character(len=:), allocatable :: TemperatureDescription
+character(len=:), allocatable :: MultipleProjectFileFull
+character(len=:), allocatable :: FullFileNameProgramParameters
+character(len=:), allocatable :: ManDescription
+character(len=:), allocatable :: ClimDescription
+character(len=:), allocatable :: OffSeasonDescription
+character(len=:), allocatable :: GroundwaterDescription
      ! OUTPUT
      real, pointer      :: ac70smc(:)
 
