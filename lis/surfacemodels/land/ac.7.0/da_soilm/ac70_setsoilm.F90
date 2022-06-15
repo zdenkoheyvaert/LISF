@@ -38,6 +38,7 @@ subroutine ac70_setsoilm(n, LSM_State)
   use LIS_logMod
   use ac70_lsmMod
   use module_sf_noahaclsm_36  !MN
+  use ac_kinds, only: dp
 
   implicit none
 ! !ARGUMENTS: 
@@ -54,17 +55,11 @@ subroutine ac70_setsoilm(n, LSM_State)
   real                   :: MAX_threshold
   real                   :: sm_threshold
   type(ESMF_Field)       :: sm1Field
-  type(ESMF_Field)       :: sm2Field
-  type(ESMF_Field)       :: sm3Field
-  type(ESMF_Field)       :: sm4Field
   real, pointer          :: soilm1(:)
-  real, pointer          :: soilm2(:)
-  real, pointer          :: soilm3(:)
-  real, pointer          :: soilm4(:)
   integer                :: t, j,i, gid, m, t_unpert
   integer                :: status
-  real                   :: delta(4)
-  real                   :: delta1,delta2,delta3,delta4
+  real                   :: delta(1)
+  real                   :: delta1
   real                   :: tmpval
   logical                :: bounds_violation
   integer                :: nIter
@@ -91,28 +86,10 @@ subroutine ac70_setsoilm(n, LSM_State)
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
        "ESMF_StateSet: Soil Moisture Layer 1 failed in ac70_setsoilm")
-  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 2",sm2Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateSet: Soil Moisture Layer 2 failed in ac70_setsoilm")
-  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 3",sm3Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateSet: Soil Moisture Layer 3 failed in ac70_setsoilm")
-  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 4",sm4Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateSet: Soil Moisture Layer 4 failed in ac70_setsoilm")
 
   call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_setsoilm")
-  call ESMF_FieldGet(sm2Field,localDE=0,farrayPtr=soilm2,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 2 failed in ac70_setsoilm")
-  call ESMF_FieldGet(sm3Field,localDE=0,farrayPtr=soilm3,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 3 failed in ac70_setsoilm")
-  call ESMF_FieldGet(sm4Field,localDE=0,farrayPtr=soilm4,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 4 failed in ac70_setsoilm")
 
   update_flag = .true. 
   update_flag_tile= .true. 
@@ -132,40 +109,13 @@ subroutine ac70_setsoilm(n, LSM_State)
      !MN: delta = X(+) - X(-)
      !NOTE: "ac70_updatesoilm.F90" updates the soilm_(t)     
      delta1 = soilm1(t)-AC70_struc(n)%ac70(t)%smc(1)
-     delta2 = soilm2(t)-AC70_struc(n)%ac70(t)%smc(2)
-     delta3 = soilm3(t)-AC70_struc(n)%ac70(t)%smc(3)
-     delta4 = soilm4(t)-AC70_struc(n)%ac70(t)%smc(4)
 
      ! MN: check    MIN_THRESHOLD < volumetric liquid soil moisture < threshold 
-     if(AC70_struc(n)%ac70(t)%sh2o(1)+delta1.gt.MIN_THRESHOLD .and.&
-          AC70_struc(n)%ac70(t)%sh2o(1)+delta1.lt.&
+     if(AC70_struc(n)%ac70(t)%smc(1)+delta1.gt.MIN_THRESHOLD .and.&
+          AC70_struc(n)%ac70(t)%smc(1)+delta1.lt.&
           sm_threshold) then 
         update_flag(gid) = update_flag(gid).and.(.true.)
         ! MN save the flag for each tile (col*row*ens)   (64*44)*20
-        update_flag_tile(t) = update_flag_tile(t).and.(.true.)
-     else
-        update_flag(gid) = update_flag(gid).and.(.false.)
-        update_flag_tile(t) = update_flag_tile(t).and.(.false.)
-     endif
-     if(AC70_struc(n)%ac70(t)%sh2o(2)+delta2.gt.MIN_THRESHOLD .and.&
-          AC70_struc(n)%ac70(t)%sh2o(2)+delta2.lt.sm_threshold) then 
-        update_flag(gid) = update_flag(gid).and.(.true.)
-        update_flag_tile(t) = update_flag_tile(t).and.(.true.)
-     else
-        update_flag(gid) = update_flag(gid).and.(.false.)
-        update_flag_tile(t) = update_flag_tile(t).and.(.false.)
-     endif
-     if(AC70_struc(n)%ac70(t)%sh2o(3)+delta3.gt.MIN_THRESHOLD .and.&
-          AC70_struc(n)%ac70(t)%sh2o(3)+delta3.lt.sm_threshold) then 
-        update_flag(gid) = update_flag(gid).and.(.true.)
-        update_flag_tile(t) = update_flag_tile(t).and.(.true.)
-     else
-        update_flag(gid) = update_flag(gid).and.(.false.)
-        update_flag_tile(t) = update_flag_tile(t).and.(.false.)
-     endif
-     if(AC70_struc(n)%ac70(t)%sh2o(4)+delta4.gt.MIN_THRESHOLD .and.&
-          AC70_struc(n)%ac70(t)%sh2o(4)+delta4.lt.sm_threshold) then 
-        update_flag(gid) = update_flag(gid).and.(.true.)
         update_flag_tile(t) = update_flag_tile(t).and.(.true.)
      else
         update_flag(gid) = update_flag(gid).and.(.false.)
@@ -221,9 +171,6 @@ subroutine ac70_setsoilm(n, LSM_State)
         ! update_flag_tile = TRUE --> means met the both min and max threshold
       
         tmp1 = LIS_rc%udef
-        tmp2 = LIS_rc%udef
-        tmp3 = LIS_rc%udef
-        tmp4 = LIS_rc%udef
 	!icount = 1
         do m=1,LIS_rc%nensem(n)
            t = i+m-1
@@ -232,34 +179,19 @@ subroutine ac70_setsoilm(n, LSM_State)
 	  if(update_flag_tile(t)) then
           
            tmp1(m) = soilm1(t) 
-           tmp2(m) = soilm2(t) 
-           tmp3(m) = soilm3(t) 
-           tmp4(m) = soilm4(t) 
            !icount = icount + 1 
           endif
         enddo
         
         MaxEnsSM1 = -10000
-        MaxEnsSM2 = -10000
-        MaxEnsSM3 = -10000
-        MaxEnsSM4 = -10000
 
         MinEnsSM1 = 10000
-        MinEnsSM2 = 10000
-        MinEnsSM3 = 10000
-        MinEnsSM4 = 10000
 
         do m=1,LIS_rc%nensem(n)
            if(tmp1(m).ne.LIS_rc%udef) then 
               MaxEnsSM1 = max(MaxEnsSM1, tmp1(m))
-              MaxEnsSM2 = max(MaxEnsSM2, tmp2(m))
-              MaxEnsSM3 = max(MaxEnsSM3, tmp3(m))
-              MaxEnsSM4 = max(MaxEnsSM4, tmp4(m))
 
               MinEnsSM1 = min(MinEnsSM1, tmp1(m))
-              MinEnsSM2 = min(MinEnsSM2, tmp2(m))
-              MinEnsSM3 = min(MinEnsSM3, tmp3(m))
-              MinEnsSM4 = min(MinEnsSM4, tmp4(m))
               
            endif
         enddo
@@ -274,52 +206,13 @@ subroutine ac70_setsoilm(n, LSM_State)
            if(update_flag_tile(t)) then
               
               delta1 = soilm1(t)-AC70_struc(n)%ac70(t)%smc(1)
-              delta2 = soilm2(t)-AC70_struc(n)%ac70(t)%smc(2)
-              delta3 = soilm3(t)-AC70_struc(n)%ac70(t)%smc(3)
-              delta4 = soilm4(t)-AC70_struc(n)%ac70(t)%smc(4)
 
-              AC70_struc(n)%ac70(t)%sh2o(1) = AC70_struc(n)%ac70(t)%sh2o(1)+&
-                   delta1
               AC70_struc(n)%ac70(t)%smc(1) = soilm1(t)
               if(soilm1(t).lt.0) then 
                  print*, 'setsoilm1 ',t,soilm1(t)
                  stop
               endif
-              if(AC70_struc(n)%ac70(t)%sh2o(2)+delta2.gt.MIN_THRESHOLD .and.&
-                   AC70_struc(n)%ac70(t)%sh2o(2)+delta2.lt.sm_threshold) then 
-                 AC70_struc(n)%ac70(t)%sh2o(2) = AC70_struc(n)%ac70(t)%sh2o(2)+&
-                      soilm2(t)-AC70_struc(n)%ac70(t)%smc(2)
-                 AC70_struc(n)%ac70(t)%smc(2) = soilm2(t)
-                 if(soilm2(t).lt.0) then 
-                    print*, 'setsoilm2 ',t,soilm2(t)
-                    stop
-                 endif
-              endif
-  
-              if(AC70_struc(n)%ac70(t)%sh2o(3)+delta3.gt.MIN_THRESHOLD .and.&
-                   AC70_struc(n)%ac70(t)%sh2o(3)+delta3.lt.sm_threshold) then 
-                 AC70_struc(n)%ac70(t)%sh2o(3) = AC70_struc(n)%ac70(t)%sh2o(3)+&
-                      soilm3(t)-AC70_struc(n)%ac70(t)%smc(3)
-                 AC70_struc(n)%ac70(t)%smc(3) = soilm3(t)
-                 if(soilm3(t).lt.0) then 
-                    print*, 'setsoilm3 ',t,soilm3(t)
-                    stop
-                 endif
-              endif
 
-              if(AC70_struc(n)%ac70(t)%sh2o(4)+delta4.gt.MIN_THRESHOLD .and.&
-                   AC70_struc(n)%ac70(t)%sh2o(4)+delta4.lt.sm_threshold) then 
-                 AC70_struc(n)%ac70(t)%sh2o(4) = AC70_struc(n)%ac70(t)%sh2o(4)+&
-                      soilm4(t)-AC70_struc(n)%ac70(t)%smc(4)
-                 AC70_struc(n)%ac70(t)%smc(4) = soilm4(t)
-
-                 if(soilm4(t).lt.0) then 
-                    print*, 'setsoilm4 ',t,soilm4(t)
-                    stop
-                 endif
-              endif
-              
-              
 !-----------------------------------------------------------------------------------------              
               ! randomly resample the smc from [MIN_THRESHOLD,  Max value from DA @ that tiem step]
 !-----------------------------------------------------------------------------------------
@@ -332,22 +225,8 @@ subroutine ac70_setsoilm(n, LSM_State)
               ! use mean value
               ! Assume sh2o = smc (i.e. ice content=0) 
               smc_tmp = (MaxEnsSM1 - MinEnsSM1)/2 + MinEnsSM1
-              AC70_struc(n)%ac70(t)%sh2o(1) = smc_tmp 
               AC70_struc(n)%ac70(t)%smc(1) = smc_tmp
                           
-              smc_tmp = (MaxEnsSM2 - MinEnsSM2)/2 + MinEnsSM2            
-              AC70_struc(n)%ac70(t)%sh2o(2) = smc_tmp
-              AC70_struc(n)%ac70(t)%smc(2) = smc_tmp
-               
-              smc_tmp = (MaxEnsSM3 - MinEnsSM3)/2 + MinEnsSM3
-              AC70_struc(n)%ac70(t)%sh2o(3) = smc_tmp
-              AC70_struc(n)%ac70(t)%smc(3) = smc_tmp
-              
-              smc_tmp = (MaxEnsSM4 - MinEnsSM4)/2 + MinEnsSM4
-              AC70_struc(n)%ac70(t)%sh2o(4) = smc_tmp
-              AC70_struc(n)%ac70(t)%smc(4) = smc_tmp
-              
- 
            endif ! flag for each tile
 
         enddo ! loop over tile
@@ -367,7 +246,7 @@ subroutine ac70_setsoilm(n, LSM_State)
               niter = niter + 1
               !t_unpert = i*LIS_rc%nensem(n)
 	      t_unpert = i+LIS_rc%nensem(n)-1
-              do j=1,4
+              do j=1,1
                  delta(j) = 0.0
                  do m=1,LIS_rc%nensem(n)-1
                      t = i+m-1
@@ -375,36 +254,29 @@ subroutine ac70_setsoilm(n, LSM_State)
                     
                     if(m.ne.LIS_rc%nensem(n)) then 
                        delta(j) = delta(j) + &
-                            (AC70_struc(n)%ac70(t)%sh2o(j) - &
-                            AC70_struc(n)%ac70(t_unpert)%sh2o(j))
+                            (AC70_struc(n)%ac70(t)%smc(j) - &
+                            AC70_struc(n)%ac70(t_unpert)%smc(j))
                     endif
                     
                  enddo
               enddo
               
-              do j=1,4
+              do j=1,1
                  delta(j) =delta(j)/(LIS_rc%nensem(n)-1)
                  do m=1,LIS_rc%nensem(n)-1
                      t = i+m-1
                     !t = (i-1)*LIS_rc%nensem(n)+m
-                    SOILTYP = AC70_struc(n)%ac70(t)%soiltype  
-                    MAX_THRESHOLD = MAXSMC (SOILTYP)
-                    sm_threshold = MAXSMC (SOILTYP) - 0.02
+                    MAX_THRESHOLD = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - epsilon(0._dp)
+                    sm_threshold = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - 0.02
                     
-                    tmpval = AC70_struc(n)%ac70(t)%sh2o(j) - &
+                    tmpval = AC70_struc(n)%ac70(t)%smc(j) - &
                          delta(j)
                     if(tmpval.le.MIN_THRESHOLD) then 
-                       AC70_struc(n)%ac70(t)%sh2o(j) = &
-                            max(AC70_struc(n)%ac70(t_unpert)%sh2o(j),&
-                            MIN_THRESHOLD)
                        AC70_struc(n)%ac70(t)%smc(j) = &
                             max(AC70_struc(n)%ac70(t_unpert)%smc(j),&
                             MIN_THRESHOLD)
                        ens_flag(m) = .false. 
                     elseif(tmpval.ge.sm_threshold) then
-                       AC70_struc(n)%ac70(t)%sh2o(j) = &
-                            min(AC70_struc(n)%ac70(t_unpert)%sh2o(j),&
-                            sm_threshold)
                        AC70_struc(n)%ac70(t)%smc(j) = &
                             min(AC70_struc(n)%ac70(t_unpert)%smc(j),&
                             sm_threshold)
@@ -416,45 +288,43 @@ subroutine ac70_setsoilm(n, LSM_State)
               !--------------------------------------------------------------------------
               ! Recalculate the deltas and adjust the ensemble
               !--------------------------------------------------------------------------
-              do j=1,4
+              do j=1,1
                  delta(j) = 0.0
                  do m=1,LIS_rc%nensem(n)-1
                     t = i+m-1
                     !t = (i-1)*LIS_rc%nensem(n)+m
                     if(m.ne.LIS_rc%nensem(n)) then 
                        delta(j) = delta(j) + &
-                            (AC70_struc(n)%ac70(t)%sh2o(j) - &
-                            AC70_struc(n)%ac70(t_unpert)%sh2o(j))
+                            (AC70_struc(n)%ac70(t)%smc(j) - &
+                            AC70_struc(n)%ac70(t_unpert)%smc(j))
                     endif
                  enddo
               enddo
               
-              do j=1,4
+              do j=1,1
                  delta(j) =delta(j)/(LIS_rc%nensem(n)-1)
                  do m=1,LIS_rc%nensem(n)-1
                     t = i+m-1
                     !t = (i-1)*LIS_rc%nensem(n)+m
                     
                     if(ens_flag(m)) then 
-                       tmpval = AC70_struc(n)%ac70(t)%sh2o(j) - &
+                       tmpval = AC70_struc(n)%ac70(t)%smc(j) - &
                             delta(j)
-                       SOILTYP = AC70_struc(n)%ac70(t)%soiltype  
-                       MAX_THRESHOLD = MAXSMC (SOILTYP) 
+                       MAX_THRESHOLD = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - epsilon(0._dp)
+                       sm_threshold = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - 0.02
                        
                        if(.not.(tmpval.le.0.0 .or.&
                             tmpval.gt.(MAX_THRESHOLD))) then 
                           
                           AC70_struc(n)%ac70(t)%smc(j) = &
                                AC70_struc(n)%ac70(t)%smc(j) - delta(j)
-                          AC70_struc(n)%ac70(t)%sh2o(j) = &
-                               AC70_struc(n)%ac70(t)%sh2o(j) - delta(j)
                           bounds_violation = .false.
                        endif
                     endif
                     
-                    tmpval = AC70_struc(n)%ac70(t)%sh2o(j)
-                    SOILTYP = AC70_struc(n)%ac70(t)%soiltype  
-                    MAX_THRESHOLD = MAXSMC (SOILTYP) 
+                    tmpval = AC70_struc(n)%ac70(t)%smc(j)
+                    MAX_THRESHOLD = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - epsilon(0._dp)
+                    sm_threshold = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - 0.02
                     
                     if(tmpval.le.0.0 .or.&
                          tmpval.gt.(MAX_THRESHOLD)) then 
@@ -473,23 +343,19 @@ subroutine ac70_setsoilm(n, LSM_State)
                  write(LIS_logunit,*) '[ERR] Ensemble structure violates physical bounds '
                  write(LIS_logunit,*) '[ERR] Please adjust the perturbation settings ..'
 
-                 do j=1,4
+                 do j=1,1
                     do m=1,LIS_rc%nensem(n)
                        t = i+m-1
                        !t = (i-1)*LIS_rc%nensem(n)+m
                        
-                       SOILTYP = AC70_struc(n)%ac70(t)%soiltype  
-                       MAX_THRESHOLD = MAXSMC (SOILTYP)            
+                       MAX_THRESHOLD = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - epsilon(0._dp)
+                       sm_threshold = AC70_struc(n)%ac70(t)%soillayer(1)%sat/100.0 - 0.02
                        
-                       if(AC70_struc(n)%ac70(t)%sh2o(j).gt.MAX_THRESHOLD.or.&
-                            AC70_struc(n)%ac70(t)%smc(j).gt.MAX_THRESHOLD) then                        
-                          AC70_struc(n)%ac70(t)%sh2o(j) = MAX_THRESHOLD
+                       if(AC70_struc(n)%ac70(t)%smc(j).gt.MAX_THRESHOLD) then
                           AC70_struc(n)%ac70(t)%smc(j) = MAX_THRESHOLD
                        endif
                        
-                       if(AC70_struc(n)%ac70(t)%sh2o(j).lt.MIN_THRESHOLD.or.&
-                            AC70_struc(n)%ac70(t)%smc(j).lt.MIN_THRESHOLD) then                        
-                          AC70_struc(n)%ac70(t)%sh2o(j) = MIN_THRESHOLD
+                       if(AC70_struc(n)%ac70(t)%smc(j).lt.MIN_THRESHOLD) then 
                           AC70_struc(n)%ac70(t)%smc(j) = MIN_THRESHOLD
                        endif
 !                    print*, i, m

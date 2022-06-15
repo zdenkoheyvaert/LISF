@@ -43,39 +43,34 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
 !  \end{description}
 !EOP
   type(ESMF_Field)       :: sm1Field
-  type(ESMF_Field)       :: ac70sm1Field
 !  type(ESMF_Field)       :: sm2Field
 !  type(ESMF_Field)       :: sm3Field
 !  type(ESMF_Field)       :: sm4Field
-  type(ESMF_Field)       :: laiField
+  type(ESMF_Field)       :: CCiActualField
   integer                :: t
   integer                :: status
   real, pointer          :: soilm1(:)
-  real, pointer          :: ac70soilm1(:)
 !  real, pointer          :: soilm2(:)
 !  real, pointer          :: soilm3(:)
 !  real, pointer          :: soilm4(:)
-  real, pointer          :: lai(:)
+  real, pointer          :: CCiActual(:)
   real                   :: smmax1!,smmax2,smmax3,smmax4
   real                   :: smmin1!,smmin2,smmin3,smmin4
-  real                   :: ac70smmax1!,smmax2,smmax3,smmax4
-  real                   :: ac70smmin1!,smmin2,smmin3,smmin4
-  real                   :: laimax
-  real                   :: laimin
+  real                   :: CCiActualmax
+  real                   :: CCiActualmin
   integer                :: gid
-  real                   :: laitmp
+  real                   :: CCiActualtmp
 
   logical                :: update_flag(LIS_rc%ngrid(n))
   real                   :: perc_violation(LIS_rc%ngrid(n))
-  real                   :: laimean(LIS_rc%ngrid(n))
-  integer                :: nlaimean(LIS_rc%ngrid(n))
+  real                   :: CCiActualmean(LIS_rc%ngrid(n))
+  integer                :: nCCiActualmean(LIS_rc%ngrid(n))
   integer                :: N_ens
   real                   :: state_tmp(LIS_rc%nensem(n)),state_mean
 
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet for Soil Moisture Layer 1 failed in ac70_qcsoilmLAI")
- 
   call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet for Soil Moisture Layer 1 failed in ac70_qcsoilmLAI")
@@ -88,49 +83,31 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
   call LIS_verify(status,&
        "ESMF_AttributeGet: Min Value failed in ac70_qcsoilmLAI")
 
-  call ESMF_StateGet(LSM_State,"AC70 Soil Moisture Layer 1",ac70sm1Field,rc=status)
+  call ESMF_StateGet(LSM_State,"CCIActual",CCiActualField,rc=status)
   call LIS_verify(status,&
-       "ESMF_StateGet for AC70 Soil Moisture Layer 1 failed in ac70_qcsoilmLAI")
- 
-  call ESMF_FieldGet(ac70sm1Field,localDE=0,farrayPtr=ac70soilm1,rc=status)
+           "ESMF_StateGet for CCiActual failed in ac70_qcsoilmLAI")
+  call ESMF_FieldGet(CCiActualField,localDE=0,farrayPtr=CCiActual,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet for AC70 Soil Moisture Layer 1 failed in ac70_qcsoilmLAI")
+           "ESMF_FieldGet for CCiActual failed in ac70_qcsoilmLAI")
 
-  call ESMF_AttributeGet(ac70sm1Field,"Max Value",ac70smmax1,rc=status)
+  call ESMF_AttributeGet(CCiActualField,"Max Value",CCiActualmax,rc=status)
   call LIS_verify(status,&
-       "ESMF_AttributeGet: AC70 Max Value failed in ac70_qcsoilmLAI")
-
-  call ESMF_AttributeGet(ac70sm1Field,"Min Value",ac70smmin1,rc=status)
+           "ESMF_AttributeGet for CCiActual Max Value failed in ac70_qcsoilmLAI")
+  call ESMF_AttributeGet(CCiActualField,"Min Value",CCiActualmin,rc=status)
   call LIS_verify(status,&
-       "ESMF_AttributeGet: AC70 Min Value failed in ac70_qcsoilmLAI")
-
-  call ESMF_StateGet(LSM_State,"LAI",laiField,rc=status)
-  call LIS_verify(status,&
-           "ESMF_StateGet for LAI failed in ac70_qcsoilmLAI")
-  call ESMF_FieldGet(laiField,localDE=0,farrayPtr=lai,rc=status)
-  call LIS_verify(status,&
-           "ESMF_FieldGet for LAI failed in ac70_qcsoilmLAI")
-
-  call ESMF_AttributeGet(laiField,"Max Value",laimax,rc=status)
-  call LIS_verify(status,&
-           "ESMF_AttributeGet for LAI Max Value failed in ac70_qcsoilmLAI")
-  call ESMF_AttributeGet(laiField,"Min Value",laimin,rc=status)
-  call LIS_verify(status,&
-           "ESMF_AttributeGet for LAI Min Value failed in ac70_qcsoilmLAI")
+           "ESMF_AttributeGet for CCiActual Min Value failed in ac70_qcsoilmLAI")
 
 
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
      if(soilm1(t).gt.smmax1) soilm1(t) = smmax1
      if(soilm1(t).lt.smmin1) soilm1(t) = smmin1
-     if(ac70soilm1(t).gt.ac70smmax1) ac70soilm1(t) = ac70smmax1
-     if(ac70soilm1(t).lt.ac70smmin1) ac70soilm1(t) = ac70smmin1
   enddo
 
   update_flag    = .true.
   perc_violation = 0.0
-  laimean       = 0.0
-  nlaimean      = 0
+  CCiActualmean       = 0.0
+  nCCiActualmean      = 0
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
 
@@ -138,9 +115,9 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%col,&
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
 
-     laitmp =  lai(t)
+     CCiActualtmp =  CCiActual(t)
 
-     if(laitmp.lt.laimin.or.laitmp.gt.laimax) then
+     if(CCiActualtmp.lt.CCiActualmin.or.CCiActualtmp.gt.CCiActualmax) then
         update_flag(gid) = .false.
         perc_violation(gid) = perc_violation(gid) +1
      endif
@@ -163,19 +140,19 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
      if(.not.update_flag(gid)) then
         if(perc_violation(gid).lt.0.8) then
-           if((lai(t).gt.laimin).and.&
-                (lai(t).lt.laimax)) then 
-              laimean(gid) = laimean(gid) + &
-                   lai(t) 
-              nlaimean(gid) = nlaimean(gid) + 1
+           if((CCiActual(t).gt.CCiActualmin).and.&
+                (CCiActual(t).lt.CCiActualmax)) then 
+              CCiActualmean(gid) = CCiActualmean(gid) + &
+                   CCiActual(t) 
+              nCCiActualmean(gid) = nCCiActualmean(gid) + 1
            endif
         endif
      endif
   enddo
   
   do gid=1,LIS_rc%ngrid(n)
-     if(nlaimean(gid).gt.0) then
-        laimean(gid) = laimean(gid)/nlaimean(gid)
+     if(nCCiActualmean(gid).gt.0) then
+        CCiActualmean(gid) = CCiActualmean(gid)/nCCiActualmean(gid)
      endif
   enddo
 
@@ -185,19 +162,19 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%col,&
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
 
-     laitmp =  lai(t)
+     CCiActualtmp =  CCiActual(t)
 
 ! If the update is unphysical, simply set to the average of
 ! the good ensemble members. If all else fails, do not
 ! update.
 
      if(update_flag(gid)) then
-        lai(t) = laitmp
+        CCiActual(t) = CCiActualtmp
      elseif(perc_violation(gid).lt.0.8) then
-        if(laitmp.lt.laimin.or.laitmp.gt.laimax) then
-           lai(t) = laimean(gid)
+        if(CCiActualtmp.lt.CCiActualmin.or.CCiActualtmp.gt.CCiActualmax) then
+           CCiActual(t) = CCiActualmean(gid)
         else
-           lai(t) = lai(t) 
+           CCiActual(t) = CCiActual(t) 
         endif
      endif
   enddo
@@ -205,7 +182,7 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
 #if 0 
   N_ens = LIS_rc%nensem(n)
   do t=1,N_ens
-     state_tmp(t) = lai(t)
+     state_tmp(t) = CCiActual(t)
   enddo
   state_mean =sum(state_tmp)/N_ens
 

@@ -253,9 +253,6 @@ subroutine Ac70_coldstart(mtype)
                 do l=1, AC70_struc(n)%nsoil
                     AC70_struc(n)%ac70(t)%sh2o(l) = AC70_struc(n)%init_sh2o(l)
                 enddo
-                do l=1, AC70_struc(n)%nsoil
-                    AC70_struc(n)%ac70(t)%smc(l) = AC70_struc(n)%init_smc(l)
-                enddo
                 AC70_struc(n)%ac70(t)%tah = AC70_struc(n)%init_tah
                 AC70_struc(n)%ac70(t)%eah = AC70_struc(n)%init_eah
                 AC70_struc(n)%ac70(t)%fwet = AC70_struc(n)%init_fwet
@@ -478,8 +475,8 @@ subroutine Ac70_coldstart(mtype)
                 AC70_struc(n)%ac70(t)%NoMoreCrop = GetNoMoreCrop()
                 AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting = GetCGCadjustmentAfterCutting()
 
-                do l=1, AC70_struc(n)%nsoil
-                    AC70_struc(n)%ac70(t)%ac70smc(l) = GetCompartment_theta(l)
+                do l=1, AC70_struc(n)%ac70(t)%NrCompartments
+                    AC70_struc(n)%ac70(t)%smc(l) = GetCompartment_theta(l)
                 enddo
 
                 do l=1, 40

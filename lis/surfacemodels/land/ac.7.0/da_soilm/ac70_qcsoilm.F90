@@ -42,17 +42,11 @@ subroutine ac70_qcsoilm(n, LSM_State)
 !  \end{description}
 !EOP
   type(ESMF_Field)       :: sm1Field
-!  type(ESMF_Field)       :: sm2Field
-!  type(ESMF_Field)       :: sm3Field
-!  type(ESMF_Field)       :: sm4Field
   integer                :: t
   integer                :: status
   real, pointer          :: soilm1(:)
-!  real, pointer          :: soilm2(:)
-!  real, pointer          :: soilm3(:)
-!  real, pointer          :: soilm4(:)
-  real                   :: smmax1!,smmax2,smmax3,smmax4
-  real                   :: smmin1!,smmin2,smmin3,smmin4
+  real                   :: smmax1
+  real                   :: smmin1
  
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&

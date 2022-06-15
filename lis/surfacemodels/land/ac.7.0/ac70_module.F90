@@ -940,7 +940,6 @@ character(len=:), allocatable :: ClimDescription
 character(len=:), allocatable :: OffSeasonDescription
 character(len=:), allocatable :: GroundwaterDescription
      ! OUTPUT
-     real, pointer      :: ac70smc(:)
 
   end type ac70dec
 end module Ac70_module

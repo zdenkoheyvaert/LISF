@@ -239,6 +239,7 @@ module Ac70_lsmMod
         character(len=256) :: PathNameList
         character(len=256) :: PathNameParam
         integer            :: NrSoilLayers
+        integer            :: Tmin_windowsize
         real, pointer      :: Thickness(:)
         !!! MB: AC70
         type(Ac70dec), pointer :: ac70(:)
@@ -299,17 +300,16 @@ contains
             do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
                 allocate(AC70_struc(n)%ac70(t)%sstc( AC70_struc(n)%nsoil + AC70_struc(n)%nsnow))
                 allocate(AC70_struc(n)%ac70(t)%sh2o(AC70_struc(n)%nsoil))
-                allocate(AC70_struc(n)%ac70(t)%smc(AC70_struc(n)%nsoil))
                 allocate(AC70_struc(n)%ac70(t)%zss( AC70_struc(n)%nsoil + AC70_struc(n)%nsnow))
                 allocate(AC70_struc(n)%ac70(t)%snowice(AC70_struc(n)%nsnow))
                 allocate(AC70_struc(n)%ac70(t)%snowliq(AC70_struc(n)%nsnow))
             enddo
             !!! MB: AC70
             do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
-                allocate(AC70_struc(n)%ac70(t)%ac70smc(AC70_struc(n)%NrSoilLayers))
+                allocate(AC70_struc(n)%ac70(t)%smc(AC70_struc(n)%ac70(t)%NrCompartments))
             enddo
             do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
-                allocate(AC70_struc(n)%ac70(t)%PREC_ac_antecedent(AC70_struc(n)%Tmin_windowsize))
+                allocate(AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(AC70_struc(n)%Tmin_windowsize))
             enddo
 !            ! allocate memory for intiali state variables
 !            allocate(AC70_struc(n)%init_stc( AC70_struc(n)%nsoil))

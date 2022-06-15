@@ -842,8 +842,8 @@ subroutine Ac70_setup()
             AC70_struc(n)%ac70(t)%IrriAfterSeason = GetIrriAfterSeason()
             AC70_struc(n)%ac70(t)%SoilLayer = GetSoilLayer()
             AC70_struc(n)%ac70(t)%daynri = GetDayNri()
-            do l=1, AC70_struc(n)%nsoil
-                 AC70_struc(n)%ac70(t)%ac70smc(l) = GetCompartment_theta(l)
+            do l=1, AC70_struc(n)%ac70(t)%NrCompartments
+                 AC70_struc(n)%ac70(t)%smc(l) = GetCompartment_theta(l)
             enddo
             !write(*,'(e23.15e3)') AC70_struc(n)%ac70(t)%ac70smc(1)
             AC70_struc(n)%ac70(t)%IrriECw = GetIrriECw()

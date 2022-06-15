@@ -40,194 +40,70 @@ subroutine ac70_updatesoilmLAI(n, LSM_State, LSM_Incr_State)
 !EOP
 
   type(ESMF_Field)       :: sm1Field
-  type(ESMF_Field)       :: sm2Field
-  type(ESMF_Field)       :: sm3Field
-  type(ESMF_Field)       :: sm4Field
-  type(ESMF_Field)       :: laiField
-  type(ESMF_Field)       :: ac70sm1Field
-  type(ESMF_Field)       :: ac70sm2Field
-  type(ESMF_Field)       :: ac70sm3Field
-  type(ESMF_Field)       :: ac70sm4Field
+  type(ESMF_Field)       :: CCiActualField
   type(ESMF_Field)       :: sm1IncrField
-  type(ESMF_Field)       :: sm2IncrField
-  type(ESMF_Field)       :: sm3IncrField
-  type(ESMF_Field)       :: sm4IncrField
-  type(ESMF_Field)       :: laiIncrField
-  type(ESMF_Field)       :: ac70sm1IncrField
-  type(ESMF_Field)       :: ac70sm2IncrField
-  type(ESMF_Field)       :: ac70sm3IncrField
-  type(ESMF_Field)       :: ac70sm4IncrField
+  type(ESMF_Field)       :: CCiActualIncrField
 
   real, pointer          :: soilm1(:)
-  real, pointer          :: soilm2(:)
-  real, pointer          :: soilm3(:)
-  real, pointer          :: soilm4(:)
-  real, pointer          :: lai(:)
-  real, pointer          :: ac70soilm1(:)
-  real, pointer          :: ac70soilm2(:)
-  real, pointer          :: ac70soilm3(:)
-  real, pointer          :: ac70soilm4(:)
+  real, pointer          :: CCiActual(:)
   real, pointer          :: soilmIncr1(:)
-  real, pointer          :: soilmIncr2(:)
-  real, pointer          :: soilmIncr3(:)
-  real, pointer          :: soilmIncr4(:)
-  real, pointer          :: laiincr(:)
-  real, pointer          :: ac70soilmIncr1(:)
-  real, pointer          :: ac70soilmIncr2(:)
-  real, pointer          :: ac70soilmIncr3(:)
-  real, pointer          :: ac70soilmIncr4(:)
+  real, pointer          :: CCiActualincr(:)
   integer                :: t,i,m,gid
   integer                :: status
 
-  real                   :: laitmp,laimax,laimin
+  real                   :: CCiActualtmp,CCiActualmax,CCiActualmin
 
   logical                :: update_flag(LIS_rc%ngrid(n))
   real                   :: perc_violation(LIS_rc%ngrid(n))
 
-  real                   :: laimean(LIS_rc%ngrid(n))
-  integer                :: nlaimean(LIS_rc%ngrid(n))
+  real                   :: CCiActualmean(LIS_rc%ngrid(n))
+  integer                :: nCCiActualmean(LIS_rc%ngrid(n))
 
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 2",sm2Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 3",sm3Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_State,"Soil Moisture Layer 4",sm4Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_State,"AC70 Soil Moisture Layer 1",ac70sm1Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_State,"AC70 Soil Moisture Layer 2",ac70sm2Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_State,"AC70 Soil Moisture Layer 3",ac70sm3Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_State,"AC70 Soil Moisture Layer 4",ac70sm4Field,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
-
   call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(sm2Field,localDE=0,farrayPtr=soilm2,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(sm3Field,localDE=0,farrayPtr=soilm3,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(sm4Field,localDE=0,farrayPtr=soilm4,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm1Field,localDE=0,farrayPtr=ac70soilm1,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm2Field,localDE=0,farrayPtr=ac70soilm2,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm3Field,localDE=0,farrayPtr=ac70soilm3,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm4Field,localDE=0,farrayPtr=ac70soilm4,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
 
   call ESMF_StateGet(LSM_Incr_State,"Soil Moisture Layer 1",sm1IncrField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"Soil Moisture Layer 2",sm2IncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"Soil Moisture Layer 3",sm3IncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"Soil Moisture Layer 4",sm4IncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"AC70 Soil Moisture Layer 1",sm1IncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"AC70 Soil Moisture Layer 2",sm2IncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"AC70 Soil Moisture Layer 3",sm3IncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"AC70 Soil Moisture Layer 4",sm4IncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: AC70 Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
-
   call ESMF_FieldGet(sm1IncrField,localDE=0,farrayPtr=soilmIncr1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(sm2IncrField,localDE=0,farrayPtr=soilmIncr2,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(sm3IncrField,localDE=0,farrayPtr=soilmIncr3,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(sm4IncrField,localDE=0,farrayPtr=soilmIncr4,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm1IncrField,localDE=0,farrayPtr=ac70soilmIncr1,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm2IncrField,localDE=0,farrayPtr=ac70soilmIncr2,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 2 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm3IncrField,localDE=0,farrayPtr=ac70soilmIncr3,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 3 failed in ac70_updatesoilmLAI")
-  call ESMF_FieldGet(ac70sm4IncrField,localDE=0,farrayPtr=ac70soilmIncr4,rc=status)
-  call LIS_verify(status,&
-       "ESMF_FieldGet: AC70 Soil Moisture Layer 4 failed in ac70_updatesoilmLAI")
 
-
-  call ESMF_StateGet(LSM_State,"LAI",laiField,rc=status)
+  call ESMF_StateGet(LSM_State,"CCiActual",CCiActualField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: LSM_State, failed in ac70_updatesoilmLAI")
-
-  call ESMF_StateGet(LSM_Incr_State,"LAI",laiIncrField,rc=status)
+  call ESMF_StateGet(LSM_Incr_State,"CCiActual",CCiActualIncrField,rc=status)
   call LIS_verify(status,&
-       "ESMF_StateGet: LSM_Incr_State LAI failed in ac70_updatesoilmLAI")
+       "ESMF_StateGet: LSM_Incr_State CCiActual failed in ac70_updatesoilmLAI")
  
-  call ESMF_FieldGet(laiField,localDE=0,farrayPtr=lai,rc=status)
+  call ESMF_FieldGet(CCiActualField,localDE=0,farrayPtr=CCiActual,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet: laiField failed in ac70_updatesoilmLAI")
+       "ESMF_FieldGet: CCiActualField failed in ac70_updatesoilmLAI")
+  call ESMF_FieldGet(CCiActualIncrField,localDE=0,farrayPtr=CCiActualincr,rc=status)
+  call LIS_verify(status,&
+       "ESMF_FieldGet: CCiActualIncrField failed in ac70_updatesoilmLAI")
 
-  call ESMF_FieldGet(laiIncrField,localDE=0,farrayPtr=laiincr,rc=status)
+  call ESMF_AttributeGet(CCiActualField,"Max Value",CCiActualmax,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet: laiIncrField failed in ac70_updatesoilmLAI")
-
-  call ESMF_AttributeGet(laiField,"Max Value",laimax,rc=status)
+       "ESMF_AttributeGet: CCiActualField Max Value failed in ac70_updatesoilmLAI")
+  call ESMF_AttributeGet(CCiActualField,"Min Value",CCiActualmin,rc=status)
   call LIS_verify(status,&
-       "ESMF_AttributeGet: laiField Max Value failed in ac70_updatesoilmLAI")
-  call ESMF_AttributeGet(laiField,"Min Value",laimin,rc=status)
-  call LIS_verify(status,&
-       "ESMF_AttributeGet: laiField Min Value failed in ac70_updatesoilmLAI")
+       "ESMF_AttributeGet: CCiActualField Min Value failed in ac70_updatesoilmLAI")
 
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
      soilm1(t) = soilm1(t) + soilmIncr1(t)
-     soilm2(t) = soilm2(t) + soilmIncr2(t)
-     soilm3(t) = soilm3(t) + soilmIncr3(t)
-     soilm4(t) = soilm4(t) + soilmIncr4(t)
-     ac70soilm1(t) = ac70soilm1(t) + ac70soilmIncr1(t)
-     ac70soilm2(t) = ac70soilm2(t) + ac70soilmIncr2(t)
-     ac70soilm3(t) = ac70soilm3(t) + ac70soilmIncr3(t)
-     ac70soilm4(t) = ac70soilm4(t) + ac70soilmIncr4(t)
   enddo
 
 
   update_flag    = .true.
   perc_violation = 0.0
-  laimean       = 0.0
-  nlaimean      = 0
+  CCiActualmean       = 0.0
+  nCCiActualmean      = 0
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
 
@@ -235,10 +111,10 @@ subroutine ac70_updatesoilmLAI(n, LSM_State, LSM_Incr_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%col,&
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
 
-     laitmp =  lai(t) + laiincr(t)
+     CCiActualtmp =  CCiActual(t) + CCiActualincr(t)
 
 
-     if(laitmp.lt.laimin.or.laitmp.gt.laimax) then
+     if(CCiActualtmp.lt.CCiActualmin.or.CCiActualtmp.gt.CCiActualmax) then
         update_flag(gid) = .false.
         perc_violation(gid) = perc_violation(gid) +1
      endif
@@ -261,19 +137,19 @@ subroutine ac70_updatesoilmLAI(n, LSM_State, LSM_Incr_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
      if(.not.update_flag(gid)) then
         if(perc_violation(gid).lt.0.8) then
-           if((lai(t)+laiincr(t).gt.laimin).and.&
-                (lai(t)+laiincr(t).lt.laimax)) then 
-              laimean(gid) = laimean(gid) + &
-                   lai(t) + laiincr(t)
-              nlaimean(gid) = nlaimean(gid) + 1
+           if((CCiActual(t)+CCiActualincr(t).gt.CCiActualmin).and.&
+                (CCiActual(t)+CCiActualincr(t).lt.CCiActualmax)) then 
+              CCiActualmean(gid) = CCiActualmean(gid) + &
+                   CCiActual(t) + CCiActualincr(t)
+              nCCiActualmean(gid) = nCCiActualmean(gid) + 1
            endif
         endif
      endif
   enddo
 
  do gid=1,LIS_rc%ngrid(n)
-     if(nlaimean(gid).gt.0) then
-        laimean(gid) = laimean(gid)/nlaimean(gid)
+     if(nCCiActualmean(gid).gt.0) then
+        CCiActualmean(gid) = CCiActualmean(gid)/nCCiActualmean(gid)
      endif
   enddo
 
@@ -283,19 +159,19 @@ subroutine ac70_updatesoilmLAI(n, LSM_State, LSM_Incr_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%col,&
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
 
-     laitmp =  lai(t) + laiincr(t)
+     CCiActualtmp =  CCiActual(t) + CCiActualincr(t)
 
 ! If the update is unphysical, simply set to the average of
 ! the good ensemble members. If all else fails, do not
 ! update.
 
      if(update_flag(gid)) then
-        lai(t) = laitmp
+        CCiActual(t) = CCiActualtmp
      elseif(perc_violation(gid).lt.0.8) then
-        if(laitmp.lt.laimin.or.laitmp.gt.laimax) then
-           lai(t) = laimean(gid)
+        if(CCiActualtmp.lt.CCiActualmin.or.CCiActualtmp.gt.CCiActualmax) then
+           CCiActual(t) = CCiActualmean(gid)
         else
-           lai(t) = lai(t) + laiincr(t)
+           CCiActual(t) = CCiActual(t) + CCiActualincr(t)
         endif
      endif
   enddo

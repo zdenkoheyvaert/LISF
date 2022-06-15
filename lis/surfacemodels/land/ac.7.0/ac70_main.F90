@@ -437,6 +437,11 @@ subroutine Ac70_main(n)
     integer              :: year, month, day, hour, minute, second
     logical              :: alarmCheck
 
+    integer               :: status
+    integer               :: c,r,l
+    integer               :: ios, nid,rivid,fldid
+
+    integer            :: tid
 !
 ! !DESCRIPTION:
 !  This is the entry point for calling the Ac70 physics.
@@ -470,42 +475,42 @@ subroutine Ac70_main(n)
           lat = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lat
           lon = LIS_domain(n)%grid(LIS_domain(n)%gindex(col, row))%lon
 
-            ! PREC_ac
-            tmp_PREC_ac      = AC70_struc(n)%ac70(t)%PREC_ac  / AC70_struc(n)%forc_count
-            ! TMIN_ac
-            tmp_TMIN_ac      = AC70_struc(n)%ac70(t)%TMIN_ac  / AC70_struc(n)%forc_count
-            ! TMAX_ac
-            tmp_TMAX_ac      = AC70_struc(n)%ac70(t)%TMAX_ac  / AC70_struc(n)%forc_count
-            ! ETo_ac
-            tmp_ETo_ac      = AC70_struc(n)%ac70(t)%ETo_ac  / AC70_struc(n)%forc_count
+          ! PREC_ac
+          tmp_PREC_ac      = AC70_struc(n)%ac70(t)%PREC_ac  / AC70_struc(n)%forc_count
+          ! TMIN_ac
+          tmp_TMIN_ac      = AC70_struc(n)%ac70(t)%TMIN_ac  / AC70_struc(n)%forc_count
+          ! TMAX_ac
+          tmp_TMAX_ac      = AC70_struc(n)%ac70(t)%TMAX_ac  / AC70_struc(n)%forc_count
+          ! ETo_ac
+          tmp_ETo_ac      = AC70_struc(n)%ac70(t)%ETo_ac  / AC70_struc(n)%forc_count
 
-            ! check validity of PREC_ac
-            if(tmp_PREC_ac .eq. LIS_rc%udef) then
-                write(LIS_logunit, *) "undefined value found for forcing variable PREC_ac in Ac70"
-                write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
-                call LIS_endrun()
-            endif
+          ! check validity of PREC_ac
+          if(tmp_PREC_ac .eq. LIS_rc%udef) then
+              write(LIS_logunit, *) "undefined value found for forcing variable PREC_ac in Ac70"
+              write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
+              call LIS_endrun()
+          endif
             
-            ! check validity of TMIN
-            if(tmp_TMIN .eq. LIS_rc%udef) then
-                write(LIS_logunit, *) "undefined value found for forcing variable TMIN in Ac70"
-                write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
-                call LIS_endrun()
-            endif
+          ! check validity of TMIN
+          if(tmp_TMIN_ac .eq. LIS_rc%udef) then
+              write(LIS_logunit, *) "undefined value found for forcing variable TMIN in Ac70"
+              write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
+              call LIS_endrun()
+          endif
+          
+          ! check validity of TMAX
+          if(tmp_TMAX_ac .eq. LIS_rc%udef) then
+              write(LIS_logunit, *) "undefined value found for forcing variable TMAX in Ac70"
+              write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
+              call LIS_endrun()
+          endif
             
-            ! check validity of TMAX
-            if(tmp_TMAX .eq. LIS_rc%udef) then
-                write(LIS_logunit, *) "undefined value found for forcing variable TMAX in Ac70"
-                write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
-                call LIS_endrun()
-            endif
-            
-            ! check validity of ETo
-            if(tmp_ETo .eq. LIS_rc%udef) then
-                write(LIS_logunit, *) "undefined value found for forcing variable ETo in Ac70"
-                write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
-                call LIS_endrun()
-            endif
+          ! check validity of ETo
+          if(tmp_ETo_ac .eq. LIS_rc%udef) then
+              write(LIS_logunit, *) "undefined value found for forcing variable ETo in Ac70"
+              write(LIS_logunit, *) "for tile ", t, "latitude = ", lat, "longitude = ", lon
+              call LIS_endrun()
+          endif
             
 
             !!! MB_AC70
@@ -533,22 +538,22 @@ subroutine Ac70_main(n)
             call SetIrriInfoRecord1(AC70_struc(n)%ac70(t)%IrriInfoRecord1)
             call SetIrriInfoRecord2(AC70_struc(n)%ac70(t)%IrriInfoRecord2)
             call SetIrrigation(REAL(AC70_struc(n)%ac70(t)%Irrigation,8))
-            do l=1, AC70_struc(n)%nsoil
-                 call SetCompartment_theta(l,REAL(AC70_struc(n)%ac70(t)%ac70smc(l),8))
+            do l=1, AC70_struc(n)%ac70(t)%NrCompartments
+                 call SetCompartment_theta(l,REAL(AC70_struc(n)%ac70(t)%smc(l),8))
             enddo
-                call SetIrriECw(AC70_struc(n)%ac70(t)%IrriECw) 
-                call SetManagement(AC70_struc(n)%ac70(t)%Management) 
-                call SetPerennialPeriod(AC70_struc(n)%ac70(t)%PerennialPeriod) 
-                call SetSimulParam(AC70_struc(n)%ac70(t)%simulparam) 
-                call SetManagement_Cuttings(AC70_struc(n)%ac70(t)%Cuttings) 
-                call SetOnset(AC70_struc(n)%ac70(t)%onset) 
-                call SetEndSeason(AC70_struc(n)%ac70(t)%endseason) 
-                call SetCrop(AC70_struc(n)%ac70(t)%crop) 
-                call SetSoil(AC70_struc(n)%ac70(t)%Soil) 
-                !call SetTemperatureRecord(AC70_struc(n)%ac70(t)%TemperatureRecord) 
-                !call SetClimRecord(AC70_struc(n)%ac70(t)%ClimRecord) 
-                !call SetRainRecord(AC70_struc(n)%ac70(t)%RainRecord) 
-                !call SetEToRecord(AC70_struc(n)%ac70(t)%EToRecord) 
+            call SetIrriECw(AC70_struc(n)%ac70(t)%IrriECw) 
+            call SetManagement(AC70_struc(n)%ac70(t)%Management) 
+            call SetPerennialPeriod(AC70_struc(n)%ac70(t)%PerennialPeriod) 
+            call SetSimulParam(AC70_struc(n)%ac70(t)%simulparam) 
+            call SetManagement_Cuttings(AC70_struc(n)%ac70(t)%Cuttings) 
+            call SetOnset(AC70_struc(n)%ac70(t)%onset) 
+            call SetEndSeason(AC70_struc(n)%ac70(t)%endseason) 
+            call SetCrop(AC70_struc(n)%ac70(t)%crop) 
+            call SetSoil(AC70_struc(n)%ac70(t)%Soil) 
+            !call SetTemperatureRecord(AC70_struc(n)%ac70(t)%TemperatureRecord) 
+            !call SetClimRecord(AC70_struc(n)%ac70(t)%ClimRecord) 
+            !call SetRainRecord(AC70_struc(n)%ac70(t)%RainRecord) 
+            !call SetEToRecord(AC70_struc(n)%ac70(t)%EToRecord) 
             call SetIrriBeforeSeason(AC70_struc(n)%ac70(t)%IrriBeforeSeason)
             call SetIrriAfterSeason(AC70_struc(n)%ac70(t)%IrriAfterSeason)
             call SetSoilLayer(AC70_struc(n)%ac70(t)%soillayer)
@@ -809,8 +814,8 @@ subroutine Ac70_main(n)
             AC70_struc(n)%ac70(t)%IrriAfterSeason = GetIrriAfterSeason()
             AC70_struc(n)%ac70(t)%SoilLayer = GetSoilLayer()
             AC70_struc(n)%ac70(t)%daynri = GetDayNri()
-            do l=1, AC70_struc(n)%nsoil
-                 AC70_struc(n)%ac70(t)%ac70smc(l) = GetCompartment_theta(l)
+            do l=1, AC70_struc(n)%ac70(t)%NrCompartments
+                 AC70_struc(n)%ac70(t)%smc(l) = GetCompartment_theta(l)
             enddo
             !write(*,'(e23.15e3)') AC70_struc(n)%ac70(t)%ac70smc(1)
             AC70_struc(n)%ac70(t)%IrriECw = GetIrriECw()
@@ -992,16 +997,14 @@ subroutine Ac70_main(n)
     end if
             !!! MB_AC70
 
-            end do
-
 
             ! MB: AC70
             ![ 1] output variable: smc (unit=m^3 m-3 ). ***  volumetric soil moisture, ice + liquid 
-            do i=1, AC70_struc(n)%nsoil
-                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%ac70smc(i), &
+            do i=1, AC70_struc(n)%ac70(t)%NrCompartments
+                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i), &
                                                   vlevel=i, unit="m^3 m-3", direction="-", surface_type = LIS_rc%lsm_index)
                                               ! 0.1 m soil compartment thickness in ac70
-                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%ac70smc(i)*0.1*LIS_CONST_RHOFW,  &
+                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i)*0.1*LIS_CONST_RHOFW,  &
                                                   vlevel=i, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
             end do
             ![ 4] output variable: biomass (unit=t/ha). ***  leaf area index 

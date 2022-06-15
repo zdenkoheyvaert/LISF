@@ -52,7 +52,7 @@ subroutine ac70_sfc2wcm(n, sfcState)
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
      soil_moisture_content(t) = AC70_struc(n)%ac70(t)%smc(1)
-     Leaf_Area_Index(t) = AC70_struc(n)%ac70(t)%lai
+     Leaf_Area_Index(t) = AC70_struc(n)%ac70(t)%WCMV1V2
   enddo
 
 end subroutine ac70_sfc2wcm
