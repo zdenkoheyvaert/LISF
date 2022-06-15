@@ -728,6 +728,11 @@ module Ac70_module
      real               :: smcdry ! SY: Not used by Ac70 from REDPRM, but read in from table
 
      !!! MB: AC70
+     ! WCM
+     real               :: Tmin_ac_1stJuly
+     real               :: WCMV1V2
+     real, allocatable  :: TMIN_ac_antecedent(:)
+     !!!
      integer            :: daynri
      !real, pointer      :: ac70_soilwc(:)
      real               :: RootZoneWC_Actual

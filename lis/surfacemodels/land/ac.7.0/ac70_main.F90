@@ -428,8 +428,11 @@ subroutine Ac70_main(n)
     integer, intent(in)  :: n
     integer              :: t
     integer              :: i
+    integer              :: itemp, countertemp, Tmin_windowsize
     real                 :: dt
     real                 :: lat, lon
+    real                 :: Tmin_movmean
+    real                 :: Tmin_mplr
     integer              :: row, col
     integer              :: year, month, day, hour, minute, second
     logical              :: alarmCheck
@@ -1796,7 +1799,35 @@ subroutine Ac70_main(n)
             AC70_struc(n)%ac70(t)%StartMode = GetStartMode()
             AC70_struc(n)%ac70(t)%NoMoreCrop = GetNoMoreCrop()
             AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting = GetCGCadjustmentAfterCutting()
-                
+          
+            ! calculate Aquacrop vegetation parameter for WCM and write as LAI
+            ! as expected in WCM call (?)
+            Tmin_windowsize = 40
+            ! shift all previous Tmin by 1 index
+            do itemp = 2, Tmin_windowsize
+                AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(itemp) = AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(itemp-1) ! degC
+            end do
+            ! add new Tmin on position 1
+            AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(1) = AC70_struc(n)%ac70(t)%Tmin_ac ! degC
+            Tmin_movmean = 0.0
+            countertemp = 0
+            do itemp = 1, Tmin_windowsize
+                Tmin_movmean = Tmin_movmean + AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(itemp)
+                countertemp = countertemp + 1
+            end do 
+            Tmin_movmean = Tmin_movmean / countertemp
+            ! before 1 July
+            if ((LIS_rc%mo .eq. 7) .and. (LIS_rc%da .eq. 1)) then
+                AC70_struc(n)%ac70(t)%Tmin_ac_1stJuly = Tmin_movmean
+            end if
+            if (LIS_rc%mo .lt. 7) then
+                Tmin_mplr = 1.0
+            else
+                Tmin_mplr = Tmin_movmean / AC70_struc(n)%ac70(t)%Tmin_ac_1stJuly
+                Tmin_mplr = AMAX1(AMIN1(1.0,Tmin_mplr),0.0)
+            end if
+            AC70_struc(n)%ac70(t)%WCMV1V2 = (AC70_struc(n)%ac70(t)%SumWaBal%Biomass * Tmin_mplr)**0.5
+
     if ((LIS_rc%mo .eq. 12) .AND. (LIS_rc%da .eq. 31)) then
         AC70_struc(n)%ac70(t)%InitializeRun = 1
         call FinalizeRun1(AC70_struc(n)%ac70(t)%irun, GetTheProjectFile(), AC70_struc(n)%ac70(t)%TheProjectType)

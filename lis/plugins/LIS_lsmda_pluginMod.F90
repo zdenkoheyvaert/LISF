@@ -561,7 +561,7 @@ subroutine LIS_lsmda_plugin
 #endif
 
 #if ( defined SM_AC_7_0 )
-! MN: ac70 soil moisture
+! MB: ac70 soil moisture
    external ac70_getsoilm           
    external ac70_setsoilm              
    external ac70_getsmpred

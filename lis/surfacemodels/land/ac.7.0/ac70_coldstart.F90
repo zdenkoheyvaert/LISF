@@ -482,6 +482,9 @@ subroutine Ac70_coldstart(mtype)
                     AC70_struc(n)%ac70(t)%ac70smc(l) = GetCompartment_theta(l)
                 enddo
 
+                do l=1, 40
+                    AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(l) = 0.0
+                enddo
                 ! added by shugong 
                 zsnso = 0.0 
                 !EMK...snow_init_70 is expecting several arrays which
