@@ -78,7 +78,15 @@ subroutine Ac70_readcrd()
         call LIS_verify(rc, "Aquacrop.7.0 number of soil layers: not defined")
     enddo
  
-    ! MM: AC70
+    ! MB: AC70
+
+    ! size of moving window for Tmin for biomass decline
+    call ESMF_ConfigFindLabel(LIS_config, "Tmin_windowsize:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, AC70_struc(n)%Tmin_windowsize, rc=rc)
+        call LIS_verify(rc, "Tmin_windowsize: not defined")
+    enddo
+
     ! number of soil layers
     call ESMF_ConfigFindLabel(LIS_config, "NrSoilLayers:", rc = rc)
     do n=1, LIS_rc%nnest

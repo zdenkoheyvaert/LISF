@@ -306,9 +306,11 @@ contains
             enddo
             !!! MB: AC70
             do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
-                allocate(AC70_struc(n)%ac70(t)%ac70smc(AC70_struc(n)%nsoil))
+                allocate(AC70_struc(n)%ac70(t)%ac70smc(AC70_struc(n)%NrSoilLayers))
             enddo
-
+            do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
+                allocate(AC70_struc(n)%ac70(t)%PREC_ac_antecedent(AC70_struc(n)%Tmin_windowsize))
+            enddo
 !            ! allocate memory for intiali state variables
 !            allocate(AC70_struc(n)%init_stc( AC70_struc(n)%nsoil))
 !            allocate(AC70_struc(n)%init_sh2o(AC70_struc(n)%nsoil))
