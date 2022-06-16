@@ -90,6 +90,7 @@ contains
     type(ESMF_Field)       ::  pertField(LIS_rc%nnest)
     type(ESMF_ArraySpec)   ::  pertArrSpec
     character*100          ::  S1sigmaobsdir
+    character*80           ::  S1_firstfile
     character*80           ::  S1_filename
     character*100          ::  temp
     real,  allocatable         ::  obsstd(:)
@@ -103,9 +104,11 @@ contains
     real                   :: dx, dy
     integer                :: NX, NY 
     integer                :: ncid
+    integer                :: flist
     integer                :: ios
     character*100          :: infile 
     character*100          :: xname, yname 
+
 
     allocate(S1_sigma_struc(LIS_rc%nnest))
 
@@ -265,12 +268,19 @@ contains
 ! set up the S1 domain %and interpolation weights. 
 !-------------------------------------------------------------
 
-    ! get nx ny dimensions
-    ! 2015 01 01 as example file
-    call S1_sigmaVVSMLAI_filename(S1_filename,S1sigmaobsdir,&
-                     2015,1,1)
-    ios = nf90_open(path=trim(S1_filename),mode=NF90_NOWRITE,ncid=ncid)
-    call LIS_verify(ios,'Error reading in S1 data dimensions: Error opening file '// S1_filename)
+    ! Open first file to get nx ny dimensions
+    call system('ls ./' // trim(S1sigmaobsdir) // ' > ./S1_listfiles.txt')
+
+    open(flist, file=trim('./S1_listfiles.txt'), &
+         status='old', iostat=status)
+
+    read(flist, '(a)', iostat=status) S1_firstfile
+    S1_filename = trim(S1sigmaobsdir) // '/' // trim(S1_firstfile)
+
+    ios = nf90_open(path=S1_filename,&
+                    mode=NF90_NOWRITE,ncid=ncid)
+    call LIS_verify(ios,&
+        'Error reading in S1 data dimensions: Error opening file '// S1_filename)
     ios = nf90_inquire_dimension(ncid,1,yname,NY)
     ios = nf90_inquire_dimension(ncid,2,xname,NX)
     ios = nf90_close(ncid)
