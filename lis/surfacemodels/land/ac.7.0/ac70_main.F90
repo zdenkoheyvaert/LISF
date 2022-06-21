@@ -965,7 +965,7 @@ subroutine Ac70_main(n)
             ! calculate Aquacrop vegetation parameter for WCM and write as LAI
             ! as expected in WCM call (?)
             ! shift all previous Tmin by 1 index
-            do itemp = 2, AC70_struc(n)%Tmin_windowsize
+            do itemp = AC70_struc(n)%Tmin_windowsize, 2, -1
                 AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(itemp) = AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(itemp-1) ! degC
             end do
             ! add new Tmin on position 1
@@ -977,17 +977,18 @@ subroutine Ac70_main(n)
                 countertemp = countertemp + 1
             end do 
             Tmin_movmean = Tmin_movmean / countertemp
-            ! before 1 July
-            if ((LIS_rc%mo .eq. 7) .and. (LIS_rc%da .eq. 1)) then
-                AC70_struc(n)%ac70(t)%Tmin_ac_1stJuly = Tmin_movmean
+            ! before 20 July
+            if ((LIS_rc%mo .eq. 7) .and. (LIS_rc%da .eq. 20)) then
+                AC70_struc(n)%ac70(t)%Tmin_ac_Julyref = Tmin_movmean
             end if
-            if (LIS_rc%mo .lt. 7) then
+            if ((LIS_rc%mo .lt. 7) .or. ((LIS_rc%mo .eq. 7) .and. (LIS_rc%da .lt. 20))) then
                 Tmin_mplr = 1.0
             else
-                Tmin_mplr = Tmin_movmean / AC70_struc(n)%ac70(t)%Tmin_ac_1stJuly
+                Tmin_mplr = Tmin_movmean / AC70_struc(n)%ac70(t)%Tmin_ac_Julyref
                 Tmin_mplr = AMAX1(AMIN1(1.0,Tmin_mplr),0.0)
             end if
             AC70_struc(n)%ac70(t)%WCMV1V2 = (AC70_struc(n)%ac70(t)%SumWaBal%Biomass * Tmin_mplr)**0.5
+            AC70_struc(n)%ac70(t)%AC70FC = AC70_struc(n)%ac70(t)%SoilLayer(1)%fc
 
     if ((LIS_rc%mo .eq. 12) .AND. (LIS_rc%da .eq. 31)) then
         AC70_struc(n)%ac70(t)%InitializeRun = 1
@@ -1001,17 +1002,23 @@ subroutine Ac70_main(n)
             ! MB: AC70
             ![ 1] output variable: smc (unit=m^3 m-3 ). ***  volumetric soil moisture, ice + liquid 
             do i=1, AC70_struc(n)%ac70(t)%NrCompartments
-                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i), &
+                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i), &
                                                   vlevel=i, unit="m^3 m-3", direction="-", surface_type = LIS_rc%lsm_index)
                                               ! 0.1 m soil compartment thickness in ac70
-                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i)*0.1*LIS_CONST_RHOFW,  &
+                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i)*0.1*LIS_CONST_RHOFW,  &
                                                   vlevel=i, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
             end do
             ![ 4] output variable: biomass (unit=t/ha). ***  leaf area index 
             call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70BIOMASS, value = real(AC70_struc(n)%ac70(t)%SumWaBal%Biomass,kind=sp), &
-                                              vlevel=1, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
+                                              vlevel=1, unit="t/ha", direction="-", surface_type = LIS_rc%lsm_index)
             !call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70BIOMASS, value = real(AC70_struc(n)%ac70(t)%SumWaBal%Biomass,kind=sp), &
             !                                  vlevel=1, unit="t h-1", direction="-", surface_type = LIS_rc%lsm_index)
+            call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_CCiActual, value = real(AC70_struc(n)%ac70(t)%CCiActual,kind=sp), &
+                                              vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)
+            call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_WCMV1V2, value = real(AC70_struc(n)%ac70(t)%WCMV1V2,kind=sp), &
+                                              vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)
+            call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70FC, value = real(AC70_struc(n)%ac70(t)%AC70FC,kind=sp), &
+                                              vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)
             
             ! reset forcing variables to 0 for accumulation 
 

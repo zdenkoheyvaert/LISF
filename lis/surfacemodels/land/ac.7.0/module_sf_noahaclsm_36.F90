@@ -2344,21 +2344,21 @@ CONTAINS
       ZBOTV     = ZBOTVTBL     (VEGTYP)
 
                IF (VEGTYP .eq. BARE) SHDFAC = 0.0
-               IF (NROOT .gt. NSOIL) THEN
-                  WRITE (err_message,*) 'Error: too many root layers ',  &
-                                                 NSOIL,NROOT
-                  CALL wrf_error_fatal ( err_message )
+               !IF (NROOT .gt. NSOIL) THEN
+               !   WRITE (err_message,*) 'Error: too many root layers ',  &
+               !                                  NSOIL,NROOT
+               !   CALL wrf_error_fatal ( err_message )
 ! ----------------------------------------------------------------------
 ! CALCULATE ROOT DISTRIBUTION.  PRESENT VERSION ASSUMES UNIFORM
 ! DISTRIBUTION BASED ON SOIL LAYER DEPTHS.
 ! ----------------------------------------------------------------------
-               END IF
-               DO I = 1,NROOT
-                  RTDIS (I) = - SLDPTH (I)/ ZSOIL (NROOT)
+               !END IF
+               !DO I = 1,NROOT
+               !   RTDIS (I) = - SLDPTH (I)/ ZSOIL (NROOT)
 ! ----------------------------------------------------------------------
 !  SET-UP SLOPE PARAMETER
 ! ----------------------------------------------------------------------
-               END DO
+               !END DO
 
 !        print*,'end of PRMRED'
 !       print*,'VEGTYP',VEGTYP,'SOILTYP',SOILTYP,'SLOPETYP',SLOPETYP,    &

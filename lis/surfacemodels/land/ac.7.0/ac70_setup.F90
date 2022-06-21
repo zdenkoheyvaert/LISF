@@ -354,519 +354,631 @@ subroutine Ac70_setup()
                         SetTadj,&
                         SetGDDTadj,&
                         SetDayLastCut,&
-                        SetNrCut,&
-                        SetSumInterval,&
-                        SetPreviousStressLevel,&
-                        SetStressSFadjNEW,&
-                        SetBin,&
-                        SetBout,&
-                        SetGDDayi,&
-                        SetCO2i,&
-                        SetFracBiomassPotSF,&
-                        SetSumETo,&
-                        SetSumGDD,&
-                        SetZiprev,&
-                        SetSumGDDPrev,&
-                        SetCCxWitheredTpot,&
-                        SetCCxWitheredTpotNoS,&
-                        SetCoeffb0,&
-                        SetCoeffb1,&
-                        SetCoeffb2,&
-                        SetCoeffb0Salt,&
-                        SetCoeffb1Salt,&
-                        SetCoeffb2Salt,&
-                        SetStressLeaf,&
-                        SetStressSenescence ,&
-                        SetDayFraction,&
-                        SetGDDayFraction,&
-                        SetCGCref,&
-                        SetGDDCGCref ,&
-                        SetTimeSenescence ,&
-                        SetSumKcTop,&
-                        SetSumKcTopStress,&
-                        SetSumKci,&
-                        SetCCoTotal,&
-                        SetCCxTotal,&
-                        SetCDCTotal,&
-                        SetGDDCDCTotal,&
-                        SetCCxCropWeedsNoSFstress,&
-                        SetWeedRCi,&
-                        SetCCiActualWeedInfested,&
-                        SetfWeedNoS,&
-                        SetZeval,&
-                        SetBprevSum,&
-                        SetYprevSum,&
-                        SetSumGDDcuts,&
-                        SetHItimesBEF,&
-                        SetScorAT1,&
-                        SetScorAT2,&
-                        SetHItimesAT1,&
-                        SetHItimesAT2,&
-                        SetHItimesAT,&
-                        SetalfaHI,&
-                        SetalfaHIAdj,&
-                        SetNextSimFromDayNr ,&
-                        SetDayNr1Eval,&
-                        SetDayNrEval,&
-                        SetLineNrEval,&
-                        SetPreviousSumETo,&
-                        SetPreviousSumGDD,&
-                        SetPreviousBmob,&
-                        SetPreviousBsto,&
-                        SetStageCode,&
-                        SetPreviousDayNr,&
-                        SetNoYear,&
-                        SetWaterTableInProfile,&
-                        SetStartMode,&
-                        SetNoMoreCrop,&
-                        SetCGCadjustmentAfterCutting,&
-                        AdvanceOneTimeStep, &
-                        ReadClimateNextDay, &
-                        SetGDDVariablesNextDay, &
-                         FinalizeRun1, &
-                         FinalizeRun2, &
-                         GetDayNri,&
-                         GetCrop_Tbase, &
-                         GetCrop_Tupper, &
-                         FinalizeSimulation, &
-                         InitializeSimulation ,&
-                         InitializeRunPart1 ,&
-                         InitializeRunPart2 ,&
-                         InitializeClimate,&
-                         GetSimulation_ToDayNr, &
-                         SetRain,& 
-                         SetTmin,&
-                         SetTmax,& 
-                         SetETo,&
-                         InitializeClimate, &
-                         SetTheProjectFile
+                            SetNrCut,&
+                            SetSumInterval,&
+                            SetPreviousStressLevel,&
+                            SetStressSFadjNEW,&
+                            SetBin,&
+                            SetBout,&
+                            SetGDDayi,&
+                            SetCO2i,&
+                            SetFracBiomassPotSF,&
+                            SetSumETo,&
+                            SetSumGDD,&
+                            SetZiprev,&
+                            SetSumGDDPrev,&
+                            SetCCxWitheredTpot,&
+                            SetCCxWitheredTpotNoS,&
+                            SetCoeffb0,&
+                            SetCoeffb1,&
+                            SetCoeffb2,&
+                            SetCoeffb0Salt,&
+                            SetCoeffb1Salt,&
+                            SetCoeffb2Salt,&
+                            SetStressLeaf,&
+                            SetStressSenescence ,&
+                            SetDayFraction,&
+                            SetGDDayFraction,&
+                            SetCGCref,&
+                            SetGDDCGCref ,&
+                            SetTimeSenescence ,&
+                            SetSumKcTop,&
+                            SetSumKcTopStress,&
+                            SetSumKci,&
+                            SetCCoTotal,&
+                            SetCCxTotal,&
+                            SetCDCTotal,&
+                            SetGDDCDCTotal,&
+                            SetCCxCropWeedsNoSFstress,&
+                            SetWeedRCi,&
+                            SetCCiActualWeedInfested,&
+                            SetfWeedNoS,&
+                            SetZeval,&
+                            SetBprevSum,&
+                            SetYprevSum,&
+                            SetSumGDDcuts,&
+                            SetHItimesBEF,&
+                            SetScorAT1,&
+                            SetScorAT2,&
+                            SetHItimesAT1,&
+                            SetHItimesAT2,&
+                            SetHItimesAT,&
+                            SetalfaHI,&
+                            SetalfaHIAdj,&
+                            SetNextSimFromDayNr ,&
+                            SetDayNr1Eval,&
+                            SetDayNrEval,&
+                            SetLineNrEval,&
+                            SetPreviousSumETo,&
+                            SetPreviousSumGDD,&
+                            SetPreviousBmob,&
+                            SetPreviousBsto,&
+                            SetStageCode,&
+                            SetPreviousDayNr,&
+                            SetNoYear,&
+                            SetWaterTableInProfile,&
+                            SetStartMode,&
+                            SetNoMoreCrop,&
+                            SetCGCadjustmentAfterCutting,&
+                            AdvanceOneTimeStep, &
+                            ReadClimateNextDay, &
+                            SetGDDVariablesNextDay, &
+                             FinalizeRun1, &
+                             FinalizeRun2, &
+                             GetDayNri,&
+                             GetCrop_Tbase, &
+                             GetCrop_Tupper, &
+                             FinalizeSimulation, &
+                             InitializeSimulation ,&
+                             InitializeRunPart1 ,&
+                             InitializeRunPart2 ,&
+                             InitializeClimate,&
+                             GetSimulation_ToDayNr, &
+                             SetRain,& 
+                             SetTmin,&
+                             SetTmax,& 
+                             SetETo,&
+                             InitializeClimate, &
+                             SetTheProjectFile
 
-    use ac_kinds, only: intEnum, &
-                        int32, &
-                        int8, &
-                        dp,&
-                        sp
-                         
-    use ac_startunit, only:  GetListProjectsFile, &
-                         GetNumberOfProjects, &
-                         GetProjectFileName, &
-                         GetProjectType, &
-                         GetSimulation_NrRuns, &
-                         InitializeTheProgram, &
-                         InitializeProject, &
-                         WriteProjectsInfo, &
-                         GetTimeAggregationResults, &
-                         GetRequestDailyResults, &
-                         GetRequestParticularResults, &
-                         !PrepareReport, &
-                        LoadProgramParametersProjectPlugIn, &
-                        ComposeFileForProgramParameters
+        use ac_kinds, only: intEnum, &
+                            int32, &
+                            int8, &
+                            dp,&
+                            sp
+                             
+        use ac_startunit, only:  GetListProjectsFile, &
+                             GetNumberOfProjects, &
+                             GetProjectFileName, &
+                             GetProjectType, &
+                             GetSimulation_NrRuns, &
+                             InitializeTheProgram, &
+                             InitializeProject, &
+                             WriteProjectsInfo, &
+                             GetTimeAggregationResults, &
+                             GetRequestDailyResults, &
+                             GetRequestParticularResults, &
+                            LoadProgramParametersProjectPlugIn, &
+                            ComposeFileForProgramParameters
 
-    use ac_initialsettings, only: InitializeSettings
+        use ac_initialsettings, only: InitializeSettings
 
-     !!! MB:
-!
-! !DESCRIPTION:
-!
-!  This routine is the entry point to set up the parameters
-!  required for Ac70.  These include: 
-!    vegetype     - land cover type index [-]
-!    soiltype     - soil type index [-]
-!    slopetype    - slope type for Noah baseflow [-]
-!    tbot         - deep-layer soil temperature [K]
-!    pblh         - planetary boundary layer height [m]
-! 
-!  The routines invoked are:
-!  \begin{description}
-!  \item[LIS\_read\_param](\ref{LIS_read_param}) \newline
-!    retrieves LIS parameter data from NetCDF file
-!  \item[AC70\_read\_MULTILEVEL\_param](\ref{AC70_read_MULTILEVEL_param}) \newline
-!    retrieves MULTILEVEL spatial parameter from NetCDF file
-!  \end{description}
-!EOP
-    implicit none
-    integer           :: mtype
-    integer           :: t, k, n, l
-    integer           :: col, row
-    real, allocatable :: placeholder(:,:)
-    ! MB
-    real              :: Z_surf, cl_tmp, si_tmp, sd_tmp, InfRate_tmp
-    integer           :: REW, descr
-    
-    !!! MB_AC70
-    integer :: daynr, todaynr, iproject, nprojects, NrRuns
-    integer(intEnum) :: TheProjectType
-    logical :: ListProjectFileExist
-    character(len=:), allocatable :: ListProjectsFile, TheProjectFile
-
-    logical ::  ProgramParametersAvailable 
-    integer(int32) :: TotalSimRuns
-    character(len=:), allocatable :: FullFileNameProgramParametersLocal       
-    logical :: MultipleRunWithKeepSWC_temp    
-    real(dp) :: MultipleRunConstZrx_temp    
-    !!! MB_AC70
-
-    mtype = LIS_rc%lsm_index
-    
-    do n=1, LIS_rc%nnest
-        ! allocate memory for place holder for #n nest
-        allocate(placeholder(LIS_rc%lnc(n), LIS_rc%lnr(n)))
+         !!! MB:
+    !
+    ! !DESCRIPTION:
+    !
+    !  This routine is the entry point to set up the parameters
+    !  required for Ac70.  These include: 
+    !    vegetype     - land cover type index [-]
+    !    soiltype     - soil type index [-]
+    !    slopetype    - slope type for Noah baseflow [-]
+    !    tbot         - deep-layer soil temperature [K]
+    !    pblh         - planetary boundary layer height [m]
+    ! 
+    !  The routines invoked are:
+    !  \begin{description}
+    !  \item[LIS\_read\_param](\ref{LIS_read_param}) \newline
+    !    retrieves LIS parameter data from NetCDF file
+    !  \item[AC70\_read\_MULTILEVEL\_param](\ref{AC70_read_MULTILEVEL_param}) \newline
+    !    retrieves MULTILEVEL spatial parameter from NetCDF file
+    !  \end{description}
+    !EOP
+        implicit none
+        integer           :: mtype
+        integer           :: t, k, n, l
+        integer           :: col, row
+        real, allocatable :: placeholder(:,:)
+        ! MB
+        real              :: Z_surf, cl_tmp, si_tmp, sd_tmp, InfRate_tmp
+        integer           :: REW, descr
         
-        !------------------------------------!
-        ! reading spatial spatial parameters !
-        !------------------------------------!
-        ! vegetype takes value from the LIS built-in parameter vegt
-        !TODO: convert vegetation data source into vegetation types
-        if(LIS_rc%uselcmap(n) .ne. 'none') then
-            write(LIS_logunit,*) "Ac70: retrieve parameter VEGETYPE from LIS"
-            do t=1, LIS_rc%npatch(n, mtype)
-                AC70_struc(n)%ac70(t)%vegetype= LIS_surface(n, mtype)%tile(t)%vegt
-            enddo
-        else 
-            ! read: vegetype
-            write(LIS_logunit,*) "Ac70: reading parameter VEGETYPE from ", trim(LIS_rc%paramfile(n))
-            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_vegetype), placeholder)
-            do t = 1, LIS_rc%npatch(n, mtype)
-                col = LIS_surface(n, mtype)%tile(t)%col
-                row = LIS_surface(n, mtype)%tile(t)%row
-                AC70_struc(n)%ac70(t)%vegetype = placeholder(col, row)
-            enddo 
-        endif
-        ! read: soiltype
-        !write(LIS_logunit,*) "Ac70: reading parameter SOILTYPE from ", trim(LIS_rc%paramfile(n))
-        !call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_soiltype), placeholder)
-        !do t = 1, LIS_rc%npatch(n, mtype)
-        !    col = LIS_surface(n, mtype)%tile(t)%col
-        !    row = LIS_surface(n, mtype)%tile(t)%row
-        !    AC70_struc(n)%ac70(t)%soiltype = placeholder(col, row)
-        !enddo 
+        !!! MB_AC70
+        integer :: daynr, todaynr, iproject, nprojects, NrRuns
+        integer(intEnum) :: TheProjectType
+        logical :: ListProjectFileExist
+        character(len=:), allocatable :: ListProjectsFile, TheProjectFile
 
-        ! soiltype takes value from the LIS built-in parameter soilt
-        !TODO: convert soil texture into soil types according to scheme
-        if(LIS_rc%usetexturemap(n) .ne. 'none') then
-            write(LIS_logunit,*) "Ac70: retrieve parameter SOILTYPE from LIS"
-            do t=1, LIS_rc%npatch(n, mtype)
-                AC70_struc(n)%ac70(t)%soiltype= LIS_surface(n, mtype)%tile(t)%soilt
-            enddo
-        else 
-            ! read: soiltype
-            write(LIS_logunit,*) "Ac70: reading parameter SOILTYPE from ", trim(LIS_rc%paramfile(n))
-            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_soiltype), placeholder)
-            do t = 1, LIS_rc%npatch(n, mtype)
-                col = LIS_surface(n, mtype)%tile(t)%col
-                row = LIS_surface(n, mtype)%tile(t)%row
-                AC70_struc(n)%ac70(t)%soiltype = placeholder(col, row)
-            enddo 
-        endif
+        logical ::  ProgramParametersAvailable 
+        integer(int32) :: TotalSimRuns
+        character(len=:), allocatable :: FullFileNameProgramParametersLocal       
+        logical :: MultipleRunWithKeepSWC_temp    
+        real(dp) :: MultipleRunConstZrx_temp    
+        !!! MB_AC70
 
-        ! read: slopetype
-        write(LIS_logunit,*) "Ac70: reading parameter SLOPETYPE from ", trim(LIS_rc%paramfile(n))
-        call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_slopetype), placeholder)
-        do t = 1, LIS_rc%npatch(n, mtype)
-            col = LIS_surface(n, mtype)%tile(t)%col
-            row = LIS_surface(n, mtype)%tile(t)%row
-            AC70_struc(n)%ac70(t)%slopetype = placeholder(col, row)
-        enddo 
-
-        ! read: tbot
-        write(LIS_logunit,*) "Ac70: reading parameter TBOT from ", trim(LIS_rc%paramfile(n))
-        call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_tbot), placeholder)
-        do t = 1, LIS_rc%npatch(n, mtype)
-            col = LIS_surface(n, mtype)%tile(t)%col
-            row = LIS_surface(n, mtype)%tile(t)%row
-            AC70_struc(n)%ac70(t)%tbot = placeholder(col, row)
-        enddo 
-
-        ! read: pblh
-        write(LIS_logunit,*) "Ac70: reading parameter PBLH from ", trim(LIS_rc%paramfile(n))
-        call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_pblh), placeholder)
-        do t = 1, LIS_rc%npatch(n, mtype)
-            col = LIS_surface(n, mtype)%tile(t)%col
-            row = LIS_surface(n, mtype)%tile(t)%row
-            AC70_struc(n)%ac70(t)%pblh = placeholder(col, row)
-        enddo 
-
-        !----------------------------------------------!
-        ! MULTILEVEL reading spatial spatial parameters !
-        !----------------------------------------------!
-        ! read: shdfac_monthly
-        write(LIS_logunit,*) "Ac70: reading parameter SHDFAC_MONTHLY from ", trim(LIS_rc%paramfile(n))
-        do k = 1, 12
-            call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_shdfac_monthly, k, placeholder)
-            do t = 1, LIS_rc%npatch(n, mtype)
-                col = LIS_surface(n, mtype)%tile(t)%col
-                row = LIS_surface(n, mtype)%tile(t)%row
-                AC70_struc(n)%ac70(t)%shdfac_monthly(k) = placeholder(col, row)
-            enddo 
-        enddo 
-
-        ! read: smceq for (opt_run=5)  Miguez-Macho & Fan groundwater with equilibrium water table
-        if(AC70_struc(n)%run_opt .eq. 5) then
-            write(LIS_logunit,*) "Ac70: reading parameter SMCEQ from ", trim(LIS_rc%paramfile(n))
-            do k = 1, AC70_struc(n)%nsoil
-                call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_smceq, k, placeholder)
+        mtype = LIS_rc%lsm_index
+        
+        do n=1, LIS_rc%nnest
+            ! allocate memory for place holder for #n nest
+            allocate(placeholder(LIS_rc%lnc(n), LIS_rc%lnr(n)))
+            
+            !------------------------------------!
+            ! reading spatial spatial parameters !
+            !------------------------------------!
+            ! vegetype takes value from the LIS built-in parameter vegt
+            !TODO: convert vegetation data source into vegetation types
+            if(LIS_rc%uselcmap(n) .ne. 'none') then
+                write(LIS_logunit,*) "Ac70: retrieve parameter VEGETYPE from LIS"
+                do t=1, LIS_rc%npatch(n, mtype)
+                    AC70_struc(n)%ac70(t)%vegetype= LIS_surface(n, mtype)%tile(t)%vegt
+                enddo
+            else 
+                ! read: vegetype
+                write(LIS_logunit,*) "Ac70: reading parameter VEGETYPE from ", trim(LIS_rc%paramfile(n))
+                call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_vegetype), placeholder)
                 do t = 1, LIS_rc%npatch(n, mtype)
                     col = LIS_surface(n, mtype)%tile(t)%col
                     row = LIS_surface(n, mtype)%tile(t)%row
-                    AC70_struc(n)%ac70(t)%smceq(k) = placeholder(col, row)
+                    AC70_struc(n)%ac70(t)%vegetype = placeholder(col, row)
+                enddo 
+            endif
+            ! read: soiltype
+            !write(LIS_logunit,*) "Ac70: reading parameter SOILTYPE from ", trim(LIS_rc%paramfile(n))
+            !call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_soiltype), placeholder)
+            !do t = 1, LIS_rc%npatch(n, mtype)
+            !    col = LIS_surface(n, mtype)%tile(t)%col
+            !    row = LIS_surface(n, mtype)%tile(t)%row
+            !    AC70_struc(n)%ac70(t)%soiltype = placeholder(col, row)
+            !enddo 
+
+            ! soiltype takes value from the LIS built-in parameter soilt
+            !TODO: convert soil texture into soil types according to scheme
+            if(LIS_rc%usetexturemap(n) .ne. 'none') then
+                write(LIS_logunit,*) "Ac70: retrieve parameter SOILTYPE from LIS"
+                do t=1, LIS_rc%npatch(n, mtype)
+                    AC70_struc(n)%ac70(t)%soiltype= LIS_surface(n, mtype)%tile(t)%soilt
+                enddo
+            else 
+                ! read: soiltype
+                write(LIS_logunit,*) "Ac70: reading parameter SOILTYPE from ", trim(LIS_rc%paramfile(n))
+                call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_soiltype), placeholder)
+                do t = 1, LIS_rc%npatch(n, mtype)
+                    col = LIS_surface(n, mtype)%tile(t)%col
+                    row = LIS_surface(n, mtype)%tile(t)%row
+                    AC70_struc(n)%ac70(t)%soiltype = placeholder(col, row)
+                enddo 
+            endif
+
+            ! read: slopetype
+            write(LIS_logunit,*) "Ac70: reading parameter SLOPETYPE from ", trim(LIS_rc%paramfile(n))
+            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_slopetype), placeholder)
+            do t = 1, LIS_rc%npatch(n, mtype)
+                col = LIS_surface(n, mtype)%tile(t)%col
+                row = LIS_surface(n, mtype)%tile(t)%row
+                AC70_struc(n)%ac70(t)%slopetype = placeholder(col, row)
+            enddo 
+
+            ! read: tbot
+            write(LIS_logunit,*) "Ac70: reading parameter TBOT from ", trim(LIS_rc%paramfile(n))
+            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_tbot), placeholder)
+            do t = 1, LIS_rc%npatch(n, mtype)
+                col = LIS_surface(n, mtype)%tile(t)%col
+                row = LIS_surface(n, mtype)%tile(t)%row
+                AC70_struc(n)%ac70(t)%tbot = placeholder(col, row)
+            enddo 
+
+            ! read: pblh
+            write(LIS_logunit,*) "Ac70: reading parameter PBLH from ", trim(LIS_rc%paramfile(n))
+            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_pblh), placeholder)
+            do t = 1, LIS_rc%npatch(n, mtype)
+                col = LIS_surface(n, mtype)%tile(t)%col
+                row = LIS_surface(n, mtype)%tile(t)%row
+                AC70_struc(n)%ac70(t)%pblh = placeholder(col, row)
+            enddo 
+
+            !----------------------------------------------!
+            ! MULTILEVEL reading spatial spatial parameters !
+            !----------------------------------------------!
+            ! read: shdfac_monthly
+            write(LIS_logunit,*) "Ac70: reading parameter SHDFAC_MONTHLY from ", trim(LIS_rc%paramfile(n))
+            do k = 1, 12
+                call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_shdfac_monthly, k, placeholder)
+                do t = 1, LIS_rc%npatch(n, mtype)
+                    col = LIS_surface(n, mtype)%tile(t)%col
+                    row = LIS_surface(n, mtype)%tile(t)%row
+                    AC70_struc(n)%ac70(t)%shdfac_monthly(k) = placeholder(col, row)
                 enddo 
             enddo 
-        endif
 
-        deallocate(placeholder)
-        call SOIL_VEG_GEN_PARM_70(AC70_struc(n)%landuse_tbl_name,   & 
-                                  AC70_struc(n)%soil_tbl_name,      &
-                                  AC70_struc(n)%gen_tbl_name,       &
-                                  AC70_struc(n)%landuse_scheme_name,& 
-                                  AC70_struc(n)%soil_scheme_name)
-        ! SY: Begin for enabling OPTUE 
-        do t = 1, LIS_rc%npatch(n, mtype)
-            
-            col = LIS_surface(n, mtype)%tile(t)%col
-            row = LIS_surface(n, mtype)%tile(t)%row
+            ! read: smceq for (opt_run=5)  Miguez-Macho & Fan groundwater with equilibrium water table
+            if(AC70_struc(n)%run_opt .eq. 5) then
+                write(LIS_logunit,*) "Ac70: reading parameter SMCEQ from ", trim(LIS_rc%paramfile(n))
+                do k = 1, AC70_struc(n)%nsoil
+                    call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_smceq, k, placeholder)
+                    do t = 1, LIS_rc%npatch(n, mtype)
+                        col = LIS_surface(n, mtype)%tile(t)%col
+                        row = LIS_surface(n, mtype)%tile(t)%row
+                        AC70_struc(n)%ac70(t)%smceq(k) = placeholder(col, row)
+                    enddo 
+                enddo 
+            endif
 
-            ! SY: Begin lines following those in REDPRM
-
-            ! SY: Begin SOIL PARAMETERS
-            IF (AC70_struc(n)%ac70(t)%soiltype .gt. SLCATS) THEN
-               write(LIS_logunit, *) 'SOILTYP must be less than SLCATS:'
-               write(LIS_logunit, '("t = ", I6, "; SOILTYP = ", I6, ";    SLCATS = ", I6)') &
-                         t, AC70_struc(n)%ac70(t)%soiltype, SLCATS
-               write(LIS_logunit, *) 'Ac70_setup: Error: too many input soil types'
-               write(LIS_logunit, *) 'program stopping ...'
-               call LIS_endrun
-            END IF
-            AC70_struc(n)%ac70(t)%csoil = CSOIL_DATA
-            AC70_struc(n)%ac70(t)%bexp = BB(AC70_struc(n)%ac70(t)%soiltype)
-            AC70_struc(n)%ac70(t)%dksat = SATDK(AC70_struc(n)%ac70(t)%soiltype)
-            AC70_struc(n)%ac70(t)%dwsat = SATDW(AC70_struc(n)%ac70(t)%soiltype)
-            AC70_struc(n)%ac70(t)%psisat = SATPSI(AC70_struc(n)%ac70(t)%soiltype)
-            AC70_struc(n)%ac70(t)%quartz = QTZ(AC70_struc(n)%ac70(t)%soiltype)
-            AC70_struc(n)%ac70(t)%smcmax = MAXSMC(AC70_struc(n)%ac70(t)%soiltype)
-            AC70_struc(n)%ac70(t)%smcref = REFSMC(AC70_struc(n)%ac70(t)%soiltype)
-            AC70_struc(n)%ac70(t)%smcwlt = WLTSMC(AC70_struc(n)%ac70(t)%soiltype)
-            ! SY: End SOIL PARAMETERS
-
-            ! MB: AC70
-
-
-            !!! Start the Program AC70
-            ! Everything below is the equivalent of "StartTheProgram()"
-            ! call InitializeTheProgram()
-
-            call SetPathNameOutp(trim(AC70_struc(n)%PathNameOutp))
-            call SetPathNameSimul(trim(AC70_struc(n)%PathNameSimul))
-            call SetPathNameList(trim(AC70_struc(n)%PathNameList))
-            call SetPathNameParam(trim(AC70_struc(n)%PathNameParam))
-            call SetPathNameProg('')
-
-            call GetTimeAggregationResults()
-            call GetRequestDailyResults()
-            call GetRequestParticularResults()
-            !call PrepareReport()
-
-            ListProjectsFile = GetListProjectsFile()
-            inquire(file=trim(ListProjectsFile), exist=ListProjectFileExist)
-
-            call WriteProjectsInfo('')
-            call WriteProjectsInfo('Projects handled:')
-            
-            iproject = 1
-            TheProjectFile = GetProjectFileName(iproject)
-            call GetProjectType(TheProjectFile, TheProjectType)
-
-        
-            ! set AC70 soil parameters based on soiltype
-            !AC70_struc(n)%ac70(t)%SoilLayer(1)%oc = OC(AC70_struc(n)%ac70(t)%soiltype) * 100
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%wp = WP(AC70_struc(n)%ac70(t)%soiltype) * 100
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%sat = SAT(AC70_struc(n)%ac70(t)%soiltype) * 100
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%fc = FC(AC70_struc(n)%ac70(t)%soiltype) * 100
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate = INFRATE(AC70_struc(n)%ac70(t)%soiltype) * 86400000
-            sd_tmp = sd(AC70_struc(n)%ac70(t)%soiltype)
-            cl_tmp = cl(AC70_struc(n)%ac70(t)%soiltype)
-            si_tmp = si(AC70_struc(n)%ac70(t)%soiltype)
+            deallocate(placeholder)
+            call SOIL_VEG_GEN_PARM_70(AC70_struc(n)%landuse_tbl_name,   & 
+                                      AC70_struc(n)%soil_tbl_name,      &
+                                      AC70_struc(n)%gen_tbl_name,       &
+                                      AC70_struc(n)%landuse_scheme_name,& 
+                                      AC70_struc(n)%soil_scheme_name)
+            ! SY: Begin for enabling OPTUE 
+            do t = 1, LIS_rc%npatch(n, mtype)
                 
-            ! define default CN
-            if (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>864) then
-                AC70_struc(n)%ac70(t)%Soil%CNvalue = 46
-            elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=347) then
-                AC70_struc(n)%ac70(t)%Soil%CNvalue = 61
-            elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=36) then
-                AC70_struc(n)%ac70(t)%Soil%CNvalue = 72
-            else
-                AC70_struc(n)%ac70(t)%Soil%CNvalue = 77
-            endif
+                col = LIS_surface(n, mtype)%tile(t)%col
+                row = LIS_surface(n, mtype)%tile(t)%row
+
+                ! SY: Begin lines following those in REDPRM
+
+                ! SY: Begin SOIL PARAMETERS
+                !IF (AC70_struc(n)%ac70(t)%soiltype .gt. SLCATS) THEN
+                !   write(LIS_logunit, *) 'SOILTYP must be less than SLCATS:'
+                !   write(LIS_logunit, '("t = ", I6, "; SOILTYP = ", I6, ";    SLCATS = ", I6)') &
+                !             t, AC70_struc(n)%ac70(t)%soiltype, SLCATS
+                !   write(LIS_logunit, *) 'Ac70_setup: Error: too many input soil types'
+                !   write(LIS_logunit, *) 'program stopping ...'
+                !   call LIS_endrun
+                !END IF
+                AC70_struc(n)%ac70(t)%csoil = CSOIL_DATA
+                AC70_struc(n)%ac70(t)%bexp = BB(AC70_struc(n)%ac70(t)%soiltype)
+                AC70_struc(n)%ac70(t)%dksat = SATDK(AC70_struc(n)%ac70(t)%soiltype)
+                AC70_struc(n)%ac70(t)%dwsat = SATDW(AC70_struc(n)%ac70(t)%soiltype)
+                AC70_struc(n)%ac70(t)%psisat = SATPSI(AC70_struc(n)%ac70(t)%soiltype)
+                AC70_struc(n)%ac70(t)%quartz = QTZ(AC70_struc(n)%ac70(t)%soiltype)
+                AC70_struc(n)%ac70(t)%smcmax = MAXSMC(AC70_struc(n)%ac70(t)%soiltype)
+                AC70_struc(n)%ac70(t)%smcref = REFSMC(AC70_struc(n)%ac70(t)%soiltype)
+                AC70_struc(n)%ac70(t)%smcwlt = WLTSMC(AC70_struc(n)%ac70(t)%soiltype)
+                ! SY: End SOIL PARAMETERS
+
+                ! MB: AC70
+
+
+                !!! Start the Program AC70
+                ! Everything below is the equivalent of "StartTheProgram()"
+                ! call InitializeTheProgram()
+
+                call SetPathNameOutp(trim(AC70_struc(n)%PathNameOutp))
+                call SetPathNameSimul(trim(AC70_struc(n)%PathNameSimul))
+                call SetPathNameList(trim(AC70_struc(n)%PathNameList))
+                call SetPathNameParam(trim(AC70_struc(n)%PathNameParam))
+                call SetPathNameProg('')
+
+                call GetTimeAggregationResults()
+                call GetRequestDailyResults()
+                call GetRequestParticularResults()
+                !call PrepareReport()
+
+                ListProjectsFile = GetListProjectsFile()
+                inquire(file=trim(ListProjectsFile), exist=ListProjectFileExist)
+
+                call WriteProjectsInfo('')
+                call WriteProjectsInfo('Projects handled:')
+                
+                iproject = 1
+                TheProjectFile = GetProjectFileName(iproject)
+                call GetProjectType(TheProjectFile, TheProjectType)
+
             
-            ! define default REW (only top layer will be used)
-            Z_surf = 0.04_dp
-            REW=nint(10.0_dp*(AC70_struc(n)%ac70(t)%SoilLayer(1)%fc-(AC70_struc(n)%ac70(t)%SoilLayer(1)%wp/2.0))*Z_surf)
-            if (REW < 0) REW = 0
-            if (REW > 15) REW = 15
-            AC70_struc(n)%ac70(t)%Soil%REW = REW
+                ! set AC70 soil parameters based on soiltype
+                !AC70_struc(n)%ac70(t)%SoilLayer(1)%oc = OC(AC70_struc(n)%ac70(t)%soiltype) * 100
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%wp = WP(AC70_struc(n)%ac70(t)%soiltype) * 100
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%sat = SAT(AC70_struc(n)%ac70(t)%soiltype) * 100
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%fc = FC(AC70_struc(n)%ac70(t)%soiltype) * 100
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate = INFRATE(AC70_struc(n)%ac70(t)%soiltype) * 86400000
+                sd_tmp = sd(AC70_struc(n)%ac70(t)%soiltype)*100
+                cl_tmp = cl(AC70_struc(n)%ac70(t)%soiltype)*100
+                si_tmp = si(AC70_struc(n)%ac70(t)%soiltype)*100
+                    
+                ! define default CN
+                if (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>864) then
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 46
+                elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=347) then
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 61
+                elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=36) then
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 72
+                else
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 77
+                endif
+                
+                ! define default REW (only top layer will be used)
+                Z_surf = 0.04_dp
+                REW=nint(10.0_dp*(AC70_struc(n)%ac70(t)%SoilLayer(1)%fc-(AC70_struc(n)%ac70(t)%SoilLayer(1)%wp/2.0))*Z_surf)
+                if (REW < 0) REW = 0
+                if (REW > 15) REW = 15
+                AC70_struc(n)%ac70(t)%Soil%REW = REW
 
-            !  associate soil class with USDA soil type for soil description
-            if ((1.5 * cl_tmp + si_tmp) < 15.0) then
-                descr = 0
-            elseif (((1.5 * cl_tmp + si_tmp) >= 15) .and. ((2 * cl_tmp + si_tmp) <= 30)) then
-                descr = 1
-            elseif ((cl_tmp >= 7 .and. cl_tmp < 20 .and. sd_tmp >= 52) .and. (2 * cl_tmp + si_tmp >= 30)) then
-                descr = 2
-            elseif ((cl_tmp < 7) .and. (si_tmp < 50) .and. (2 * cl_tmp + si_tmp >= 30)) then
-                descr = 2
-            elseif ((cl_tmp >= 7) .and. (cl_tmp < 27) .and. (si_tmp >= 28) .and. (si_tmp < 50) .and. (sd_tmp < 52)) then
-                descr = 3
-            elseif ((si_tmp >= 50) .and. (cl_tmp >= 12) .and. (cl_tmp < 27)) then
-                descr = 4
-            elseif ((si_tmp >= 50) .and. (si_tmp < 80) .and. (cl_tmp < 12)) then
-                descr = 4
-            elseif ((si_tmp >= 80) .and. (cl_tmp < 12)) then
-                descr = 5
-            elseif ((cl_tmp >= 20) .and. (cl_tmp < 35) .and. (si_tmp < 28) .and. (sd_tmp > 45)) then
-                descr = 6
-            elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp >= 20) .and. (sd_tmp < 45)) then
-                descr = 7
-            elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp < 20)) then
-                descr = 8
-            elseif ((cl_tmp >= 35) .and. (cl_tmp < 55) .and. (sd_tmp >= 45) .and. (sd_tmp < 65)) then
-                descr = 9
-            elseif ((cl_tmp >= 40) .and. (si_tmp >= 40)) then
-                descr = 10
-            elseif ((cl_tmp >= 40) .and. (sd_tmp < 45) .and. (si_tmp < 40)) then
-                descr = 11
-            else
-               write(LIS_logunit, *) 'no soil texture found'
-               write(LIS_logunit, *) 'program stopping ...'
-               call LIS_endrun
-            end if
-            ! soil_type = ['sand', 'loamy sand', 'sandy loam', 'loam', 'silt loam', 'silt', 'sandy clay loam',
-            !              'clay loam',
-            !              'silty clay loam', 'sandy clay', 'silty clay', 'clay']
-            InfRate_tmp = AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate
-            if ((descr == 0) .or. (descr == 1) .or. (descr == 2)) then
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.3112-10**(-5)*InfRate_tmp
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.4936+0.2416*log(InfRate_tmp)
-            elseif ((descr == 3) .or. (descr == 4) .or. (descr == 5)) then
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.4986-9*10**(-5)*InfRate_tmp
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -2.1320+0.4778*log(InfRate_tmp)
-            elseif ((descr == 6) .or. (descr == 7) .or. (descr == 9)) then
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.5677-4*10**(-5)*InfRate_tmp
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -3.7189+0.5922*log(InfRate_tmp)
-            elseif ((descr == 8) .or. (descr == 10) .or. (descr == 11)) then
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.6366+8*10**(-4)*InfRate_tmp
-                AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.9165+0.7063*log(InfRate_tmp)
-            endif
-            ! Set GravelMass and Penetrability
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%Penetrability = 100.0
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%GravelMass = 10.0
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%Description = 'soil type from LIS'
-            AC70_struc(n)%ac70(t)%SoilLayer(2) = AC70_struc(n)%ac70(t)%SoilLayer(1)
-            AC70_struc(n)%ac70(t)%SoilLayer(2)%GravelMass = 0.0
+                !  associate soil class with USDA soil type for soil description
+                if ((1.5 * cl_tmp + si_tmp) < 15.0) then
+                    descr = 0
+                elseif (((1.5 * cl_tmp + si_tmp) >= 15) .and. ((2 * cl_tmp + si_tmp) <= 30)) then
+                    descr = 1
+                elseif ((cl_tmp >= 7 .and. cl_tmp < 20 .and. sd_tmp >= 52) .and. (2 * cl_tmp + si_tmp >= 30)) then
+                    descr = 2
+                elseif ((cl_tmp < 7) .and. (si_tmp < 50) .and. (2 * cl_tmp + si_tmp >= 30)) then
+                    descr = 2
+                elseif ((cl_tmp >= 7) .and. (cl_tmp < 27) .and. (si_tmp >= 28) .and. (si_tmp < 50) .and. (sd_tmp < 52)) then
+                    descr = 3
+                elseif ((si_tmp >= 50) .and. (cl_tmp >= 12) .and. (cl_tmp < 27)) then
+                    descr = 4
+                elseif ((si_tmp >= 50) .and. (si_tmp < 80) .and. (cl_tmp < 12)) then
+                    descr = 4
+                elseif ((si_tmp >= 80) .and. (cl_tmp < 12)) then
+                    descr = 5
+                elseif ((cl_tmp >= 20) .and. (cl_tmp < 35) .and. (si_tmp < 28) .and. (sd_tmp > 45)) then
+                    descr = 6
+                elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp >= 20) .and. (sd_tmp < 45)) then
+                    descr = 7
+                elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp < 20)) then
+                    descr = 8
+                elseif ((cl_tmp >= 35) .and. (cl_tmp < 55) .and. (sd_tmp >= 45) .and. (sd_tmp < 65)) then
+                    descr = 9
+                elseif ((cl_tmp >= 40) .and. (si_tmp >= 40)) then
+                    descr = 10
+                elseif ((cl_tmp >= 40) .and. (sd_tmp < 45) .and. (si_tmp < 40)) then
+                    descr = 11
+                else
+                   write(LIS_logunit, *) 'no soil texture found'
+                   write(LIS_logunit, *) 'program stopping ...'
+                   call LIS_endrun
+                end if
+                ! soil_type = ['sand', 'loamy sand', 'sandy loam', 'loam', 'silt loam', 'silt', 'sandy clay loam',
+                !              'clay loam',
+                !              'silty clay loam', 'sandy clay', 'silty clay', 'clay']
+                InfRate_tmp = AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate
+                if ((descr == 0) .or. (descr == 1) .or. (descr == 2)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.3112-10**(-5)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.4936+0.2416*log(InfRate_tmp)
+                elseif ((descr == 3) .or. (descr == 4) .or. (descr == 5)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.4986-9*10**(-5)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -2.1320+0.4778*log(InfRate_tmp)
+                elseif ((descr == 6) .or. (descr == 7) .or. (descr == 9)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.5677-4*10**(-5)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -3.7189+0.5922*log(InfRate_tmp)
+                elseif ((descr == 8) .or. (descr == 10) .or. (descr == 11)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.6366+8*10**(-4)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.9165+0.7063*log(InfRate_tmp)
+                endif
+                ! Set GravelMass and Penetrability
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%Penetrability = 100.0
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%GravelMass = 10.0
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%Description = 'soil type from LIS'
+                AC70_struc(n)%ac70(t)%SoilLayer(2) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                AC70_struc(n)%ac70(t)%SoilLayer(2)%GravelMass = 0.0
 
-            AC70_struc(n)%ac70(t)%ProfDescription = 'soil profile from LIS'
-            
-            AC70_struc(n)%ac70(t)%SoilLayer(1)%Thickness = AC70_struc(n)%Thickness(1)
-            AC70_struc(n)%ac70(t)%SoilLayer(2)%Thickness = AC70_struc(n)%Thickness(2)
-            
-            AC70_struc(n)%ac70(t)%Soil%NrSoilLayers = AC70_struc(n)%NrSoilLayers
+                AC70_struc(n)%ac70(t)%ProfDescription = 'soil profile from LIS'
+                
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%Thickness = AC70_struc(n)%Thickness(1)
+                AC70_struc(n)%ac70(t)%SoilLayer(2)%Thickness = AC70_struc(n)%Thickness(2)
+                !AC70_struc(n)%ac70(t)%SoilLayer(3) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                !AC70_struc(n)%ac70(t)%SoilLayer(4) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                !AC70_struc(n)%ac70(t)%SoilLayer(5) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                
+                AC70_struc(n)%ac70(t)%Soil%NrSoilLayers = AC70_struc(n)%NrSoilLayers
+                AC70_struc(n)%ac70(t)%NrCompartments = AC70_struc(n)%max_No_compartments
+                !AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()
 
-            ! Set soil global variables 
-            call SetSoilLayer(AC70_struc(n)%ac70(t)%SoilLayer)
-            call SetSoil(AC70_struc(n)%ac70(t)%Soil)
-            !!! Set all constant parameters from LIS_config
-             
+                ! Set soil global variables 
+                call SetSoilLayer(AC70_struc(n)%ac70(t)%SoilLayer)
+                call SetSoil(AC70_struc(n)%ac70(t)%Soil)
+                call SetNrCompartments(AC70_struc(n)%ac70(t)%NrCompartments)
+                !!! Set all constant parameters from LIS_config
+                 
 
-            !SetNumberSimulationRuns(AC70_struc(n)%NumberSimulationRuns)
-            !call InitializeProject(iproject, TheProjectFile, TheProjectType)
-            call InitializeSettings()
-            
-            ! paths need to be reset after Initialize Settings
-            call SetPathNameOutp(trim(AC70_struc(n)%PathNameOutp))
-            call SetPathNameSimul(trim(AC70_struc(n)%PathNameSimul))
-            call SetPathNameList(trim(AC70_struc(n)%PathNameList))
-            call SetPathNameParam(trim(AC70_struc(n)%PathNameParam))
-            call SetPathNameProg('')
-            !
+                !SetNumberSimulationRuns(AC70_struc(n)%NumberSimulationRuns)
+                !call InitializeProject(iproject, TheProjectFile, TheProjectType)
+                call InitializeSettings(use_default_soil_file=.false.)
+                AC70_struc(n)%ac70(t)%SoilLayer = GetSoilLayer()
+                AC70_struc(n)%ac70(t)%Soil = GetSoil()
+                AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()
+                ! Set again soil global variables 
+                
+                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                ! Temporary: redo setting of parameters
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%wp = WP(AC70_struc(n)%ac70(t)%soiltype) * 100
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%sat = SAT(AC70_struc(n)%ac70(t)%soiltype) * 100
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%fc = FC(AC70_struc(n)%ac70(t)%soiltype) * 100
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate = INFRATE(AC70_struc(n)%ac70(t)%soiltype) * 86400000
+                sd_tmp = sd(AC70_struc(n)%ac70(t)%soiltype)*100
+                cl_tmp = cl(AC70_struc(n)%ac70(t)%soiltype)*100
+                si_tmp = si(AC70_struc(n)%ac70(t)%soiltype)*100
+                    
+                ! define default CN
+                if (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>864) then
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 46
+                elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=347) then
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 61
+                elseif (AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate>=36) then
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 72
+                else
+                    AC70_struc(n)%ac70(t)%Soil%CNvalue = 77
+                endif
+                
+                ! define default REW (only top layer will be used)
+                Z_surf = 0.04_dp
+                REW=nint(10.0_dp*(AC70_struc(n)%ac70(t)%SoilLayer(1)%fc-(AC70_struc(n)%ac70(t)%SoilLayer(1)%wp/2.0))*Z_surf)
+                if (REW < 0) REW = 0
+                if (REW > 15) REW = 15
+                AC70_struc(n)%ac70(t)%Soil%REW = REW
 
-            call SetMultipleProjectFile(TheProjectFile)
-            call SetMultipleProjectFileFull(GetPathNameList() // &
-                                    GetMultipleProjectFile())
-            call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
-                                                        TotalSimRuns)
-            call SetMultipleProjectDescription('undefined')
-            FullFileNameProgramParametersLocal = GetFullFileNameProgramParameters()
-            call ComposeFileForProgramParameters(GetMultipleProjectFile(), &
-                                      FullFileNameProgramParametersLocal)
-            call SetFullFileNameProgramParameters(FullFileNameProgramParametersLocal)
-            call LoadProgramParametersProjectPlugIn(&
-                  GetFullFileNameProgramParameters(), &
-                         ProgramParametersAvailable)
-            call SetSimulation_MultipleRun(.true.)
-            call SetSimulation_NrRuns(TotalSimRuns) 
-            MultipleRunWithKeepSWC_temp = GetSimulation_MultipleRunWithKeepSWC() 
-            MultipleRunConstZrx_temp = GetSimulation_MultipleRunConstZrx()
-            call CheckForKeepSWC(GetMultipleProjectFileFull(), &  
-                GetSimulation_NrRuns(), &       
-                MultipleRunWithKeepSWC_temp, & 
-                MultipleRunConstZrx_temp)  
-            call SetSimulation_MultipleRunWithKeepSWC(MultipleRunWithKeepSWC_temp) 
-            call SetSimulation_MultipleRunConstZrx(MultipleRunConstZrx_temp)        
+                !  associate soil class with USDA soil type for soil description
+                if ((1.5 * cl_tmp + si_tmp) < 15.0) then
+                    descr = 0
+                elseif (((1.5 * cl_tmp + si_tmp) >= 15) .and. ((2 * cl_tmp + si_tmp) <= 30)) then
+                    descr = 1
+                elseif ((cl_tmp >= 7 .and. cl_tmp < 20 .and. sd_tmp >= 52) .and. (2 * cl_tmp + si_tmp >= 30)) then
+                    descr = 2
+                elseif ((cl_tmp < 7) .and. (si_tmp < 50) .and. (2 * cl_tmp + si_tmp >= 30)) then
+                    descr = 2
+                elseif ((cl_tmp >= 7) .and. (cl_tmp < 27) .and. (si_tmp >= 28) .and. (si_tmp < 50) .and. (sd_tmp < 52)) then
+                    descr = 3
+                elseif ((si_tmp >= 50) .and. (cl_tmp >= 12) .and. (cl_tmp < 27)) then
+                    descr = 4
+                elseif ((si_tmp >= 50) .and. (si_tmp < 80) .and. (cl_tmp < 12)) then
+                    descr = 4
+                elseif ((si_tmp >= 80) .and. (cl_tmp < 12)) then
+                    descr = 5
+                elseif ((cl_tmp >= 20) .and. (cl_tmp < 35) .and. (si_tmp < 28) .and. (sd_tmp > 45)) then
+                    descr = 6
+                elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp >= 20) .and. (sd_tmp < 45)) then
+                    descr = 7
+                elseif ((cl_tmp >= 27) .and. (cl_tmp < 40) .and. (sd_tmp < 20)) then
+                    descr = 8
+                elseif ((cl_tmp >= 35) .and. (cl_tmp < 55) .and. (sd_tmp >= 45) .and. (sd_tmp < 65)) then
+                    descr = 9
+                elseif ((cl_tmp >= 40) .and. (si_tmp >= 40)) then
+                    descr = 10
+                elseif ((cl_tmp >= 40) .and. (sd_tmp < 45) .and. (si_tmp < 40)) then
+                    descr = 11
+                else
+                   write(LIS_logunit, *) 'no soil texture found'
+                   write(LIS_logunit, *) 'program stopping ...'
+                   call LIS_endrun
+                end if
+                ! soil_type = ['sand', 'loamy sand', 'sandy loam', 'loam', 'silt loam', 'silt', 'sandy clay loam',
+                !              'clay loam',
+                !              'silty clay loam', 'sandy clay', 'silty clay', 'clay']
+                InfRate_tmp = AC70_struc(n)%ac70(t)%SoilLayer(1)%InfRate
+                if ((descr == 0) .or. (descr == 1) .or. (descr == 2)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.3112-10**(-5)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.4936+0.2416*log(InfRate_tmp)
+                elseif ((descr == 3) .or. (descr == 4) .or. (descr == 5)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.4986-9*10**(-5)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -2.1320+0.4778*log(InfRate_tmp)
+                elseif ((descr == 6) .or. (descr == 7) .or. (descr == 9)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.5677-4*10**(-5)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -3.7189+0.5922*log(InfRate_tmp)
+                elseif ((descr == 8) .or. (descr == 10) .or. (descr == 11)) then
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRa = -0.6366+8*10**(-4)*InfRate_tmp
+                    AC70_struc(n)%ac70(t)%SoilLayer(1)%CRb = -1.9165+0.7063*log(InfRate_tmp)
+                endif
+                ! Set GravelMass and Penetrability
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%Penetrability = 100.0
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%GravelMass = 10.0
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%Description = 'soil type from LIS'
+                AC70_struc(n)%ac70(t)%SoilLayer(2) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                AC70_struc(n)%ac70(t)%SoilLayer(2)%GravelMass = 0.0
 
-            ! The remainder of this loop is the equivalent of "RunSimulation()"
-            ! call InitializeSimulation(TheProjectFile, TheProjectType)
-            call SetTheProjectFile(trim(TheProjectFile))
+                AC70_struc(n)%ac70(t)%ProfDescription = 'soil profile from LIS'
+                
+                AC70_struc(n)%ac70(t)%SoilLayer(1)%Thickness = AC70_struc(n)%Thickness(1)
+                AC70_struc(n)%ac70(t)%SoilLayer(2)%Thickness = AC70_struc(n)%Thickness(2)
+                
+                !AC70_struc(n)%ac70(t)%SoilLayer(3) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                !AC70_struc(n)%ac70(t)%SoilLayer(4) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                !AC70_struc(n)%ac70(t)%SoilLayer(5) = AC70_struc(n)%ac70(t)%SoilLayer(1)
 
-            ! Overwrite all AC70_struc after Initialization
-            AC70_struc(n)%ac70(t)%RootZoneWC_Actual = GetRootZoneWC_Actual()
-            AC70_struc(n)%ac70(t)%RootZoneWC_FC = GetRootZoneWC_FC()
-            AC70_struc(n)%ac70(t)%RootZoneWC_WP = GetRootZoneWC_WP()
-            AC70_struc(n)%ac70(t)%RootZoneWC_SAT = GetRootZoneWC_SAT()
-            AC70_struc(n)%ac70(t)%RootZoneWC_Leaf = GetRootZoneWC_Leaf()
-            AC70_struc(n)%ac70(t)%RootZoneWC_Thresh = GetRootZoneWC_Thresh()
-            AC70_struc(n)%ac70(t)%RootZoneWC_Sen = GetRootZoneWC_Sen()
-            AC70_struc(n)%ac70(t)%RootZoneWC_ZtopAct = GetRootZoneWC_ZtopAct()
-            AC70_struc(n)%ac70(t)%RootZoneWC_ZtopFC = GetRootZoneWC_ZtopFC()
-            AC70_struc(n)%ac70(t)%RootZoneWC_ZtopWP = GetRootZoneWC_ZtopWP()
-            AC70_struc(n)%ac70(t)%RootZoneWC_ZtopThresh = GetRootZoneWC_ZtopThresh()
-            AC70_struc(n)%ac70(t)%Compartment = GetCompartment()
-            AC70_struc(n)%ac70(t)%TotalSaltContent = GetTotalSaltContent()
-            AC70_struc(n)%ac70(t)%TotalWaterContent = GetTotalWaterContent()
-            AC70_struc(n)%ac70(t)%effectiverain = Geteffectiverain()
-            AC70_struc(n)%ac70(t)%SumWaBal = GetSumWaBal()
-            AC70_struc(n)%ac70(t)%RootZoneSalt = GetRootZoneSalt()
-            AC70_struc(n)%ac70(t)%Simulation = GetSimulation()
-            AC70_struc(n)%ac70(t)%IrriInterval = GetIrriInterval()
-            AC70_struc(n)%ac70(t)%IrriInfoRecord1 = GetIrriInfoRecord1()
-            AC70_struc(n)%ac70(t)%IrriInfoRecord2 = GetIrriInfoRecord2()
-            AC70_struc(n)%ac70(t)%Irrigation = GetIrrigation()
-            AC70_struc(n)%ac70(t)%IrriBeforeSeason = GetIrriBeforeSeason()
-            AC70_struc(n)%ac70(t)%IrriAfterSeason = GetIrriAfterSeason()
-            AC70_struc(n)%ac70(t)%SoilLayer = GetSoilLayer()
-            AC70_struc(n)%ac70(t)%daynri = GetDayNri()
-            do l=1, AC70_struc(n)%ac70(t)%NrCompartments
-                 AC70_struc(n)%ac70(t)%smc(l) = GetCompartment_theta(l)
-            enddo
-            !write(*,'(e23.15e3)') AC70_struc(n)%ac70(t)%ac70smc(1)
-            AC70_struc(n)%ac70(t)%IrriECw = GetIrriECw()
-            AC70_struc(n)%ac70(t)%Management = GetManagement()
-            AC70_struc(n)%ac70(t)%PerennialPeriod = GetPerennialPeriod()
-            AC70_struc(n)%ac70(t)%simulparam = GetSimulParam()
-            AC70_struc(n)%ac70(t)%Cuttings = GetManagement_Cuttings()
-            AC70_struc(n)%ac70(t)%onset = GetOnset()
-            AC70_struc(n)%ac70(t)%endseason = GetEndSeason()
-            AC70_struc(n)%ac70(t)%crop = GetCrop()
-            AC70_struc(n)%ac70(t)%Soil = GetSoil()
-            AC70_struc(n)%ac70(t)%TemperatureRecord = GetTemperatureRecord()
-            AC70_struc(n)%ac70(t)%ClimRecord = GetClimRecord()
-            AC70_struc(n)%ac70(t)%RainRecord = GetRainRecord()
-            AC70_struc(n)%ac70(t)%EToRecord = GetEToRecord()
+                AC70_struc(n)%ac70(t)%Soil%NrSoilLayers = AC70_struc(n)%NrSoilLayers
 
-            AC70_struc(n)%ac70(t)%GenerateTimeMode = GetGenerateTimeMode()
-            AC70_struc(n)%ac70(t)%GenerateDepthMode = GetGenerateDepthMode()
-            AC70_struc(n)%ac70(t)%IrriMode = GetIrriMode()
-            AC70_struc(n)%ac70(t)%IrriMethod = GetIrriMethod()
-            AC70_struc(n)%ac70(t)%DaySubmerged = GetDaySubmerged()
-            AC70_struc(n)%ac70(t)%MaxPlotNew = GetMaxPlotNew()
-            AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()
+
+                call SetSoilLayer(AC70_struc(n)%ac70(t)%SoilLayer)
+                call SetSoil(AC70_struc(n)%ac70(t)%Soil)
+
+
+                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                ! paths need to be reset after Initialize Settings
+                call SetPathNameOutp(trim(AC70_struc(n)%PathNameOutp))
+                call SetPathNameSimul(trim(AC70_struc(n)%PathNameSimul))
+                call SetPathNameList(trim(AC70_struc(n)%PathNameList))
+                call SetPathNameParam(trim(AC70_struc(n)%PathNameParam))
+                call SetPathNameProg('')
+                !
+
+                call SetMultipleProjectFile(TheProjectFile)
+                call SetMultipleProjectFileFull(GetPathNameList() // &
+                                        GetMultipleProjectFile())
+                call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
+                                                            TotalSimRuns)
+                call SetMultipleProjectDescription('undefined')
+                FullFileNameProgramParametersLocal = GetFullFileNameProgramParameters()
+                call ComposeFileForProgramParameters(GetMultipleProjectFile(), &
+                                          FullFileNameProgramParametersLocal)
+                call SetFullFileNameProgramParameters(FullFileNameProgramParametersLocal)
+                call LoadProgramParametersProjectPlugIn(&
+                      GetFullFileNameProgramParameters(), &
+                             ProgramParametersAvailable)
+                call SetSimulation_MultipleRun(.true.)
+                call SetSimulation_NrRuns(TotalSimRuns) 
+                MultipleRunWithKeepSWC_temp = GetSimulation_MultipleRunWithKeepSWC() 
+                MultipleRunConstZrx_temp = GetSimulation_MultipleRunConstZrx()
+                call CheckForKeepSWC(GetMultipleProjectFileFull(), &  
+                    GetSimulation_NrRuns(), &       
+                    MultipleRunWithKeepSWC_temp, & 
+                    MultipleRunConstZrx_temp)  
+                call SetSimulation_MultipleRunWithKeepSWC(MultipleRunWithKeepSWC_temp) 
+                call SetSimulation_MultipleRunConstZrx(MultipleRunConstZrx_temp)        
+
+                ! The remainder of this loop is the equivalent of "RunSimulation()"
+                ! call InitializeSimulation(TheProjectFile, TheProjectType)
+                call SetTheProjectFile(trim(TheProjectFile))
+
+                ! Overwrite all AC70_struc after Initialization
+                AC70_struc(n)%ac70(t)%RootZoneWC_Actual = GetRootZoneWC_Actual()
+                AC70_struc(n)%ac70(t)%RootZoneWC_FC = GetRootZoneWC_FC()
+                AC70_struc(n)%ac70(t)%RootZoneWC_WP = GetRootZoneWC_WP()
+                AC70_struc(n)%ac70(t)%RootZoneWC_SAT = GetRootZoneWC_SAT()
+                AC70_struc(n)%ac70(t)%RootZoneWC_Leaf = GetRootZoneWC_Leaf()
+                AC70_struc(n)%ac70(t)%RootZoneWC_Thresh = GetRootZoneWC_Thresh()
+                AC70_struc(n)%ac70(t)%RootZoneWC_Sen = GetRootZoneWC_Sen()
+                AC70_struc(n)%ac70(t)%RootZoneWC_ZtopAct = GetRootZoneWC_ZtopAct()
+                AC70_struc(n)%ac70(t)%RootZoneWC_ZtopFC = GetRootZoneWC_ZtopFC()
+                AC70_struc(n)%ac70(t)%RootZoneWC_ZtopWP = GetRootZoneWC_ZtopWP()
+                AC70_struc(n)%ac70(t)%RootZoneWC_ZtopThresh = GetRootZoneWC_ZtopThresh()
+                AC70_struc(n)%ac70(t)%Compartment = GetCompartment()
+                AC70_struc(n)%ac70(t)%TotalSaltContent = GetTotalSaltContent()
+                AC70_struc(n)%ac70(t)%TotalWaterContent = GetTotalWaterContent()
+                AC70_struc(n)%ac70(t)%effectiverain = Geteffectiverain()
+                AC70_struc(n)%ac70(t)%SumWaBal = GetSumWaBal()
+                AC70_struc(n)%ac70(t)%RootZoneSalt = GetRootZoneSalt()
+                AC70_struc(n)%ac70(t)%Simulation = GetSimulation()
+                AC70_struc(n)%ac70(t)%IrriInterval = GetIrriInterval()
+                AC70_struc(n)%ac70(t)%IrriInfoRecord1 = GetIrriInfoRecord1()
+                AC70_struc(n)%ac70(t)%IrriInfoRecord2 = GetIrriInfoRecord2()
+                AC70_struc(n)%ac70(t)%Irrigation = GetIrrigation()
+                AC70_struc(n)%ac70(t)%IrriBeforeSeason = GetIrriBeforeSeason()
+                AC70_struc(n)%ac70(t)%IrriAfterSeason = GetIrriAfterSeason()
+                AC70_struc(n)%ac70(t)%SoilLayer = GetSoilLayer()
+                AC70_struc(n)%ac70(t)%daynri = GetDayNri()
+                do l=1, AC70_struc(n)%ac70(t)%NrCompartments
+                     AC70_struc(n)%ac70(t)%smc(l) = GetCompartment_theta(l)
+                enddo
+                !write(*,'(e23.15e3)') AC70_struc(n)%ac70(t)%ac70smc(1)
+                AC70_struc(n)%ac70(t)%IrriECw = GetIrriECw()
+                AC70_struc(n)%ac70(t)%Management = GetManagement()
+                AC70_struc(n)%ac70(t)%PerennialPeriod = GetPerennialPeriod()
+                AC70_struc(n)%ac70(t)%simulparam = GetSimulParam()
+                AC70_struc(n)%ac70(t)%Cuttings = GetManagement_Cuttings()
+                AC70_struc(n)%ac70(t)%onset = GetOnset()
+                AC70_struc(n)%ac70(t)%endseason = GetEndSeason()
+                AC70_struc(n)%ac70(t)%crop = GetCrop()
+                AC70_struc(n)%ac70(t)%Soil = GetSoil()
+                AC70_struc(n)%ac70(t)%TemperatureRecord = GetTemperatureRecord()
+                AC70_struc(n)%ac70(t)%ClimRecord = GetClimRecord()
+                AC70_struc(n)%ac70(t)%RainRecord = GetRainRecord()
+                AC70_struc(n)%ac70(t)%EToRecord = GetEToRecord()
+
+                AC70_struc(n)%ac70(t)%GenerateTimeMode = GetGenerateTimeMode()
+                AC70_struc(n)%ac70(t)%GenerateDepthMode = GetGenerateDepthMode()
+                AC70_struc(n)%ac70(t)%IrriMode = GetIrriMode()
+                AC70_struc(n)%ac70(t)%IrriMethod = GetIrriMethod()
+                AC70_struc(n)%ac70(t)%DaySubmerged = GetDaySubmerged()
+                AC70_struc(n)%ac70(t)%MaxPlotNew = GetMaxPlotNew()
+                AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()
             AC70_struc(n)%ac70(t)%IrriFirstDayNr = GetIrriFirstDayNr()
             AC70_struc(n)%ac70(t)%ZiAqua = GetZiAqua()
             AC70_struc(n)%ac70(t)%IniPercTAW = GetIniPercTAW()
@@ -1052,14 +1164,14 @@ subroutine Ac70_setup()
             AC70_struc(n)%ac70(t)%nroot = & 
                  NROTBL(AC70_struc(n)%ac70(t)%vegetype)
 
-            IF (NROTBL(AC70_struc(n)%ac70(t)%vegetype) .gt. &
-                AC70_struc(n)%nsoil) THEN
-               WRITE (LIS_logunit,*) 'Warning: too many root layers'
-               write (LIS_logunit,*) 'NROOT = ', NROTBL(AC70_struc(n)%ac70(t)%vegetype)
-               write (LIS_logunit,*) 'NSOIL = ', AC70_struc(n)%nsoil
-               write(LIS_logunit, *) 'program stopping ...'
-               call LIS_endrun
-            END IF
+            !IF (NROTBL(AC70_struc(n)%ac70(t)%vegetype) .gt. &
+            !    AC70_struc(n)%nsoil) THEN
+            !   WRITE (LIS_logunit,*) 'Warning: too many root layers'
+            !   write (LIS_logunit,*) 'NROOT = ', NROTBL(AC70_struc(n)%ac70(t)%vegetype)
+            !   write (LIS_logunit,*) 'NSOIL = ', AC70_struc(n)%nsoil
+            !   write(LIS_logunit, *) 'program stopping ...'
+            !   call LIS_endrun
+            !END IF
             ! SY: End VEGETATION PARAMETERS
 
             ! SY: End lines following those in REDPRM

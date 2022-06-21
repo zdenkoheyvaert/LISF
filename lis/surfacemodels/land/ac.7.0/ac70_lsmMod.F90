@@ -239,6 +239,7 @@ module Ac70_lsmMod
         character(len=256) :: PathNameList
         character(len=256) :: PathNameParam
         integer            :: NrSoilLayers
+        integer            :: max_No_compartments
         integer            :: Tmin_windowsize
         real, pointer      :: Thickness(:)
         !!! MB: AC70
@@ -306,7 +307,7 @@ contains
             enddo
             !!! MB: AC70
             do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
-                allocate(AC70_struc(n)%ac70(t)%smc(AC70_struc(n)%ac70(t)%NrCompartments))
+                allocate(AC70_struc(n)%ac70(t)%smc(AC70_struc(n)%max_No_compartments))
             enddo
             do t=1, LIS_rc%npatch(n, LIS_rc%lsm_index)
                 allocate(AC70_struc(n)%ac70(t)%Tmin_ac_antecedent(AC70_struc(n)%Tmin_windowsize))
@@ -367,11 +368,11 @@ contains
 ! TODO: setup number of soil moisture/temperature layers and depth here  
 !------------------------------------------------------------------------
             ! TODO: set number of soil moisture layers in surface model
-            LIS_sfmodel_struc(n)%nsm_layers = AC70_struc(n)%nsoil
+            LIS_sfmodel_struc(n)%nsm_layers = AC70_struc(n)%max_No_compartments
             ! TODO: set number of soil temperature layers in surface model
-            LIS_sfmodel_struc(n)%nst_layers = AC70_struc(n)%nsoil
-            allocate(LIS_sfmodel_struc(n)%lyrthk(AC70_struc(n)%nsoil))
-            LIS_sfmodel_struc(n)%lyrthk(:) = AC70_struc(n)%sldpth(:) 
+            LIS_sfmodel_struc(n)%nst_layers = AC70_struc(n)%max_No_compartments
+            allocate(LIS_sfmodel_struc(n)%lyrthk(AC70_struc(n)%max_No_compartments))
+            LIS_sfmodel_struc(n)%lyrthk(:) = 0.1
             LIS_sfmodel_struc(n)%ts = AC70_struc(n)%ts
         enddo
     end subroutine Ac70_ini

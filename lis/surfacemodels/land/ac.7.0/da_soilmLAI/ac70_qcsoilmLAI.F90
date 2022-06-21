@@ -78,12 +78,11 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
   call ESMF_AttributeGet(sm1Field,"Max Value",smmax1,rc=status)
   call LIS_verify(status,&
        "ESMF_AttributeGet: Max Value failed in ac70_qcsoilmLAI")
-
   call ESMF_AttributeGet(sm1Field,"Min Value",smmin1,rc=status)
   call LIS_verify(status,&
        "ESMF_AttributeGet: Min Value failed in ac70_qcsoilmLAI")
 
-  call ESMF_StateGet(LSM_State,"CCIActual",CCiActualField,rc=status)
+  call ESMF_StateGet(LSM_State,"CCiActual",CCiActualField,rc=status)
   call LIS_verify(status,&
            "ESMF_StateGet for CCiActual failed in ac70_qcsoilmLAI")
   call ESMF_FieldGet(CCiActualField,localDE=0,farrayPtr=CCiActual,rc=status)

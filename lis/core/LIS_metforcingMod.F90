@@ -347,7 +347,7 @@ contains
 ! MB: for AC70
     call ESMF_ConfigFindLabel(forcConfig,"PREC_ac:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_PREC_ac,&
-         "precipitation", tnvars,status)
+         "Rainfall_ac Rate", tnvars,status)
 
     call ESMF_ConfigFindLabel(forcConfig,"TMIN_ac:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_TMIN_ac,&
@@ -598,7 +598,7 @@ contains
 ! MB: for AC70
     call ESMF_ConfigFindLabel(forcConfig,"PREC_ac:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_PREC_ac,&
-         "precipitation", tnvars,status)
+         "Rainfall_ac Rate", tnvars,status)
 
     call ESMF_ConfigFindLabel(forcConfig,"TMIN_ac:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_TMIN_ac,&
@@ -2375,8 +2375,10 @@ contains
              
              do t=1,LIS_rc%ntiles(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_PREC_ac_FORC,value=&
-                     PREC_ac(t),vlevel=k,unit="kg m-2",direction="-", &
+                     PREC_ac(t),vlevel=k,unit="kg m-2 d-1",direction="DN", &
                      valid_min = 0.0, valid_max=1000.0)
+                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_PREC_ac_FORC,value=&
+                     PREC_ac(t)*LIS_rc%ts, vlevel=k,unit="kg m-2",direction="DN")
              enddo
           enddo
        endif
@@ -2394,8 +2396,8 @@ contains
              
              do t=1,LIS_rc%ntiles(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_TMIN_ac_FORC,value=&
-                     TMIN_ac(t),vlevel=k,unit="kg m-2",direction="-", &
-                     valid_min = 0.0, valid_max=1000.0)
+                     TMIN_ac(t),vlevel=k,unit="C",direction="-", &
+                     valid_min = -60.0, valid_max=100.0)
              enddo
           enddo
        endif
@@ -2413,8 +2415,8 @@ contains
              
              do t=1,LIS_rc%ntiles(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_TMAX_ac_FORC,value=&
-                     TMAX_ac(t),vlevel=k,unit="kg m-2",direction="-", &
-                     valid_min = 0.0, valid_max=1000.0)
+                     TMAX_ac(t),vlevel=k,unit="C",direction="-", &
+                     valid_min = -60.0, valid_max=100.0)
              enddo
           enddo
        endif
@@ -2432,8 +2434,10 @@ contains
              
              do t=1,LIS_rc%ntiles(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_ETo_ac_FORC,value=&
-                     ETo_ac(t),vlevel=k,unit="kg m-2",direction="-", &
+                     ETo_ac(t),vlevel=k,unit="kg m-2 d-1",direction="-", &
                      valid_min = 0.0, valid_max=1000.0)
+                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_ETo_ac_FORC,value=&
+                     ETo_ac(t)*LIS_rc%ts, vlevel=k,unit="kg m-2",direction="DN")
              enddo
           enddo
        endif

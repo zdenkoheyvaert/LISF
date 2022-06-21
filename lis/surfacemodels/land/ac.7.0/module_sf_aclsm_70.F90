@@ -9689,12 +9689,12 @@ END  SUBROUTINE SHALLOWWATERTABLE
 !    SHDFAC = SHDTBL(VEGTYP)
 !    IF (VEGTYP .eq. BARE) SHDFAC = 0.0
 
-    IF (NROOT .gt. NSOIL) THEN
-       WRITE (*,*) 'Warning: too many root layers'
-       write (*,*) 'NROOT = ', nroot
-       write (*,*) 'NSOIL = ', nsoil
-       call wrf_error_fatal("STOP in Noah-MP")
-    END IF
+    !IF (NROOT .gt. NSOIL) THEN
+    !   WRITE (*,*) 'Warning: too many root layers'
+    !   write (*,*) 'NROOT = ', nroot
+    !   write (*,*) 'NSOIL = ', nsoil
+    !   call wrf_error_fatal("STOP in Noah-MP")
+    !END IF
 
 ! ----------------------------------------------------------------------
 

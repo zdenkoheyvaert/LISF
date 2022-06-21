@@ -437,8 +437,9 @@ module LIS_histDataMod
   ! AC70
   public :: LIS_MOC_AC70SOILMOIST 
   public :: LIS_MOC_AC70BIOMASS
-  public :: LIS_MOC_AC70CCiActual
-  public :: LIS_MOC_AC70WCMV1V2
+  public :: LIS_MOC_CCiActual
+  public :: LIS_MOC_WCMV1V2
+  public :: LIS_MOC_AC70FC
   
   ! RUC 
   public :: LIS_MOC_QVG
@@ -937,8 +938,9 @@ module LIS_histDataMod
 !  <- AC70 ->
    integer :: LIS_MOC_AC70SOILMOIST  = -9999
    integer :: LIS_MOC_AC70BIOMASS  = -9999
-   integer :: LIS_MOC_AC70CCiActual  = -9999
-   integer :: LIS_MOC_AC70WCMV1V2  = -9999
+   integer :: LIS_MOC_CCiActual  = -9999
+   integer :: LIS_MOC_WCMV1V2  = -9999
+   integer :: LIS_MOC_AC70FC  = -9999
 
 !   <- RUC -> 
    integer :: LIS_MOC_QVG = -9999
@@ -4555,29 +4557,41 @@ contains
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70BIOMASS,&
             LIS_histData(n)%head_lsm_list,&
-            n,1,ntiles,(/"kg/m2"/),1,(/"-"/),1,1,1,&
+            n,1,ntiles,(/"t/ha"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
 
-    call ESMF_ConfigFindLabel(modelSpecConfig,"AC70CCiActual:",rc=rc)
+    call ESMF_ConfigFindLabel(modelSpecConfig,"CCiActual:",rc=rc)
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
-         "AC70CCiActual",&
-         "AC70_CCiActual",&
-         "AC70 CCiActual",rc)
+         "CCiActual",&
+         "CCiActual",&
+         "CCiActual",rc)
     if ( rc == 1 ) then
-       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70CCiActual,&
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_CCiActual,&
             LIS_histData(n)%head_lsm_list,&
-            n,1,ntiles,(/"kg/m2"/),1,(/"-"/),1,1,1,&
+            n,1,ntiles,(/"-"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
 
-    call ESMF_ConfigFindLabel(modelSpecConfig,"AC70WCMV1V2:",rc=rc)
+    call ESMF_ConfigFindLabel(modelSpecConfig,"WCMV1V2:",rc=rc)
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
-         "AC70WCMV1V2",&
-         "AC70_WCMV1V2",&
-         "AC70 WCMV1V2",rc)
+         "WCMV1V2",&
+         "WCMV1V2",&
+         "WCMV1V2",rc)
     if ( rc == 1 ) then
-       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70WCMV1V2,&
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_WCMV1V2,&
+            LIS_histData(n)%head_lsm_list,&
+            n,1,ntiles,(/"-"/),1,(/"-"/),1,1,1,&
+            model_patch=.true.)
+    endif
+
+    call ESMF_ConfigFindLabel(modelSpecConfig,"AC70FC:",rc=rc)
+    call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+         "AC70FC",&
+         "AC70FC",&
+         "AC70FC",rc)
+    if ( rc == 1 ) then
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70FC,&
             LIS_histData(n)%head_lsm_list,&
             n,1,ntiles,(/"-"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)

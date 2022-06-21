@@ -729,8 +729,9 @@ module Ac70_module
 
      !!! MB: AC70
      ! WCM
-     real               :: Tmin_ac_1stJuly
+     real               :: Tmin_ac_Julyref
      real               :: WCMV1V2
+     real               :: AC70FC
      real, allocatable  :: TMIN_ac_antecedent(:)
      !!!
      integer            :: daynri

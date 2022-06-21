@@ -76,13 +76,13 @@ subroutine ac70_updatesoilmLAI(n, LSM_State, LSM_Incr_State)
   call ESMF_StateGet(LSM_State,"CCiActual",CCiActualField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: LSM_State, failed in ac70_updatesoilmLAI")
-  call ESMF_StateGet(LSM_Incr_State,"CCiActual",CCiActualIncrField,rc=status)
-  call LIS_verify(status,&
-       "ESMF_StateGet: LSM_Incr_State CCiActual failed in ac70_updatesoilmLAI")
- 
   call ESMF_FieldGet(CCiActualField,localDE=0,farrayPtr=CCiActual,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: CCiActualField failed in ac70_updatesoilmLAI")
+ 
+  call ESMF_StateGet(LSM_Incr_State,"CCiActual",CCiActualIncrField,rc=status)
+  call LIS_verify(status,&
+       "ESMF_StateGet: LSM_Incr_State CCiActual failed in ac70_updatesoilmLAI")
   call ESMF_FieldGet(CCiActualIncrField,localDE=0,farrayPtr=CCiActualincr,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: CCiActualIncrField failed in ac70_updatesoilmLAI")

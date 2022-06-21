@@ -88,6 +88,13 @@ subroutine Ac70_readcrd()
     enddo
 
     ! number of soil layers
+    call ESMF_ConfigFindLabel(LIS_config, "max_No_compartments:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, AC70_struc(n)%max_No_compartments, rc=rc)
+        call LIS_verify(rc, "max_No_compartments: not defined")
+    enddo
+
+    ! number of soil layers
     call ESMF_ConfigFindLabel(LIS_config, "NrSoilLayers:", rc = rc)
     do n=1, LIS_rc%nnest
         call ESMF_ConfigGetAttribute(LIS_config, AC70_struc(n)%NrSoilLayers, rc=rc)
