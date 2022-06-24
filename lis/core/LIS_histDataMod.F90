@@ -149,6 +149,12 @@ module LIS_histDataMod
   public :: LIS_MOC_TOTSOILCARB
   public :: LIS_MOC_TOTLIVBIOM
   
+  ! MB: AC70 
+  public :: LIS_MOC_PREC_ac
+  public :: LIS_MOC_TMIN_ac 
+  public :: LIS_MOC_TMAX_ac 
+  public :: LIS_MOC_ETo_ac 
+  
   public :: LIS_MOC_WINDFORC  
   public :: LIS_MOC_RAINFFORC 
   public :: LIS_MOC_SNOWFFORC 
@@ -649,6 +655,10 @@ module LIS_histDataMod
    integer :: LIS_MOC_TMIN_ac_FORC  = -9999
    integer :: LIS_MOC_TMAX_ac_FORC  = -9999
    integer :: LIS_MOC_ETo_ac_FORC  = -9999
+   integer :: LIS_MOC_PREC_ac  = -9999
+   integer :: LIS_MOC_TMIN_ac  = -9999
+   integer :: LIS_MOC_TMAX_ac  = -9999
+   integer :: LIS_MOC_ETo_ac  = -9999
 
    ! PARAMETER OUTPUT - EXPERIMENTAL (USE W/WRF-WPS)
    integer :: LIS_MOC_LANDMASK   = -9999
@@ -2687,15 +2697,29 @@ contains
     endif
 
     ! MB: AC70
+
+    !call ESMF_ConfigFindLabel(modelSpecConfig,"PREC_ac:",rc=rc)
+    !call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
+    !     "PREC_ac",&
+    !     "precipitation_rate",&
+    !     "precipitation rate",rc)
+    !if ( rc == 1 ) then
+    !   call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_PREC_ac,&
+    !        LIS_histData(n)%head_lsm_list,&
+    !        n,1,ntiles,(/"mm/d"/),&
+    !        1,(/"-"/),1,1,1,&
+    !        model_patch=.true.)
+    !endif
+
     call ESMF_ConfigFindLabel(modelSpecConfig,"PREC_ac_f:",rc=rc)
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "PREC_ac_f",&
-         "precipitation kg m-2",&
-         "precipitation",rc)
+         "Rainfall_ac Rate mm/day",&
+         "Rainfall_ac Rate",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_PREC_ac_FORC,&
             LIS_histData(n)%head_lsm_list,&
-            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            n,1,ntiles,(/"-"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
 
@@ -2703,11 +2727,11 @@ contains
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "TMIN_ac_f",&
          "min temperature degC",&
-         "max temperature",rc)
+         "min temperature",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_TMIN_ac_FORC,&
             LIS_histData(n)%head_lsm_list,&
-            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            n,1,ntiles,(/"C"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
 
@@ -2715,23 +2739,23 @@ contains
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "TMAX_ac_f",&
          "max temperature degC",&
-         "min temperature",rc)
+         "max temperature",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_TMAX_ac_FORC,&
             LIS_histData(n)%head_lsm_list,&
-            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            n,1,ntiles,(/"C"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
 
     call ESMF_ConfigFindLabel(modelSpecConfig,"ETo_ac_f:",rc=rc)
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "ETo_ac_f",&
-         "potential evaporation kg m-2",&
+         "potential evaporation mm/day",&
          "potential evaporation",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_ETo_ac_FORC,&
             LIS_histData(n)%head_lsm_list,&
-            n,1,ntiles,(/"kg m-2"/),1,(/"-"/),1,1,1,&
+            n,1,ntiles,(/"mm/d"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
     ! MB: AC70 
@@ -3112,7 +3136,7 @@ contains
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "PET_f",&
          "potential_evaporation",&
-         "potential evaporation",rc)
+         "potential_evaporation",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_PETFORC,&
             LIS_histData(n)%head_lsm_list,&
@@ -4545,7 +4569,7 @@ contains
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70SOILMOIST,&
             LIS_histData(n)%head_lsm_list,&
-            n,2,ntiles,(/"kg/m2","m3/m3"/),1,(/"-"/),1,grib_depthlvl,0,&
+            n,2,ntiles,(/"m3/m3","kg/m2"/),1,(/"-"/),1,grib_depthlvl,0,&
             model_patch=.true.)
     endif
 
@@ -5611,7 +5635,7 @@ contains
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "e0",&
          "potential_evaporation",&
-         "potential evaporation",rc)
+         "potential_evaporation",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_E0, &
             LIS_histData(n)%head_lsm_list,&
@@ -6265,6 +6289,10 @@ end subroutine get_moc_attributes
        cfunit = "km day-1"
     elseif(unit.eq."J/kg") then 
        cfunit = "J kg-1"
+    elseif(unit.eq."mm/d") then 
+       cfunit = "mm d-1"
+    elseif(unit.eq."t/ha") then 
+       cfunit = "t ha-1"
     else
        cfunit = unit
     endif

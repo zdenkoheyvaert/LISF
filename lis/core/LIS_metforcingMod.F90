@@ -2362,6 +2362,7 @@ contains
        endif
 
 ! MB: for ac70
+
        if(LIS_FORC_PREC_ac%selectOpt.eq.1) then
           do k=1,LIS_FORC_PREC_ac%vlevels
              call ESMF_StateGet(LIS_FORC_State(n),(LIS_FORC_PREC_ac%varname(k)),&
@@ -2375,10 +2376,8 @@ contains
              
              do t=1,LIS_rc%ntiles(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_PREC_ac_FORC,value=&
-                     PREC_ac(t),vlevel=k,unit="kg m-2 d-1",direction="DN", &
+                     PREC_ac(t),vlevel=k,unit="-",direction="-", &
                      valid_min = 0.0, valid_max=1000.0)
-                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_PREC_ac_FORC,value=&
-                     PREC_ac(t)*LIS_rc%ts, vlevel=k,unit="kg m-2",direction="DN")
              enddo
           enddo
        endif
@@ -2434,10 +2433,8 @@ contains
              
              do t=1,LIS_rc%ntiles(n)
                 call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_ETo_ac_FORC,value=&
-                     ETo_ac(t),vlevel=k,unit="kg m-2 d-1",direction="-", &
+                     ETo_ac(t),vlevel=k,unit="mm/d",direction="-", &
                      valid_min = 0.0, valid_max=1000.0)
-                call LIS_diagnoseSurfaceOutputVar(n, t,LIS_MOC_ETo_ac_FORC,value=&
-                     ETo_ac(t)*LIS_rc%ts, vlevel=k,unit="kg m-2",direction="DN")
              enddo
           enddo
        endif

@@ -1002,11 +1002,10 @@ subroutine Ac70_main(n)
             ! MB: AC70
             ![ 1] output variable: smc (unit=m^3 m-3 ). ***  volumetric soil moisture, ice + liquid 
             do i=1, AC70_struc(n)%ac70(t)%NrCompartments
+                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i),  &
+                                                  vlevel=i, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
                 call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i), &
                                                   vlevel=i, unit="m^3 m-3", direction="-", surface_type = LIS_rc%lsm_index)
-                                              ! 0.1 m soil compartment thickness in ac70
-                call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_SOILMOIST, value = AC70_struc(n)%ac70(t)%smc(i)*0.1*LIS_CONST_RHOFW,  &
-                                                  vlevel=i, unit="kg m-2", direction="-", surface_type = LIS_rc%lsm_index)
             end do
             ![ 4] output variable: biomass (unit=t/ha). ***  leaf area index 
             call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70BIOMASS, value = real(AC70_struc(n)%ac70(t)%SumWaBal%Biomass,kind=sp), &
@@ -1019,7 +1018,13 @@ subroutine Ac70_main(n)
                                               vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)
             call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70FC, value = real(AC70_struc(n)%ac70(t)%AC70FC,kind=sp), &
                                               vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)
+            !call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_PREC_ac, value = real(AC70_struc(n)%ac70(t)%PREC_ac,kind=sp), &
+            !                                  vlevel=1, unit="mm/d", direction="-", surface_type = LIS_rc%lsm_index)
             
+            !call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_PREC_ac, value=tmp_PREC_ac, &
+            !    vlevel=1,unit="kg m-2 s-1",direction="DN",surface_type=LIS_rc%lsm_index)
+            !call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_PREC_ac, value=tmp_PREC_ac*dt, &
+            !    vlevel=1,unit="kg m-2", direction="DN",surface_type=LIS_rc%lsm_index)
             ! reset forcing variables to 0 for accumulation 
 
             AC70_struc(n)%ac70(t)%PREC_ac = 0.0

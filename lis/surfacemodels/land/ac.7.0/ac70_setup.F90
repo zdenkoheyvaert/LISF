@@ -765,9 +765,9 @@ subroutine Ac70_setup()
                 
                 AC70_struc(n)%ac70(t)%SoilLayer(1)%Thickness = AC70_struc(n)%Thickness(1)
                 AC70_struc(n)%ac70(t)%SoilLayer(2)%Thickness = AC70_struc(n)%Thickness(2)
-                !AC70_struc(n)%ac70(t)%SoilLayer(3) = AC70_struc(n)%ac70(t)%SoilLayer(1)
-                !AC70_struc(n)%ac70(t)%SoilLayer(4) = AC70_struc(n)%ac70(t)%SoilLayer(1)
-                !AC70_struc(n)%ac70(t)%SoilLayer(5) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                AC70_struc(n)%ac70(t)%SoilLayer(3) = AC70_struc(n)%ac70(t)%SoilLayer(2)
+                AC70_struc(n)%ac70(t)%SoilLayer(4) = AC70_struc(n)%ac70(t)%SoilLayer(2)
+                AC70_struc(n)%ac70(t)%SoilLayer(5) = AC70_struc(n)%ac70(t)%SoilLayer(2)
                 
                 AC70_struc(n)%ac70(t)%Soil%NrSoilLayers = AC70_struc(n)%NrSoilLayers
                 AC70_struc(n)%ac70(t)%NrCompartments = AC70_struc(n)%max_No_compartments
@@ -879,9 +879,9 @@ subroutine Ac70_setup()
                 AC70_struc(n)%ac70(t)%SoilLayer(1)%Thickness = AC70_struc(n)%Thickness(1)
                 AC70_struc(n)%ac70(t)%SoilLayer(2)%Thickness = AC70_struc(n)%Thickness(2)
                 
-                !AC70_struc(n)%ac70(t)%SoilLayer(3) = AC70_struc(n)%ac70(t)%SoilLayer(1)
-                !AC70_struc(n)%ac70(t)%SoilLayer(4) = AC70_struc(n)%ac70(t)%SoilLayer(1)
-                !AC70_struc(n)%ac70(t)%SoilLayer(5) = AC70_struc(n)%ac70(t)%SoilLayer(1)
+                AC70_struc(n)%ac70(t)%SoilLayer(3) = AC70_struc(n)%ac70(t)%SoilLayer(2)
+                AC70_struc(n)%ac70(t)%SoilLayer(4) = AC70_struc(n)%ac70(t)%SoilLayer(2)
+                AC70_struc(n)%ac70(t)%SoilLayer(5) = AC70_struc(n)%ac70(t)%SoilLayer(2)
 
                 AC70_struc(n)%ac70(t)%Soil%NrSoilLayers = AC70_struc(n)%NrSoilLayers
 
