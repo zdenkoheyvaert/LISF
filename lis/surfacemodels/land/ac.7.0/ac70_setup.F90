@@ -26,6 +26,7 @@ subroutine Ac70_setup()
     use LIS_logMod,    only: LIS_logunit, LIS_verify, LIS_endrun
     use LIS_fileIOMod, only: LIS_read_param
     use LIS_coreMod,   only: LIS_rc, LIS_surface
+    use LIS_timeMgrMod
     !use AC_VEG_PARAMETERS_70, only: read_mp_veg_parameters
     !use MODULE_SF_ACLSM_70, only: read_mp_veg_parameters
     use MODULE_SF_ACLSM_70, only: read_mp_veg_parameters, &
@@ -50,8 +51,12 @@ subroutine Ac70_setup()
  
 
     use Ac70_lsmMod
-
     !!! MB:
+    use ac_project_input, only: set_project_input, &
+                                allocate_project_input
+
+    !ProjectInput_type, &
+    !ProjectInput
     use ac_global, only: typeproject_typeprm, &
                          typeproject_typepro, &
                          GetSimulParam_ThicknessTopSWC, &
@@ -491,12 +496,19 @@ subroutine Ac70_setup()
         ! MB
         real              :: Z_surf, cl_tmp, si_tmp, sd_tmp, InfRate_tmp
         integer           :: REW, descr
+        integer           :: time1julhours, time2julhours, timerefjulhours
+        integer           :: time1days, time2days
+        real*8            :: timenow, timetemp
+        real              :: gmt1, gmt2
+        integer           :: yr1, mo1, da1, hr1, mn1, ss1, doy1, tdelta1
+        integer           :: yr2, mo2, da2, hr2, mn2, ss2, doy2, tdelta2
         
         !!! MB_AC70
         integer :: daynr, todaynr, iproject, nprojects, NrRuns
         integer(intEnum) :: TheProjectType
         logical :: ListProjectFileExist
         character(len=:), allocatable :: ListProjectsFile, TheProjectFile
+        !type(ProjectInput_type), dimension(:), allocatable :: ProjectInput
 
         logical ::  ProgramParametersAvailable 
         integer(int32) :: TotalSimRuns
@@ -664,17 +676,83 @@ subroutine Ac70_setup()
                 call GetRequestParticularResults()
                 !call PrepareReport()
 
-                ListProjectsFile = GetListProjectsFile()
-                inquire(file=trim(ListProjectsFile), exist=ListProjectFileExist)
+                !!!!! OLD , project related
+                !ListProjectsFile = GetListProjectsFile()
+                !inquire(file=trim(ListProjectsFile), exist=ListProjectFileExist)
 
-                call WriteProjectsInfo('')
-                call WriteProjectsInfo('Projects handled:')
+                !call WriteProjectsInfo('')
+                !call WriteProjectsInfo('Projects handled:')
                 
-                iproject = 1
-                TheProjectFile = GetProjectFileName(iproject)
-                call GetProjectType(TheProjectFile, TheProjectType)
-
-            
+                !iproject = 1
+                !TheProjectFile = GetProjectFileName(iproject)
+                !call GetProjectType(TheProjectFile, TheProjectType)
+                !!!!! NEW
+                ! To set the Climate_Info attribute of the input associated with
+                ! the third Run:
+                call LIS_get_julhr(1901,1,1,0,0,0,timerefjulhours)
+                TotalSimRuns = LIS_rc%eyr - LIS_rc%syr + 1
+                call allocate_project_input(TotalSimRuns)
+                do l=1, TotalSimRuns  ! TotalSimRuns
+                    ! for current generic crop this is fixed to 1
+                    call set_project_input(l, 'Simulation_YearSeason', 1_int8)
+                    !
+                    call LIS_get_julhr(LIS_rc%syr+(l-1), 1,1,0,0,0,time1julhours)
+                    call LIS_get_julhr(LIS_rc%syr+(l-1),12,31,0,0,0,time2julhours)
+                    time1days = (time1julhours - timerefjulhours)/24 + 1 
+                    time2days = (time2julhours - timerefjulhours)/24 + 1
+                    !call set_project_input(l, 'Simulation_DayNr1', 40178_int32)
+                    !call set_project_input(l, 'Simulation_DayNrN', 40542_int32)
+                    !call set_project_input(l, 'Crop_Day1', 40178_int32)
+                    !call set_project_input(l, 'Crop_DayN', 40542_int32)
+                    call set_project_input(l, 'Simulation_DayNr1', time1days)
+                    call set_project_input(l, 'Simulation_DayNrN', time2days)
+                    call set_project_input(l, 'Crop_Day1', time1days)
+                    call set_project_input(l, 'Crop_DayN', time2days)
+                    call set_project_input(l, 'Description', ' LIS ')
+                    call set_project_input(l, 'Climate_Info', ' MERRA2_AC ')
+                    call set_project_input(l, 'Climate_Filename', trim(AC70_struc(n)%Climate_Filename))
+                    call set_project_input(l, 'Climate_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'VersionNr', 7.0_dp)
+                    call set_project_input(l, 'Temperature_Info', '(None)')
+                    call set_project_input(l, 'Temperature_Filename', '(None)')
+                    call set_project_input(l, 'Temperature_Directory', '(None)')
+                    call set_project_input(l, 'ETo_Info', '(None)')
+                    call set_project_input(l, 'ETo_Filename', trim(AC70_struc(n)%ETo_Filename))
+                    call set_project_input(l, 'ETo_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'Rain_Info', ' LIS ')
+                    call set_project_input(l, 'Rain_Filename', trim(AC70_struc(n)%Rain_Filename))
+                    call set_project_input(l, 'Rain_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'CO2_Info', ' LIS ')
+                    call set_project_input(l, 'CO2_Filename', trim(AC70_struc(n)%CO2_Filename))
+                    call set_project_input(l, 'CO2_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'Calendar_Info', '(None)')
+                    call set_project_input(l, 'Calendar_Filename', '(None)')
+                    call set_project_input(l, 'Calendar_Directory', '(None)')
+                    call set_project_input(l, 'Crop_Info', '(None)')
+                    call set_project_input(l, 'Crop_Filename', trim(AC70_struc(n)%Crop_Filename))
+                    call set_project_input(l, 'Crop_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'Irrigation_Info', '(None)')
+                    call set_project_input(l, 'Irrigation_Filename', '(None)')
+                    call set_project_input(l, 'Irrigation_Directory', '(None)')
+                    call set_project_input(l, 'Management_Info', ' LIS ')
+                    call set_project_input(l, 'Management_Filename',  trim(AC70_struc(n)%Management_Filename))
+                    call set_project_input(l, 'Management_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'GroundWater_Info', '(None)')
+                    call set_project_input(l, 'GroundWater_Filename', '(None)')
+                    call set_project_input(l, 'GroundWater_Directory', '(None)')
+                    call set_project_input(l, 'Soil_Info', '(External)')
+                    call set_project_input(l, 'Soil_Filename', '(External)')
+                    call set_project_input(l, 'Soil_Directory', '(External)')
+                    call set_project_input(l, 'SWCIni_Info', '(None)')
+                    call set_project_input(l, 'SWCIni_Filename', '(None)')
+                    call set_project_input(l, 'SWCIni_Directory', '(None)')
+                    call set_project_input(l, 'OffSeason_Info', '(None)')
+                    call set_project_input(l, 'OffSeason_Filename', '(None)')
+                    call set_project_input(l, 'OffSeason_Directory', '(None)')
+                    call set_project_input(l, 'Observations_Info', '(None)')
+                    call set_project_input(l, 'Observations_Filename', '(None)')
+                    call set_project_input(l, 'Observations_Directory', '(None)')
+                end do
                 ! set AC70 soil parameters based on soiltype
                 !AC70_struc(n)%ac70(t)%SoilLayer(1)%oc = OC(AC70_struc(n)%ac70(t)%soiltype) * 100
                 AC70_struc(n)%ac70(t)%SoilLayer(1)%wp = WP(AC70_struc(n)%ac70(t)%soiltype) * 100
@@ -902,13 +980,14 @@ subroutine Ac70_setup()
                 call SetMultipleProjectFile(TheProjectFile)
                 call SetMultipleProjectFileFull(GetPathNameList() // &
                                         GetMultipleProjectFile())
-                call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
-                                                            TotalSimRuns)
+                !call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
+                !                                            TotalSimRuns)
                 call SetMultipleProjectDescription('undefined')
                 FullFileNameProgramParametersLocal = GetFullFileNameProgramParameters()
-                call ComposeFileForProgramParameters(GetMultipleProjectFile(), &
-                                          FullFileNameProgramParametersLocal)
-                call SetFullFileNameProgramParameters(FullFileNameProgramParametersLocal)
+                !call ComposeFileForProgramParameters(GetMultipleProjectFile(), &
+                !                          FullFileNameProgramParametersLocal)
+                !call SetFullFileNameProgramParameters(FullFileNameProgramParametersLocal)
+                call SetFullFileNameProgramParameters("(None)")
                 call LoadProgramParametersProjectPlugIn(&
                       GetFullFileNameProgramParameters(), &
                              ProgramParametersAvailable)
@@ -916,10 +995,12 @@ subroutine Ac70_setup()
                 call SetSimulation_NrRuns(TotalSimRuns) 
                 MultipleRunWithKeepSWC_temp = GetSimulation_MultipleRunWithKeepSWC() 
                 MultipleRunConstZrx_temp = GetSimulation_MultipleRunConstZrx()
-                call CheckForKeepSWC(GetMultipleProjectFileFull(), &  
-                    GetSimulation_NrRuns(), &       
-                    MultipleRunWithKeepSWC_temp, & 
-                    MultipleRunConstZrx_temp)  
+                call CheckForKeepSWC(MultipleRunWithKeepSWC_temp, &
+                                     MultipleRunConstZrx_temp)
+                !call CheckForKeepSWC(GetMultipleProjectFileFull(), &  
+                !    GetSimulation_NrRuns(), &       
+                !    MultipleRunWithKeepSWC_temp, & 
+                !    MultipleRunConstZrx_temp)  
                 call SetSimulation_MultipleRunWithKeepSWC(MultipleRunWithKeepSWC_temp) 
                 call SetSimulation_MultipleRunConstZrx(MultipleRunConstZrx_temp)        
 

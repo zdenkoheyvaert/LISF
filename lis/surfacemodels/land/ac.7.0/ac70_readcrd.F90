@@ -148,6 +148,54 @@ subroutine Ac70_readcrd()
         call LIS_verify(rc, "PathNameParam: not defined")
     enddo
 
+    ! Climate_Filename
+    call ESMF_ConfigFindLabel(LIS_config, "Climate_Filename:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%Climate_Filename, rc=rc)
+        call LIS_verify(rc, "Climate_Filename: not defined")
+    enddo
+ 
+    ! ETo_Filename
+    call ESMF_ConfigFindLabel(LIS_config, "ETo_Filename:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%ETo_Filename, rc=rc)
+        call LIS_verify(rc, "ETo_Filename: not defined")
+    enddo
+ 
+    ! Rain_Filename
+    call ESMF_ConfigFindLabel(LIS_config, "Rain_Filename:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%Rain_Filename, rc=rc)
+        call LIS_verify(rc, "Rain_Filename: not defined")
+    enddo
+ 
+    ! CO2_Filename
+    call ESMF_ConfigFindLabel(LIS_config, "CO2_Filename:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%CO2_Filename, rc=rc)
+        call LIS_verify(rc, "CO2_Filename: not defined")
+    enddo
+ 
+    ! Crop_Filename
+    call ESMF_ConfigFindLabel(LIS_config, "Crop_Filename:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%Crop_Filename, rc=rc)
+        call LIS_verify(rc, "Crop_Filename: not defined")
+    enddo
+ 
+    ! Management_Filename
+    call ESMF_ConfigFindLabel(LIS_config, "Management_Filename:", rc = rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, &
+            AC70_struc(n)%Management_Filename, rc=rc)
+        call LIS_verify(rc, "Management_Filename: not defined")
+    enddo
+ 
     !! NumberSimulationRuns
     !call ESMF_ConfigFindLabel(LIS_config, "NumberSimulationRuns:", rc = rc)
     !do n=1, LIS_rc%nnest

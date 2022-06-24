@@ -238,6 +238,12 @@ module Ac70_lsmMod
         character(len=256) :: PathNameSimul
         character(len=256) :: PathNameList
         character(len=256) :: PathNameParam
+        character(len=256) :: Climate_Filename
+        character(len=256) :: ETo_Filename
+        character(len=256) :: Rain_Filename
+        character(len=256) :: CO2_Filename
+        character(len=256) :: Crop_Filename
+        character(len=256) :: Management_Filename
         integer            :: NrSoilLayers
         integer            :: max_No_compartments
         integer            :: Tmin_windowsize
