@@ -351,15 +351,15 @@ contains
 
     call ESMF_ConfigFindLabel(forcConfig,"TMIN_ac:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_TMIN_ac,&
-         "min temperature", tnvars,status)
+         "min temperature_ac", tnvars,status)
 
     call ESMF_ConfigFindLabel(forcConfig,"TMAX_ac:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_TMAX_ac,&
-         "max temperature", tnvars,status)
+         "max temperature_ac", tnvars,status)
 
     call ESMF_ConfigFindLabel(forcConfig,"ETo_ac:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_ETo_ac,&
-         "potential evaporation", tnvars,status)
+         "potential evaporation_ac", tnvars,status)
 
     call ESMF_ConfigFindLabel(forcConfig,"Ch:",rc=status)
     call get_forcingvar_attributes(forcConfig,LIS_FORC_Ch,&

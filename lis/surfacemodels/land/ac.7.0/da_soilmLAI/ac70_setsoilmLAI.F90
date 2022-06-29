@@ -87,16 +87,16 @@ subroutine ac70_setsoilmLAI(n, LSM_State)
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
        "ESMF_StateSet: Soil Moisture Layer 1 failed in ac70_setsoilmLAI")
-  call ESMF_StateGet(LSM_State,"CCiActual",laiField,rc=status)
+  call ESMF_StateGet(LSM_State,"AC70BIOMASS",laiField,rc=status)
   call LIS_verify(status,&
-       "ESMF_StateSet: CCiActual failed in ac70_setsoilmLAI")
+       "ESMF_StateSet: AC70BIOMASS failed in ac70_setsoilmLAI")
 
   call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_setsoilmLAI")
   call ESMF_FieldGet(laiField,localDE=0,farrayPtr=lai,rc=status)
   call LIS_verify(status,&
-       "ESMF_FieldGet: CCiActual failed in ac70_setsoilmLAI")
+       "ESMF_FieldGet: AC70BIOMASS failed in ac70_setsoilmLAI")
 
   update_flag = .true. 
   update_flag = .true. 

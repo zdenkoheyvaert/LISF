@@ -23,6 +23,8 @@ subroutine ac70_qc_Sig0VVVHobs(n,k,OBS_State)
   use LIS_logMod,  only : LIS_verify
   use LIS_constantsMod, only : LIS_CONST_TKFRZ
   use LIS_DAobservationsMod
+  use LIS_metforcingMod, only : LIS_FORC_State
+  use LIS_FORC_AttributesMod   
   use ac70_lsmMod
   use module_sf_noahaclsm_36  !, only: MAXSMC !MN
 
@@ -91,15 +93,15 @@ subroutine ac70_qc_Sig0VVVHobs(n,k,OBS_State)
   real                     :: stc1_obs(LIS_rc%obs_ngrid(k))
   real                     :: stc2_obs(LIS_rc%obs_ngrid(k))
   real                     :: stc3_obs(LIS_rc%obs_ngrid(k))
-  real                     :: stc4_obs(LIS_rc%obs_ngrid(k))
+  real                      :: stc4_obs(LIS_rc%obs_ngrid(k))
   real                     :: vegt_obs(LIS_rc%obs_ngrid(k))
+  ! MB
+  !real                     :: TMIN_ac(LIS_rc%npatch(n,LIS_rc%lsm_index))
+  real                     :: TMIN_ac_obs(LIS_rc%obs_ngrid(k))
+  ! TMIN_ac [degC]
+  type(ESMF_Field)  :: TMIN_ac_Field
+  real, pointer     :: TMIN_ac(:)
 
-  integer                  :: VV_agri_mask_start_doy
-  integer                  :: VV_agri_mask_end_doy
-  integer                  :: VV_mask_start_doy
-  integer                  :: VV_mask_end_doy
-  integer                  :: VH_mask_start_doy
-  integer                  :: VH_mask_end_doy
 !-----this part is derived from ./lis/dataassim/obs/s1_sigma/read_S1_sigma.F90
   call ESMF_StateGet(OBS_State,"Observation01",s_vvField,&
        rc=status) !
@@ -120,10 +122,28 @@ subroutine ac70_qc_Sig0VVVHobs(n,k,OBS_State)
        "ESMF_FieldGet failed in ac70_qc_Sigobs s_vh")
 
 !---------------------------------------------------------------------------  
+  ! Get TMIN_ac
+  call ESMF_StateGet(LIS_FORC_State(n), trim(LIS_FORC_TMIN_AC%varname(1)), TMIN_ac_Field, rc=status)
+  call LIS_verify(status, "Ac70_f2t: error getting TMIN_ac")
 
-  do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
-     smc1(t) = ac70_struc(n)%ac70(t)%smc(1)
-     !!! no quality on S1 backscatter observations for ac70 implemented yet
+  call ESMF_FieldGet(TMIN_ac_Field, localDE = 0, farrayPtr = TMIN_ac, rc = status)
+  call LIS_verify(status, "Ac70_f2t: error retrieving TMIN_ac")
+
+  call LIS_convertPatchSpaceToObsSpace(n,k,&
+       LIS_rc%lsm_index, &
+       TMIN_ac,&
+       TMIN_ac_obs)
+
+
+  do t = 1,LIS_rc%obs_ngrid(k)
+!------------------start loop considering one obs--------------------------
+     if((s_vv(t).ne.LIS_rc%udef) .and. (s_vh(t).ne.LIS_rc%udef)) then 
+! MB: check for frozen soil
+        if(TMIN_ac_obs(t) .lt. 1.0) then 
+           s_vv(t) = LIS_rc%udef
+           s_vh(t) = LIS_rc%udef
+       endif
+     endif
   enddo
 
 end subroutine ac70_qc_Sig0VVVHobs

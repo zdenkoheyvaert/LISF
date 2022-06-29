@@ -587,6 +587,7 @@ subroutine Ac70_main(n)
             !
             call SetCCiActual(AC70_struc(n)%ac70(t)%CCiActual)
             call SetCCiprev(AC70_struc(n)%ac70(t)%CCiprev)
+
             call SetCCiTopEarlySen(AC70_struc(n)%ac70(t)%CCiTopEarlySen)
             call SetCRsalt(AC70_struc(n)%ac70(t)%CRsalt)
             call SetCRwater(AC70_struc(n)%ac70(t)%CRwater)
@@ -745,6 +746,9 @@ subroutine Ac70_main(n)
                  call SetSimulation_SumGDDfromDay1(GetSimulation_SumGDDfromDay1() + &
                     GetGDDayi())
               end if
+              !write(LIS_logunit,*) &
+              !                '[INFO] AdvanceOneTimeStep AquaCrop, day in month: ', LIS_rc%da
+
               call AdvanceOneTimeStep()
             else ! read from AC input
               call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
@@ -1009,10 +1013,10 @@ subroutine Ac70_main(n)
             end do
             ![ 4] output variable: biomass (unit=t/ha). ***  leaf area index 
             call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70BIOMASS, value = real(AC70_struc(n)%ac70(t)%SumWaBal%Biomass,kind=sp), &
-                                              vlevel=1, unit="t/ha", direction="-", surface_type = LIS_rc%lsm_index)
+                                              vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)
             !call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_AC70BIOMASS, value = real(AC70_struc(n)%ac70(t)%SumWaBal%Biomass,kind=sp), &
             !                                  vlevel=1, unit="t h-1", direction="-", surface_type = LIS_rc%lsm_index)
-            call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_CCiActual, value = real(AC70_struc(n)%ac70(t)%CCiActual,kind=sp), &
+            call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_CCiPrev, value = real(AC70_struc(n)%ac70(t)%CCiPrev,kind=sp), &
                                               vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)
             call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_WCMV1V2, value = real(AC70_struc(n)%ac70(t)%WCMV1V2,kind=sp), &
                                               vlevel=1, unit="-", direction="-", surface_type = LIS_rc%lsm_index)

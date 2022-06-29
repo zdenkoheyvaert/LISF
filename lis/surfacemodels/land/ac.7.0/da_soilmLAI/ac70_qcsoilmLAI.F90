@@ -46,25 +46,25 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
 !  type(ESMF_Field)       :: sm2Field
 !  type(ESMF_Field)       :: sm3Field
 !  type(ESMF_Field)       :: sm4Field
-  type(ESMF_Field)       :: CCiActualField
+  type(ESMF_Field)       :: AC70BIOMASSField
   integer                :: t
   integer                :: status
   real, pointer          :: soilm1(:)
 !  real, pointer          :: soilm2(:)
 !  real, pointer          :: soilm3(:)
 !  real, pointer          :: soilm4(:)
-  real, pointer          :: CCiActual(:)
+  real, pointer          :: AC70BIOMASS(:)
   real                   :: smmax1!,smmax2,smmax3,smmax4
   real                   :: smmin1!,smmin2,smmin3,smmin4
-  real                   :: CCiActualmax
-  real                   :: CCiActualmin
+  real                   :: AC70BIOMASSmax
+  real                   :: AC70BIOMASSmin
   integer                :: gid
-  real                   :: CCiActualtmp
+  real                   :: AC70BIOMASStmp
 
   logical                :: update_flag(LIS_rc%ngrid(n))
   real                   :: perc_violation(LIS_rc%ngrid(n))
-  real                   :: CCiActualmean(LIS_rc%ngrid(n))
-  integer                :: nCCiActualmean(LIS_rc%ngrid(n))
+  real                   :: AC70BIOMASSmean(LIS_rc%ngrid(n))
+  integer                :: nAC70BIOMASSmean(LIS_rc%ngrid(n))
   integer                :: N_ens
   real                   :: state_tmp(LIS_rc%nensem(n)),state_mean
 
@@ -82,19 +82,19 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
   call LIS_verify(status,&
        "ESMF_AttributeGet: Min Value failed in ac70_qcsoilmLAI")
 
-  call ESMF_StateGet(LSM_State,"CCiActual",CCiActualField,rc=status)
+  call ESMF_StateGet(LSM_State,"AC70BIOMASS",AC70BIOMASSField,rc=status)
   call LIS_verify(status,&
-           "ESMF_StateGet for CCiActual failed in ac70_qcsoilmLAI")
-  call ESMF_FieldGet(CCiActualField,localDE=0,farrayPtr=CCiActual,rc=status)
+           "ESMF_StateGet for AC70BIOMASS failed in ac70_qcsoilmLAI")
+  call ESMF_FieldGet(AC70BIOMASSField,localDE=0,farrayPtr=AC70BIOMASS,rc=status)
   call LIS_verify(status,&
-           "ESMF_FieldGet for CCiActual failed in ac70_qcsoilmLAI")
+           "ESMF_FieldGet for AC70BIOMASS failed in ac70_qcsoilmLAI")
 
-  call ESMF_AttributeGet(CCiActualField,"Max Value",CCiActualmax,rc=status)
+  call ESMF_AttributeGet(AC70BIOMASSField,"Max Value",AC70BIOMASSmax,rc=status)
   call LIS_verify(status,&
-           "ESMF_AttributeGet for CCiActual Max Value failed in ac70_qcsoilmLAI")
-  call ESMF_AttributeGet(CCiActualField,"Min Value",CCiActualmin,rc=status)
+           "ESMF_AttributeGet for AC70BIOMASS Max Value failed in ac70_qcsoilmLAI")
+  call ESMF_AttributeGet(AC70BIOMASSField,"Min Value",AC70BIOMASSmin,rc=status)
   call LIS_verify(status,&
-           "ESMF_AttributeGet for CCiActual Min Value failed in ac70_qcsoilmLAI")
+           "ESMF_AttributeGet for AC70BIOMASS Min Value failed in ac70_qcsoilmLAI")
 
 
 
@@ -105,8 +105,8 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
 
   update_flag    = .true.
   perc_violation = 0.0
-  CCiActualmean       = 0.0
-  nCCiActualmean      = 0
+  AC70BIOMASSmean       = 0.0
+  nAC70BIOMASSmean      = 0
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
 
@@ -114,9 +114,9 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%col,&
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
 
-     CCiActualtmp =  CCiActual(t)
+     AC70BIOMASStmp =  AC70BIOMASS(t)
 
-     if(CCiActualtmp.lt.CCiActualmin.or.CCiActualtmp.gt.CCiActualmax) then
+     if(AC70BIOMASStmp.lt.AC70BIOMASSmin.or.AC70BIOMASStmp.gt.AC70BIOMASSmax) then
         update_flag(gid) = .false.
         perc_violation(gid) = perc_violation(gid) +1
      endif
@@ -139,19 +139,19 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
      if(.not.update_flag(gid)) then
         if(perc_violation(gid).lt.0.8) then
-           if((CCiActual(t).gt.CCiActualmin).and.&
-                (CCiActual(t).lt.CCiActualmax)) then 
-              CCiActualmean(gid) = CCiActualmean(gid) + &
-                   CCiActual(t) 
-              nCCiActualmean(gid) = nCCiActualmean(gid) + 1
+           if((AC70BIOMASS(t).gt.AC70BIOMASSmin).and.&
+                (AC70BIOMASS(t).lt.AC70BIOMASSmax)) then 
+              AC70BIOMASSmean(gid) = AC70BIOMASSmean(gid) + &
+                   AC70BIOMASS(t) 
+              nAC70BIOMASSmean(gid) = nAC70BIOMASSmean(gid) + 1
            endif
         endif
      endif
   enddo
   
   do gid=1,LIS_rc%ngrid(n)
-     if(nCCiActualmean(gid).gt.0) then
-        CCiActualmean(gid) = CCiActualmean(gid)/nCCiActualmean(gid)
+     if(nAC70BIOMASSmean(gid).gt.0) then
+        AC70BIOMASSmean(gid) = AC70BIOMASSmean(gid)/nAC70BIOMASSmean(gid)
      endif
   enddo
 
@@ -161,19 +161,19 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%col,&
           LIS_surface(n,LIS_rc%lsm_index)%tile(t)%row)
 
-     CCiActualtmp =  CCiActual(t)
+     AC70BIOMASStmp =  AC70BIOMASS(t)
 
 ! If the update is unphysical, simply set to the average of
 ! the good ensemble members. If all else fails, do not
 ! update.
 
      if(update_flag(gid)) then
-        CCiActual(t) = CCiActualtmp
+        AC70BIOMASS(t) = AC70BIOMASStmp
      elseif(perc_violation(gid).lt.0.8) then
-        if(CCiActualtmp.lt.CCiActualmin.or.CCiActualtmp.gt.CCiActualmax) then
-           CCiActual(t) = CCiActualmean(gid)
+        if(AC70BIOMASStmp.lt.AC70BIOMASSmin.or.AC70BIOMASStmp.gt.AC70BIOMASSmax) then
+           AC70BIOMASS(t) = AC70BIOMASSmean(gid)
         else
-           CCiActual(t) = CCiActual(t) 
+           AC70BIOMASS(t) = AC70BIOMASS(t) 
         endif
      endif
   enddo
@@ -181,7 +181,7 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
 #if 0 
   N_ens = LIS_rc%nensem(n)
   do t=1,N_ens
-     state_tmp(t) = CCiActual(t)
+     state_tmp(t) = AC70BIOMASS(t)
   enddo
   state_mean =sum(state_tmp)/N_ens
 

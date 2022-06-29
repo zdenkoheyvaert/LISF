@@ -443,7 +443,7 @@ module LIS_histDataMod
   ! AC70
   public :: LIS_MOC_AC70SOILMOIST 
   public :: LIS_MOC_AC70BIOMASS
-  public :: LIS_MOC_CCiActual
+  public :: LIS_MOC_CCiprev
   public :: LIS_MOC_WCMV1V2
   public :: LIS_MOC_AC70FC
   
@@ -948,7 +948,7 @@ module LIS_histDataMod
 !  <- AC70 ->
    integer :: LIS_MOC_AC70SOILMOIST  = -9999
    integer :: LIS_MOC_AC70BIOMASS  = -9999
-   integer :: LIS_MOC_CCiActual  = -9999
+   integer :: LIS_MOC_CCiprev  = -9999
    integer :: LIS_MOC_WCMV1V2  = -9999
    integer :: LIS_MOC_AC70FC  = -9999
 
@@ -2727,7 +2727,7 @@ contains
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "TMIN_ac_f",&
          "min temperature degC",&
-         "min temperature",rc)
+         "min temperature_ac",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_TMIN_ac_FORC,&
             LIS_histData(n)%head_lsm_list,&
@@ -2739,7 +2739,7 @@ contains
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "TMAX_ac_f",&
          "max temperature degC",&
-         "max temperature",rc)
+         "max temperature_ac",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_TMAX_ac_FORC,&
             LIS_histData(n)%head_lsm_list,&
@@ -2751,7 +2751,7 @@ contains
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
          "ETo_ac_f",&
          "potential evaporation mm/day",&
-         "potential evaporation",rc)
+         "potential evaporation_ac",rc)
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_ETo_ac_FORC,&
             LIS_histData(n)%head_lsm_list,&
@@ -4581,17 +4581,17 @@ contains
     if ( rc == 1 ) then
        call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_AC70BIOMASS,&
             LIS_histData(n)%head_lsm_list,&
-            n,1,ntiles,(/"t/ha"/),1,(/"-"/),1,1,1,&
+            n,1,ntiles,(/"-"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)
     endif
 
-    call ESMF_ConfigFindLabel(modelSpecConfig,"CCiActual:",rc=rc)
+    call ESMF_ConfigFindLabel(modelSpecConfig,"CCiprev:",rc=rc)
     call get_moc_attributes(modelSpecConfig, LIS_histData(n)%head_lsm_list, &
-         "CCiActual",&
-         "CCiActual",&
-         "CCiActual",rc)
+         "CCiprev",&
+         "CCiprev",&
+         "CCiprev",rc)
     if ( rc == 1 ) then
-       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_CCiActual,&
+       call register_dataEntry(LIS_MOC_LSM_COUNT,LIS_MOC_CCiprev,&
             LIS_histData(n)%head_lsm_list,&
             n,1,ntiles,(/"-"/),1,(/"-"/),1,1,1,&
             model_patch=.true.)

@@ -659,7 +659,7 @@ subroutine Ac70_setup()
                 ! SY: End SOIL PARAMETERS
 
                 ! MB: AC70
-
+                TheProjectType = typeproject_typeprm
 
                 !!! Start the Program AC70
                 ! Everything below is the equivalent of "StartTheProgram()"
@@ -976,11 +976,11 @@ subroutine Ac70_setup()
                 call SetPathNameParam(trim(AC70_struc(n)%PathNameParam))
                 call SetPathNameProg('')
                 !
-
-                call SetMultipleProjectFile(TheProjectFile)
-                call SetMultipleProjectFileFull(GetPathNameList() // &
-                                        GetMultipleProjectFile())
-                !call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
+                !TheProjectFile = "LIS"
+                !call SetMultipleProjectFile(TheProjectFile)
+                !call SetMultipleProjectFileFull(GetPathNameList() // &
+                !                        GetMultipleProjectFile())
+                !!call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
                 !                                            TotalSimRuns)
                 call SetMultipleProjectDescription('undefined')
                 FullFileNameProgramParametersLocal = GetFullFileNameProgramParameters()
@@ -1006,7 +1006,7 @@ subroutine Ac70_setup()
 
                 ! The remainder of this loop is the equivalent of "RunSimulation()"
                 ! call InitializeSimulation(TheProjectFile, TheProjectType)
-                call SetTheProjectFile(trim(TheProjectFile))
+                !call SetTheProjectFile(trim(TheProjectFile))
 
                 ! Overwrite all AC70_struc after Initialization
                 AC70_struc(n)%ac70(t)%RootZoneWC_Actual = GetRootZoneWC_Actual()
