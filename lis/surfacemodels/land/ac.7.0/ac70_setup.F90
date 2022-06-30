@@ -132,7 +132,18 @@ subroutine Ac70_setup()
                          SetRainRecord,&
                          SetEToRecord,&
                          GetSimulParam_GDDMethod,&
-
+                GetClimRecord_FromY,&
+                GetClimRecord_FromDayNr,&
+                GetClimRecord_ToDayNr,&
+                GetClimRecord_FromString,&
+                GetClimRecord_ToString,&
+                SetClimRecord_FromY,&
+                SetClimRecord_FromDayNr,&
+                SetClimRecord_ToDayNr,&
+                SetClimRecord_FromString,&
+                SetClimRecord_ToString,&
+                SetClimFile,&
+                SetClimDescription,&
                          GetGenerateTimeMode,&
                         GetGenerateDepthMode,&
                         GetIrriMode,&
@@ -710,18 +721,19 @@ subroutine Ac70_setup()
                     call set_project_input(l, 'Crop_DayN', time2days)
                     call set_project_input(l, 'Description', ' LIS ')
                     call set_project_input(l, 'Climate_Info', ' MERRA2_AC ')
-                    call set_project_input(l, 'Climate_Filename', trim(AC70_struc(n)%Climate_Filename))
-                    call set_project_input(l, 'Climate_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'Climate_Filename', '(External)')
+                    !call set_project_input(l, 'Climate_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'Climate_Directory', '(None)')
                     call set_project_input(l, 'VersionNr', 7.0_dp)
                     call set_project_input(l, 'Temperature_Info', '(None)')
                     call set_project_input(l, 'Temperature_Filename', '(None)')
                     call set_project_input(l, 'Temperature_Directory', '(None)')
                     call set_project_input(l, 'ETo_Info', '(None)')
-                    call set_project_input(l, 'ETo_Filename', trim(AC70_struc(n)%ETo_Filename))
-                    call set_project_input(l, 'ETo_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'ETo_Filename', '(None)')
+                    call set_project_input(l, 'ETo_Directory', '(None)')
                     call set_project_input(l, 'Rain_Info', ' LIS ')
-                    call set_project_input(l, 'Rain_Filename', trim(AC70_struc(n)%Rain_Filename))
-                    call set_project_input(l, 'Rain_Directory', trim(AC70_struc(n)%PathNameSimul))
+                    call set_project_input(l, 'Rain_Filename', '(None)')
+                    call set_project_input(l, 'Rain_Directory', '(None)')
                     call set_project_input(l, 'CO2_Info', ' LIS ')
                     call set_project_input(l, 'CO2_Filename', trim(AC70_struc(n)%CO2_Filename))
                     call set_project_input(l, 'CO2_Directory', trim(AC70_struc(n)%PathNameSimul))
@@ -753,6 +765,24 @@ subroutine Ac70_setup()
                     call set_project_input(l, 'Observations_Filename', '(None)')
                     call set_project_input(l, 'Observations_Directory', '(None)')
                 end do
+                
+                !call SetRainRecord_FromString('any date')
+                !call SetRainRecord_ToString('any date')
+                !call SetRainRecord_FromY(1901)
+                write(LIS_logunit, *) GetClimRecord_FromY()
+                write(LIS_logunit, *) GetClimRecord_FromDayNr()
+                write(LIS_logunit, *) GetClimRecord_ToDayNr()
+                write(LIS_logunit, *) GetClimRecord_FromString()
+                write(LIS_logunit, *) GetClimRecord_ToString()
+                !call SetClimFile('EToRainTempFile')
+                !call SetClimDescription('Read ETo/RAIN/TEMP data set')
+                !call SetClimRecord_FromY(1901)
+                !call SetClimRecord_FromDayNr(0)
+                !call SetClimRecord_ToDayNr(0)
+                !call SetClimRecord_FromString('any date')
+                !call SetClimRecord_ToString('any date')
+
+
                 ! set AC70 soil parameters based on soiltype
                 !AC70_struc(n)%ac70(t)%SoilLayer(1)%oc = OC(AC70_struc(n)%ac70(t)%soiltype) * 100
                 AC70_struc(n)%ac70(t)%SoilLayer(1)%wp = WP(AC70_struc(n)%ac70(t)%soiltype) * 100
@@ -861,6 +891,21 @@ subroutine Ac70_setup()
                 !SetNumberSimulationRuns(AC70_struc(n)%NumberSimulationRuns)
                 !call InitializeProject(iproject, TheProjectFile, TheProjectType)
                 call InitializeSettings(use_default_soil_file=.false.)
+
+                !write(LIS_logunit, *) GetClimRecord_FromY()
+                !write(LIS_logunit, *) GetClimRecord_FromDayNr()
+                !write(LIS_logunit, *) GetClimRecord_ToDayNr()
+                !write(LIS_logunit, *) GetClimRecord_FromString()
+                !write(LIS_logunit, *) GetClimRecord_ToString()
+                !call SetClimRecord_NrObs(999)
+                !call SetClimFile('EToRainTempFile')
+                !call SetClimDescription('Read ETo/RAIN/TEMP data set')
+                !call SetClimRecord_FromY(
+                !call SetClimRecord_FromDayNr(
+                !call SetClimRecord_ToDayNr(
+                !call SetClimRecord_FromString(
+                !call SetClimRecord_ToString
+
                 AC70_struc(n)%ac70(t)%SoilLayer = GetSoilLayer()
                 AC70_struc(n)%ac70(t)%Soil = GetSoil()
                 AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()

@@ -218,8 +218,24 @@ subroutine Ac70_main(n)
                          GetSimulation_ToDayNr, &
                          SetSimulation_ToDayNr, &
                         SetSimulation_SumGDDfromDay1,&
-                        SetSimulation_SumGDD
+                        SetSimulation_SumGDD, &
+                SetClimRecord_DataType, &
+                SetClimRecord_fromd, &
+                SetClimRecord_fromdaynr, &
+                SetClimRecord_fromm, &
+                SetClimRecord_fromstring, &
+                SetClimRecord_fromy, &
+                SetClimRecord_NrObs, &
+                SetClimRecord_tod, &
+                SetClimRecord_todaynr, &
+                SetClimRecord_tom, &
+                SetClimRecord_tostring, &
+                SetClimRecord_toy,&
+                SetClimFile
+
            !!! MB_AC70
+    !!! MB:
+    use ac_project_input, only: ProjectInput 
 
     use ac_run, only:    SetDayNri,&
                          GetIrriInterval,&
@@ -695,6 +711,21 @@ subroutine Ac70_main(n)
         !SetCO2FileFull
 
         ! Run InitializeRunPart1 ( in future without LoadSimulationRunProject)
+                call SetClimRecord_DataType(0_int8)
+                call SetClimRecord_fromd(0)
+                call SetClimRecord_fromdaynr(ProjectInput(1)%Simulation_DayNr1)
+                call SetClimRecord_fromm(0)
+                call SetClimRecord_fromstring("")
+                call SetClimRecord_fromy(LIS_rc%syr)
+                call SetClimRecord_NrObs(999)
+                call SetClimRecord_tod(0)
+                call SetClimRecord_todaynr(ProjectInput(GetSimulation_NrRuns())%Simulation_DayNrN)
+                call SetClimRecord_tom(0)
+                call SetClimRecord_tostring("")
+                call SetClimRecord_toy(0)
+                call SetClimFile('(External)')
+                !call SetClimFile('EToRainTempFile')
+                !call SetClimDescription('Read ETo/RAIN/TEMP data set')
         call InitializeRunPart1(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
         if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
           !call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
@@ -713,6 +744,10 @@ subroutine Ac70_main(n)
         else ! read from AC input
           call InitializeClimate();
         end if
+
+
+
+
         !call InitializeRunPart2(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
         call InitializeSimulationRunPart2()
         AC70_struc(n)%ac70(t)%InitializeRun = 0
@@ -747,7 +782,7 @@ subroutine Ac70_main(n)
                     GetGDDayi())
               end if
               !write(LIS_logunit,*) &
-              !                '[INFO] AdvanceOneTimeStep AquaCrop, day in month: ', LIS_rc%da
+              !                '[INFO] AdvanceOneTimeStep AquaCrop, day in month: ', LIS_rc
 
               call AdvanceOneTimeStep()
             else ! read from AC input

@@ -117,15 +117,15 @@ subroutine Ac70_readcrd()
  
     ! MB: AC70
     ! PathNameOutp
-    call ESMF_ConfigFindLabel(LIS_config, "PathNameOutp:", rc = rc)
-    do n=1, LIS_rc%nnest
-        call ESMF_ConfigGetAttribute(LIS_config, &
-            AC70_struc(n)%PathNameOutp, rc=rc)
-        call LIS_verify(rc, "PathNameOutp: not defined")
-    enddo
+    !call ESMF_ConfigFindLabel(LIS_config, "PathNameOutp:", rc = rc)
+    !do n=1, LIS_rc%nnest
+    !    call ESMF_ConfigGetAttribute(LIS_config, &
+    !        AC70_struc(n)%PathNameOutp, rc=rc)
+    !    call LIS_verify(rc, "PathNameOutp: not defined")
+    !enddo
  
     ! PathNameSimul
-    call ESMF_ConfigFindLabel(LIS_config, "PathNameSimul:", rc = rc)
+    call ESMF_ConfigFindLabel(LIS_config, "AC_INPUT_PATH:", rc = rc)
     do n=1, LIS_rc%nnest
         call ESMF_ConfigGetAttribute(LIS_config, &
             AC70_struc(n)%PathNameSimul, rc=rc)
@@ -133,45 +133,21 @@ subroutine Ac70_readcrd()
     enddo
  
     ! PathNameList
-    call ESMF_ConfigFindLabel(LIS_config, "PathNameList:", rc = rc)
-    do n=1, LIS_rc%nnest
-        call ESMF_ConfigGetAttribute(LIS_config, &
-            AC70_struc(n)%PathNameList, rc=rc)
-        call LIS_verify(rc, "PathNameList: not defined")
-    enddo
+    !call ESMF_ConfigFindLabel(LIS_config, "PathNameList:", rc = rc)
+    !do n=1, LIS_rc%nnest
+    !    call ESMF_ConfigGetAttribute(LIS_config, &
+    !        AC70_struc(n)%PathNameList, rc=rc)
+    !    call LIS_verify(rc, "PathNameList: not defined")
+    !enddo
  
     ! PathNameParam
-    call ESMF_ConfigFindLabel(LIS_config, "PathNameParam:", rc = rc)
-    do n=1, LIS_rc%nnest
-        call ESMF_ConfigGetAttribute(LIS_config, &
-            AC70_struc(n)%PathNameParam, rc=rc)
-        call LIS_verify(rc, "PathNameParam: not defined")
-    enddo
+    !call ESMF_ConfigFindLabel(LIS_config, "PathNameParam:", rc = rc)
+    !do n=1, LIS_rc%nnest
+    !    call ESMF_ConfigGetAttribute(LIS_config, &
+    !        AC70_struc(n)%PathNameParam, rc=rc)
+    !    call LIS_verify(rc, "PathNameParam: not defined")
+    !enddo
 
-    ! Climate_Filename
-    call ESMF_ConfigFindLabel(LIS_config, "Climate_Filename:", rc = rc)
-    do n=1, LIS_rc%nnest
-        call ESMF_ConfigGetAttribute(LIS_config, &
-            AC70_struc(n)%Climate_Filename, rc=rc)
-        call LIS_verify(rc, "Climate_Filename: not defined")
-    enddo
- 
-    ! ETo_Filename
-    call ESMF_ConfigFindLabel(LIS_config, "ETo_Filename:", rc = rc)
-    do n=1, LIS_rc%nnest
-        call ESMF_ConfigGetAttribute(LIS_config, &
-            AC70_struc(n)%ETo_Filename, rc=rc)
-        call LIS_verify(rc, "ETo_Filename: not defined")
-    enddo
- 
-    ! Rain_Filename
-    call ESMF_ConfigFindLabel(LIS_config, "Rain_Filename:", rc = rc)
-    do n=1, LIS_rc%nnest
-        call ESMF_ConfigGetAttribute(LIS_config, &
-            AC70_struc(n)%Rain_Filename, rc=rc)
-        call LIS_verify(rc, "Rain_Filename: not defined")
-    enddo
- 
     ! CO2_Filename
     call ESMF_ConfigFindLabel(LIS_config, "CO2_Filename:", rc = rc)
     do n=1, LIS_rc%nnest
