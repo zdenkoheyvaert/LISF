@@ -85,13 +85,6 @@ subroutine LIS_lsmrouting_plugin
    external noahmp36_getsws_hymap2
 #endif
 
-#if ( defined SM_AC_7_0 )
-   external ac70_getrunoffs
-   external ac70_getrunoffs_mm
-   external ac70_getrunoffs_hymap2
-   external ac70_getsws_hymap2
-#endif
-
 #if ( defined SM_NOAHMP_4_0_1 )
    external noahmp401_getrunoffs
    external noahmp401_getrunoffs_mm
@@ -176,15 +169,6 @@ subroutine LIS_lsmrouting_plugin
    call registerlsmroutinggetsws(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_HYMAP2routerId)//char(0), &
         noahmp36_getsws_hymap2)
-#endif
-
-#if ( defined SM_AC_7_0 )
-   call registerlsmroutinggetrunoff(trim(LIS_ac70Id)//"+"//&
-        trim(LIS_HYMAProuterId)//char(0), &
-        ac70_getrunoffs_mm)
-   call registerlsmroutinggetsws(trim(LIS_ac70Id)//"+"//&
-        trim(LIS_HYMAP2routerId)//char(0), &
-        ac70_getsws_hymap2)
 #endif
 
 #if ( defined SM_NOAHMP_4_0_1 )
@@ -281,15 +265,6 @@ subroutine LIS_lsmrouting_plugin
         noahmp36_getsws_hymap2)
 #endif
 
-#if ( defined SM_AC_7_0 )
-   call registerlsmroutinggetrunoff(trim(LIS_ac70Id)//"+"//&
-        trim(LIS_HYMAP2routerId)//char(0), &
-        ac70_getrunoffs_hymap2)
-   call registerlsmroutinggetsws(trim(LIS_ac70Id)//"+"//&
-        trim(LIS_HYMAP2routerId)//char(0), &
-        ac70_getsws_hymap2)
-#endif
-
 #if ( defined SM_NOAHMP_4_0_1 )
    call registerlsmroutinggetrunoff(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_HYMAP2routerId)//char(0), &
@@ -357,12 +332,6 @@ subroutine LIS_lsmrouting_plugin
    call registerlsmroutinggetrunoff(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_NLDASrouterId)//char(0), &
         noahmp36_getrunoffs)
-#endif
-
-#if ( defined SM_AC_7_0 )
-   call registerlsmroutinggetrunoff(trim(LIS_ac70Id)//"+"//&
-        trim(LIS_NLDASrouterId)//char(0), &
-        ac70_getrunoffs)
 #endif
 
 #if ( defined SM_NOAHMP_4_0_1 )

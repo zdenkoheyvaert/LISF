@@ -14,8 +14,8 @@
 !
 !
 ! !REVISION HISTORY:
-! 18 Mar 2015: James Geiger, initial code (based on merra-land)
-! 08 Dec 2015: James Geiger, update timing logic
+! 01 Jun 2022: Michel Bechtold, initial code (based on merra-2 data preprocessed
+! to daily data)
 !
 ! !INTERFACE:
 subroutine get_merra2_ac(n, findex)

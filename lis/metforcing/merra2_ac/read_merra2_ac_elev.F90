@@ -12,8 +12,8 @@
 ! \label{read_merra2_ac_elev}
 !
 ! !REVISION HISTORY:
-!
-!  22 Sep 2016: James Geiger; Initial Specification
+! 01 Jun 2022: Michel Bechtold, initial code (based on merra-2 data preprocessed
+! to daily data)
 !
 ! !INTERFACE:
 subroutine read_merra2_ac_elev(n,findex)
