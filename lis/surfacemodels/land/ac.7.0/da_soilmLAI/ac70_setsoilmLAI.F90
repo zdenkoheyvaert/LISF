@@ -87,7 +87,7 @@ subroutine ac70_setsoilmLAI(n, LSM_State)
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
        "ESMF_StateSet: Soil Moisture Layer 1 failed in ac70_setsoilmLAI")
-  call ESMF_StateGet(LSM_State,"AC70BIOMASS",laiField,rc=status)
+  call ESMF_StateGet(LSM_State,"AC70 BIOMASS",laiField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateSet: AC70BIOMASS failed in ac70_setsoilmLAI")
 

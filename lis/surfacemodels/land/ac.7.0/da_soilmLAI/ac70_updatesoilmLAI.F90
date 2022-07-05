@@ -73,14 +73,14 @@ subroutine ac70_updatesoilmLAI(n, LSM_State, LSM_Incr_State)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_updatesoilmLAI")
 
-  call ESMF_StateGet(LSM_State,"AC70BIOMASS",AC70BIOMASSField,rc=status)
+  call ESMF_StateGet(LSM_State,"AC70 BIOMASS",AC70BIOMASSField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: LSM_State, failed in ac70_updatesoilmLAI")
   call ESMF_FieldGet(AC70BIOMASSField,localDE=0,farrayPtr=AC70BIOMASS,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: AC70BIOMASSField failed in ac70_updatesoilmLAI")
  
-  call ESMF_StateGet(LSM_Incr_State,"AC70BIOMASS",AC70BIOMASSIncrField,rc=status)
+  call ESMF_StateGet(LSM_Incr_State,"AC70 BIOMASS",AC70BIOMASSIncrField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateGet: LSM_Incr_State AC70BIOMASS failed in ac70_updatesoilmLAI")
   call ESMF_FieldGet(AC70BIOMASSIncrField,localDE=0,farrayPtr=AC70BIOMASSincr,rc=status)

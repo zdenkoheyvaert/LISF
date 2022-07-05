@@ -82,7 +82,7 @@ subroutine ac70_qcsoilmLAI(n, LSM_State)
   call LIS_verify(status,&
        "ESMF_AttributeGet: Min Value failed in ac70_qcsoilmLAI")
 
-  call ESMF_StateGet(LSM_State,"AC70BIOMASS",AC70BIOMASSField,rc=status)
+  call ESMF_StateGet(LSM_State,"AC70 BIOMASS",AC70BIOMASSField,rc=status)
   call LIS_verify(status,&
            "ESMF_StateGet for AC70BIOMASS failed in ac70_qcsoilmLAI")
   call ESMF_FieldGet(AC70BIOMASSField,localDE=0,farrayPtr=AC70BIOMASS,rc=status)
