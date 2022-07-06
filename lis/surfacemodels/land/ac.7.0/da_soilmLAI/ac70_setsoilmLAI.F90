@@ -57,9 +57,9 @@ subroutine ac70_setsoilmLAI(n, LSM_State)
   real                   :: MAX_threshold
   real                   :: sm_threshold
   type(ESMF_Field)       :: sm1Field
-  type(ESMF_Field)       :: laiField
+  type(ESMF_Field)       :: AC70BIOMASSField
   real, pointer          :: soilm1(:)
-  real, pointer          :: lai(:)
+  real, pointer          :: AC70BIOMASS(:)
   integer                :: t, j,i, gid, m, t_unpert
   integer                :: status
   real                   :: delta(1)
@@ -87,14 +87,14 @@ subroutine ac70_setsoilmLAI(n, LSM_State)
   call ESMF_StateGet(LSM_State,"Soil Moisture Layer 1",sm1Field,rc=status)
   call LIS_verify(status,&
        "ESMF_StateSet: Soil Moisture Layer 1 failed in ac70_setsoilmLAI")
-  call ESMF_StateGet(LSM_State,"AC70 BIOMASS",laiField,rc=status)
+  call ESMF_StateGet(LSM_State,"AC70 BIOMASS",AC70BIOMASSField,rc=status)
   call LIS_verify(status,&
        "ESMF_StateSet: AC70BIOMASS failed in ac70_setsoilmLAI")
 
   call ESMF_FieldGet(sm1Field,localDE=0,farrayPtr=soilm1,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: Soil Moisture Layer 1 failed in ac70_setsoilmLAI")
-  call ESMF_FieldGet(laiField,localDE=0,farrayPtr=lai,rc=status)
+  call ESMF_FieldGet(AC70BIOMASSField,localDE=0,farrayPtr=AC70BIOMASS,rc=status)
   call LIS_verify(status,&
        "ESMF_FieldGet: AC70BIOMASS failed in ac70_setsoilmLAI")
 
@@ -380,10 +380,10 @@ subroutine ac70_setsoilmLAI(n, LSM_State)
 
 
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
-!     XLAI    = max(LFMASS*LAPM,laimin)
+!     XLAI    = max(LFMASS*LAPM,AC70BIOMASSmin)
 
      if(sla(AC70_struc(n)%ac70(t)%vegetype).ne.0) then 
-        AC70_struc(n)%ac70(t)%lai = lai(t)
+        AC70_struc(n)%ac70(t)%SumWaBal%Biomass = AC70BIOMASS(t)
      endif
   enddo
 
