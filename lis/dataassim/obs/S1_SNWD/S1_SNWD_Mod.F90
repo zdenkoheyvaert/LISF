@@ -60,7 +60,8 @@ contains
     use LIS_perturbMod
     use LIS_DAobservationsMod
     use LIS_logMod
-   
+    use netcdf
+ 
     implicit none 
 
 ! !ARGUMENTS: 
@@ -88,6 +89,8 @@ contains
     type(ESMF_Field)       ::  pertField(LIS_rc%nnest)
     type(ESMF_ArraySpec)   ::  pertArrSpec
     character*100          ::  S1snowobsdir
+    character*80           ::  S1_firstfile
+    character*80           ::  S1_filename
     character*100          ::  temp
     real,  allocatable         ::  obsstd(:)
     character*1            ::  vid(2)
@@ -98,6 +101,11 @@ contains
     real, pointer          :: obs_temp(:,:)
     real, allocatable          :: ssdev(:)
     real                   :: dx, dy
+    integer                :: NX, NY
+    integer                :: ncid
+    integer                :: flist
+    integer                :: ios
+    character*100          :: xname,yname
 
     allocate(S1_SNWD_struc(LIS_rc%nnest))
 
@@ -256,9 +264,28 @@ contains
 !-------------------------------------------------------------
 ! set up the S1 domain %and interpolation weights. 
 !-------------------------------------------------------------
+
+ ! Open first file to get nx ny dimensions
+    call system('ls ./' // trim(S1snowobsdir) // ' > ./S1_listfiles.txt')
+
+    open(flist, file=trim('./S1_listfiles.txt'), &
+         status='old', iostat=status)
+
+    read(flist, '(a)', iostat=status) S1_firstfile
+    S1_filename = trim(S1snowobsdir) // '/' // trim(S1_firstfile)
+
+    ios = nf90_open(path=S1_filename,&
+                    mode=NF90_NOWRITE,ncid=ncid)
+    call LIS_verify(ios,&
+        'Error reading in S1 data dimensions: Error opening file '//S1_filename)
+    ios = nf90_inquire_dimension(ncid,1,yname,NY)
+    ios = nf90_inquire_dimension(ncid,2,xname,NX)
+    ios = nf90_close(ncid)
+
+
     do n=1,LIS_rc%nnest
-       S1_SNWD_struc(n)%nc = 1248
-       S1_SNWD_struc(n)%nr = 576
+       S1_SNWD_struc(n)%nc = NY
+       S1_SNWD_struc(n)%nr = NX
 
        allocate(S1_SNWD_struc(n)%snwd(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
        allocate(S1_SNWD_struc(n)%snwdtime(&
