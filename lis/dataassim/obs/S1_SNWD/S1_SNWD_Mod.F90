@@ -15,7 +15,11 @@
 !   
 ! !REVISION HISTORY: 
 !  29 Aug 2019   Hans Lievens;   Initial Specification
-! 
+!
+! This reader can be used for netcdf data in the following format:
+! filename: 'snd_yyyymmdd.nc' with variables 'snd' [m],'lat' and 'lon'
+
+ 
 module S1_SNWD_Mod
 ! !USES: 
   use ESMF
