@@ -128,6 +128,8 @@ subroutine Ac70_setup()
                          SetCrop,&
                          SetSoil,&
                          SetTemperatureRecord,&
+                         SetEToRecord,&
+                         SetRainRecord,&
                          SetClimRecord,&
                          SetRainRecord,&
                          SetEToRecord,&
@@ -144,6 +146,17 @@ subroutine Ac70_setup()
                 SetClimRecord_ToString,&
                 SetClimFile,&
                 SetClimDescription,&
+                SetClimRecord_DataType, &
+                SetClimRecord_fromd, &
+                SetClimRecord_fromm, &
+                SetClimRecord_fromy, &
+                SetClimRecord_NrObs, &
+                SetClimRecord_tod, &
+                SetClimRecord_tom, &
+                SetClimRecord_toy,&
+                SetCO2Description,&
+                SetProfFilefull,&
+                SetSimulation_Storage_CropString,&
                          GetGenerateTimeMode,&
                         GetGenerateDepthMode,&
                         GetIrriMode,&
@@ -274,6 +287,8 @@ subroutine Ac70_setup()
                         SetPathNameProg, &
                         GetPathNameList
            !!! MB_AC70
+    !!! MB:
+    use ac_project_input, only: ProjectInput 
 
     use ac_run, only:    SetDayNri,&
                          GetIrriInterval,&
@@ -359,7 +374,7 @@ subroutine Ac70_setup()
                         GetStartMode,&
                         GetNoMoreCrop,&
                         GetCGCadjustmentAfterCutting,&
-
+                    
                         SetGwTable,&
                         SetPlotVarCrop,&
                         SetStressTot,&
@@ -729,10 +744,10 @@ subroutine Ac70_setup()
                     call set_project_input(l, 'Temperature_Filename', '(None)')
                     call set_project_input(l, 'Temperature_Directory', '(None)')
                     call set_project_input(l, 'ETo_Info', '(None)')
-                    call set_project_input(l, 'ETo_Filename', '(None)')
+                    call set_project_input(l, 'ETo_Filename', '(External)')
                     call set_project_input(l, 'ETo_Directory', '(None)')
                     call set_project_input(l, 'Rain_Info', ' LIS ')
-                    call set_project_input(l, 'Rain_Filename', '(None)')
+                    call set_project_input(l, 'Rain_Filename', '(External)')
                     call set_project_input(l, 'Rain_Directory', '(None)')
                     call set_project_input(l, 'CO2_Info', ' LIS ')
                     call set_project_input(l, 'CO2_Filename', trim(AC70_struc(n)%CO2_Filename))
@@ -766,14 +781,36 @@ subroutine Ac70_setup()
                     call set_project_input(l, 'Observations_Directory', '(None)')
                 end do
                 
+                call SetClimRecord_DataType(0_int8)
+                call SetClimRecord_fromd(LIS_rc%sda)
+                call SetClimRecord_fromdaynr(ProjectInput(1)%Simulation_DayNr1)
+                call SetClimRecord_fromm(LIS_rc%smo)
+                call SetClimRecord_fromstring("")
+                call SetClimRecord_fromy(LIS_rc%syr)
+                call SetClimRecord_NrObs(999)
+                call SetClimRecord_tod(LIS_rc%eda)
+                call SetClimRecord_todaynr(ProjectInput(GetSimulation_NrRuns())%Simulation_DayNrN)
+                call SetClimRecord_tom(LIS_rc%emo)
+                call SetClimRecord_tostring("")
+                call SetClimRecord_toy(LIS_rc%eyr)
+                call SetClimFile('(External)')
+                call SetCO2Description('')
+                call SetProfFilefull('External')
+                call SetTemperatureRecord(GetClimRecord())
+                call SetEToRecord(GetClimRecord())
+                call SetRainRecord(GetClimRecord())
+
+                ! MB: ToDo for perennial herbaceous forage crops
+                call SetSimulation_Storage_CropString('None')
+
                 !call SetRainRecord_FromString('any date')
                 !call SetRainRecord_ToString('any date')
                 !call SetRainRecord_FromY(1901)
-                write(LIS_logunit, *) GetClimRecord_FromY()
-                write(LIS_logunit, *) GetClimRecord_FromDayNr()
-                write(LIS_logunit, *) GetClimRecord_ToDayNr()
-                write(LIS_logunit, *) GetClimRecord_FromString()
-                write(LIS_logunit, *) GetClimRecord_ToString()
+                !write(LIS_logunit, *) GetClimRecord_FromY()
+                !write(LIS_logunit, *) GetClimRecord_FromDayNr()
+                !write(LIS_logunit, *) GetClimRecord_ToDayNr()
+                !write(LIS_logunit, *) GetClimRecord_FromString()
+                !write(LIS_logunit, *) GetClimRecord_ToString()
                 !call SetClimFile('EToRainTempFile')
                 !call SetClimDescription('Read ETo/RAIN/TEMP data set')
                 !call SetClimRecord_FromY(1901)
@@ -1028,10 +1065,11 @@ subroutine Ac70_setup()
                 !!call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
                 !                                            TotalSimRuns)
                 call SetMultipleProjectDescription('undefined')
-                FullFileNameProgramParametersLocal = GetFullFileNameProgramParameters()
+                !FullFileNameProgramParametersLocal = GetFullFileNameProgramParameters()
                 !call ComposeFileForProgramParameters(GetMultipleProjectFile(), &
                 !                          FullFileNameProgramParametersLocal)
                 !call SetFullFileNameProgramParameters(FullFileNameProgramParametersLocal)
+                ProgramParametersAvailable = .false.
                 call SetFullFileNameProgramParameters("(None)")
                 call LoadProgramParametersProjectPlugIn(&
                       GetFullFileNameProgramParameters(), &

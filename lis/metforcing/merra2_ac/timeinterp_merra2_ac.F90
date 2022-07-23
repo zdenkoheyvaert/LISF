@@ -105,9 +105,8 @@ subroutine timeinterp_merra2_ac(n,findex)
 !  Interpolate Data in Time
 !-----------------------------------------------------------------------
 
-  wt1=(merra2_ac_struc(n)%merra2time2-LIS_rc%time)/ & 
-      (merra2_ac_struc(n)%merra2time2-merra2_ac_struc(n)%merra2time1)
-  wt2=1.0-wt1
+  wt1=1.0
+  wt2=0.0
 
   call ESMF_StateGet(LIS_FORC_Base_State(n,findex),LIS_FORC_Tair%varname(1),tmpField,&
        rc=status)

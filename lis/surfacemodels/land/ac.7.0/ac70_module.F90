@@ -864,7 +864,7 @@ module Ac70_module
     real(dp) :: BprevSum, YprevSum, SumGDDcuts, HItimesBEF
     real(dp) :: ScorAT1, ScorAT2, HItimesAT1, HItimesAT2, HItimesAT
     real(dp) :: alfaHI, alfaHIAdj
-
+    real(dp) :: WPi
     !! DelayedGermination
     integer(int32) :: NextSimFromDayNr !! the Simulation.FromDayNr for next run if delayed germination and KeepSWC
 

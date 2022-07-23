@@ -726,6 +726,9 @@ subroutine Ac70_main(n)
                 call SetClimFile('(External)')
                 !call SetClimFile('EToRainTempFile')
                 !call SetClimDescription('Read ETo/RAIN/TEMP data set')
+
+        AC70_struc(n)%ac70(t)%WPi = 0._dp
+
         call InitializeRunPart1(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType);
         if (trim(LIS_rc%metforc(1)) == 'MERRA2_AC') then
           !call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
@@ -784,13 +787,13 @@ subroutine Ac70_main(n)
               !write(LIS_logunit,*) &
               !                '[INFO] AdvanceOneTimeStep AquaCrop, day in month: ', LIS_rc
 
-              call AdvanceOneTimeStep()
+              call AdvanceOneTimeStep(AC70_struc(n)%ac70(t)%WPi)
             else ! read from AC input
               call SetRain(real(AC70_struc(n)%ac70(t)%PREC_ac,kind=dp))
               call SetTmin(real(AC70_struc(n)%ac70(t)%TMIN_ac,kind=dp))
               call SetTmax(real(AC70_struc(n)%ac70(t)%TMAX_ac,kind=dp))
               call SetETo(real(AC70_struc(n)%ac70(t)%ETo_ac,kind=dp))
-              call AdvanceOneTimeStep()
+              call AdvanceOneTimeStep(AC70_struc(n)%ac70(t)%WPi)
               if (AC70_struc(n)%daynrinextclimaterecord .eq. 1) then
                  call ReadClimateNextDay()
                  AC70_struc(n)%ac70(t)%PREC_ac = real(GetRain(),kind=sp)
@@ -1026,13 +1029,17 @@ subroutine Ac70_main(n)
                 Tmin_mplr = Tmin_movmean / AC70_struc(n)%ac70(t)%Tmin_ac_Julyref
                 Tmin_mplr = AMAX1(AMIN1(1.0,Tmin_mplr),0.0)
             end if
-            AC70_struc(n)%ac70(t)%WCMV1V2 = (AC70_struc(n)%ac70(t)%SumWaBal%Biomass * Tmin_mplr)**0.5
+            if ((AC70_struc(n)%ac70(t)%SumWaBal%Biomass * Tmin_mplr) .gt. 0.0) then
+                AC70_struc(n)%ac70(t)%WCMV1V2 = (AC70_struc(n)%ac70(t)%SumWaBal%Biomass * Tmin_mplr)**0.5
+            else
+                AC70_struc(n)%ac70(t)%WCMV1V2 = 0.0
+            end if
             AC70_struc(n)%ac70(t)%AC70FC = AC70_struc(n)%ac70(t)%SoilLayer(1)%fc
 
     if ((LIS_rc%mo .eq. 12) .AND. (LIS_rc%da .eq. 31)) then
         AC70_struc(n)%ac70(t)%InitializeRun = 1
-        call FinalizeRun1(AC70_struc(n)%ac70(t)%irun, GetTheProjectFile(), AC70_struc(n)%ac70(t)%TheProjectType)
-        call FinalizeRun2(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType)
+        !call FinalizeRun1(AC70_struc(n)%ac70(t)%irun, GetTheProjectFile(), AC70_struc(n)%ac70(t)%TheProjectType)
+        !call FinalizeRun2(AC70_struc(n)%ac70(t)%irun, AC70_struc(n)%ac70(t)%TheProjectType)
         AC70_struc(n)%ac70(t)%irun = AC70_struc(n)%ac70(t)%irun + 1
     end if
             !!! MB_AC70
