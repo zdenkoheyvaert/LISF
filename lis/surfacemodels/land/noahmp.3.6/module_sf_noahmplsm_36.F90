@@ -7268,8 +7268,7 @@ END SUBROUTINE ALBEDO_UPD
    enddo
 
 !to obtain equilibrium state of snow in glacier region
-! Hans Lievens added condition for DZSNSO to avoid division by 0:       
-   IF(SNEQV > 2000. .AND. DZSNSO(0) > 0.0001) THEN   ! 2000 mm -> maximum water depth
+   IF(SNEQV > 2000.) THEN   ! 2000 mm -> maximum water depth
       BDSNOW      = SNICE(0) / DZSNSO(0)
       SNOFLOW     = (SNEQV - 2000.)
       SNICE(0)    = SNICE(0)  - SNOFLOW 
