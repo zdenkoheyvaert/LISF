@@ -83,40 +83,18 @@ module VODFM_Mod
     public :: vodfm_struc
     !EOP
 
-    ! the actual implementation of the model equations is done in the
-    ! subclasses below, this is just to provide a common interface
+    ! The actual implementation of the model equations is done in the
+    ! subclasses below, this is just to provide a common interface.
+    ! Using instances of this type will raise an error.
     type, public ::  vodfm_type_dec
         character*256 :: parameter_fname
         !-------output------------!
         real, allocatable :: VOD(:)
         contains
-        procedure(initialize_forward_model), deferred, pass(self) :: initialize
-        procedure(prepare_run_forward_model), deferred, pass(self) :: prepare_run
-        procedure(run_forward_model), deferred, pass(self) :: run
+        procedure, pass(self) :: initialize => VODFM_initialize_default
+        procedure, pass(self) :: prepare_run => VODFM_prepare_run_default
+        procedure, pass(self) :: run => VODFM_run_default
     end type vodfm_type_dec
-
-    abstract interface
-        subroutine initialize_forward_model(self, n, fname)
-            class(vodfm_type_dec), intent(inout) :: self
-            integer, intent(in) :: n
-            character(len=*), intent(in) :: fname
-        end subroutine initialize_forward_model
-    end interface
-
-    abstract interface
-        subroutine prepare_run_forward_model(self)
-            class(vodfm_type_dec), intent(inout) :: self
-        end subroutine prepare_run_forward_model
-    end interface
-
-    abstract interface
-        subroutine run_forward_model(self, t, lai, sm1, sm2, sm3,&
-            sm4)
-            class(vodfm_type_dec), intent(inout) :: self
-            integer, intent(in) :: t
-            real, intent(in)    :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
-        end subroutine run_forward_model
-    end interface
 
     type, extends(vodfm_type_dec) :: vodfm_linear_model
         integer           :: ntimes
@@ -131,7 +109,7 @@ module VODFM_Mod
             procedure, pass(self) :: initialize => VODFM_initialize_linear_model
             procedure, pass(self) :: prepare_run => VODFM_prepare_run_linear_model
             procedure, pass(self) :: run => VODFM_run_linear_model
-    end type vod_linear_model
+    end type vodfm_linear_model
 
     type, extends(vodfm_type_dec) :: vodfm_svr_model
         integer           :: n_SV
@@ -147,10 +125,10 @@ module VODFM_Mod
             procedure, pass(self) :: initialize => VODFM_initialize_svr_model
             procedure, pass(self) :: prepare_run => VODFM_prepare_run_svr_model
             procedure, pass(self) :: run => VODFM_run_svr_model
-    end type vod_svr_model
+    end type vodfm_svr_model
 
 
-    type(vodfm_type_dec), allocatable :: vodfm_struc(:)
+    class(vodfm_type_dec), allocatable :: vodfm_struc(:)
 
     SAVE
 
@@ -173,9 +151,6 @@ contains
         !   \item[readVODFMcrd](\ref{readVODFMcrd}) \newline
         !
         !EOP
-#if(defined USE_NETCDF3 || defined USE_NETCDF4)
-        use netcdf
-#endif
         implicit none
 
         integer :: rc, ios
@@ -183,10 +158,6 @@ contains
         character*100 :: modeltype(LIS_rc%nnest)
         character*256 :: parameter_fname(LIS_rc%nnest)
 
-#if !(defined USE_NETCDF3 || defined USE_NETCDF4)
-        write(LIS_logunit,*) "[ERR] VODFM requires NETCDF"
-        call LIS_endrun
-#else
         write(LIS_logunit,*) "[INFO] Starting VODFM setup"
 
 
@@ -232,39 +203,24 @@ contains
 
         ! read parameters/initialize model
         do n=1, LIS_rc%nnest
-
-            ! try opening the parameter file
-            write(LIS_logunit,*) '[INFO] Reading ',&
-                trim(vodfm_struc(n)%parameter_fname)
-            ios = nf90_open(path=trim(vodfm_struc(n)%parameter_fname),&
-                mode=NF90_NOWRITE,ncid=nid)
-            call LIS_verify(ios,'Error opening file '&
-                //trim(vodfm_struc(n)%parameter_fname))
-
-            ! check if ngrid is as expected
-            ios = nf90_inq_dimid(nid, "ngrid", ngridId)
-            call LIS_verify(ios, "Error nf90_inq_varid: ngrid")
-            ios = nf90_inquire_dimension(nid, ngridId, len=ngrid)
-            call LIS_verify(ios, "Error nf90_inquire_dimension: ngrid")
-            if (ngrid /= LIS_rc%glbngrid_red(n)) then
-                write(LIS_logunit, *) "[ERR] ngrid in "//trim(vodfm_struc(n)%parameter_fname)&
-                     //" not consistent with expected ngrid: ", ngrid,&
-                     " instead of ",LIS_rc%glbngrid_red(n)
-                call LIS_endrun
-            endif
-
-            vodfm_struc(n)%initialize(n)
+            call vodfm_struc(n)%initialize(n)
         enddo
 
         write(LIS_logunit,*) '[INFO] Finished VODFM setup'
-#endif
     end subroutine VODFM_initialize
+
+    subroutine VODFM_initialize_default(self, n)
+        class(vodfm_type_dec), intent(inout) :: self
+        integer, intent(in) :: n
+        write(LIS_logunit,*) "[ERR] VODFM should use linear or svr model"
+        call LIS_endrun
+    end subroutine VODFM_initialize_default
 
     subroutine VODFM_initialize_linear_model(self, n)
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
         use netcdf
 #endif
-        class(vod_linear_model), intent(inout) :: self
+        class(vodfm_linear_model), intent(inout) :: self
         integer, intent(in) :: n
 
         integer :: ios, nid, npatch
@@ -274,6 +230,25 @@ contains
         write(LIS_logunit,*) "[ERR] VODFM requires NETCDF"
         call LIS_endrun
 #else
+        ! try opening the parameter file
+        write(LIS_logunit,*) '[INFO] Reading ',&
+            trim(self%parameter_fname)
+        ios = nf90_open(path=trim(self%parameter_fname),&
+            mode=NF90_NOWRITE,ncid=nid)
+        call LIS_verify(ios,'Error opening file '&
+            //trim(vodfm_struc(n)%parameter_fname))
+
+        ! check if ngrid is as expected
+        ios = nf90_inq_dimid(nid, "ngrid", ngridId)
+        call LIS_verify(ios, "Error nf90_inq_varid: ngrid")
+        ios = nf90_inquire_dimension(nid, ngridId, len=ngrid)
+        call LIS_verify(ios, "Error nf90_inquire_dimension: ngrid")
+        if (ngrid /= LIS_rc%glbngrid_red(n)) then
+            write(LIS_logunit, *) "[ERR] ngrid in "//trim(self%parameter_fname)&
+                 //" not consistent with expected ngrid: ", ngrid,&
+                 " instead of ",LIS_rc%glbngrid_red(n)
+            call LIS_endrun
+        endif
 
         ! read ntimes
         ios = nf90_inq_dimid(nid, "ntimes", ntimesId)
@@ -311,7 +286,7 @@ contains
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
         use netcdf
 #endif
-        class(vod_svr_model), intent(inout) :: self
+        class(vodfm_svr_model), intent(inout) :: self
         integer, intent(in) :: n
 
         integer :: ios, nid, npatch
@@ -321,6 +296,26 @@ contains
         write(LIS_logunit,*) "[ERR] VODFM requires NETCDF"
         call LIS_endrun
 #else
+        ! try opening the parameter file
+        write(LIS_logunit,*) '[INFO] Reading ',&
+            trim(self%parameter_fname)
+        ios = nf90_open(path=trim(self%parameter_fname),&
+            mode=NF90_NOWRITE,ncid=nid)
+        call LIS_verify(ios,'Error opening file '&
+            //trim(vodfm_struc(n)%parameter_fname))
+
+        ! check if ngrid is as expected
+        ios = nf90_inq_dimid(nid, "ngrid", ngridId)
+        call LIS_verify(ios, "Error nf90_inq_varid: ngrid")
+        ios = nf90_inquire_dimension(nid, ngridId, len=ngrid)
+        call LIS_verify(ios, "Error nf90_inquire_dimension: ngrid")
+        if (ngrid /= LIS_rc%glbngrid_red(n)) then
+            write(LIS_logunit, *) "[ERR] ngrid in "//trim(self%parameter_fname)&
+                 //" not consistent with expected ngrid: ", ngrid,&
+                 " instead of ",LIS_rc%glbngrid_red(n)
+            call LIS_endrun
+        endif
+
         ! read n_SV, because we don't know it's length a priori
         ios = nf90_inq_dimid(nid, "n_SV", n_SVId)
         call LIS_verify(ios, "Error nf90_inq_varid: n_SV")
@@ -333,17 +328,19 @@ contains
         npatch = LIS_rc%npatch(n, LIS_rc%lsm_index)
         allocate(self%intercept(npatch))
         allocate(self%actual_n_SV(npatch))
-        allocate(self%dual_coef(npatch, n_SV))
-        allocate(self%support_vectors(npatch, n_SV, 5))
-        allocate(self%gam(npatch, 5))
+        allocate(self%dual_coef(n_SV, npatch))
+        allocate(self%support_vectors(5, n_SV, npatch))
+        allocate(self%gam(5, npatch))
 
         ! read the arrays from the file
         call read_1d_coef_from_file(n, nid, ngrid, "intercept_", self%intercept)
         call read_1d_coef_from_file(n, nid, ngrid, "n_SV_", self%actual_n_SV)
-        call read_2d_coef_from_file(n, nid, ngrid, n_SV, "dual_coef_", self%dual_coef)
-        call read_2d_coef_from_file(n, nid, ngrid, 5, "gamma_", self%gam)
-        call read_3d_coef_from_file(n, nid, ngrid, n_SV, 5, "support_vectors_",&
-             self%support_vectors)
+        call read_2d_coef_from_file(n, nid, n_SV, ngrid, "dual_coef_", &
+            self%dual_coef, ngrid_first=.false.)
+        call read_2d_coef_from_file(n, nid, 5, ngrid, "gamma_", self%gam, &
+            ngrid_first=.false.)
+        call read_3d_coef_from_file(n, nid, 5, n_SV, ngrid, "support_vectors_",&
+             self%support_vectors, ngrid_first=.false.)
 #endif
     end subroutine VODFM_initialize_svr_model
 
@@ -379,15 +376,17 @@ contains
 #endif
     end subroutine read_1d_coef_from_file
 
-    subroutine read_2d_coef_from_file(n, nid, ngrid, n2, varname, coef)
+    subroutine read_2d_coef_from_file(n, nid, n1, n2, varname, coef, ngrid_first)
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
         use netcdf
 #endif
         use LIS_historyMod, only: LIS_convertVarToLocalSpace
-        integer, intent(in) :: n, nid, ngrid, n2
+        integer, intent(in) :: n, nid, n1, n2
         character(len=*), intent(in) :: varname
         real, intent(inout) :: coef(:,:)
+        logical, intent(in), optional :: ngrid_first
 
+        logical :: ngrid_is_first
         real, allocatable :: coef_file(:,:)
         real, allocatable :: coef_grid(:)
         integer :: ios, varid, j
@@ -396,31 +395,50 @@ contains
         write(LIS_logunit,*) "[ERR] VODFM requires NETCDF"
         call LIS_endrun
 #else
-        allocate(coef_file(ngrid, n2))
+        if (present(ngrid_first)) then
+            ngrid_is_first = ngrid_first
+        else
+            ngrid_is_first = .true.
+        endif
+
+        allocate(coef_file(n1, n2))
         ios = nf90_inq_varid(nid, trim(varname), varid)
         call LIS_verify(ios, "Error nf90_inq_varid: "//trim(varname))
         ios = nf90_get_var(nid, varid, coef_file)
         call LIS_verify(ios, "Error nf90_get_var: "//trim(varname))
+
         allocate(coef_grid(LIS_rc%ngrid(n)))
-        do j=1,n2
-            call LIS_convertVarToLocalSpace(n, coef_file(:,j), coef_grid)
-            call gridvar_to_patchvar(&
-                 n, LIS_rc%lsm_index, coef_grid, coef(:, j))
-        enddo
+        if (ngrid_is_first) then
+            do j=1,n2
+                call LIS_convertVarToLocalSpace(n, coef_file(:,j), coef_grid)
+                call gridvar_to_patchvar(&
+                     n, LIS_rc%lsm_index, coef_grid, coef(:, j))
+            enddo
+        else ! ngrid is the second dimension, we have to loop over n1
+            do j=1,n1
+                call LIS_convertVarToLocalSpace(n, coef_file(j, :), coef_grid)
+                call gridvar_to_patchvar(&
+                     n, LIS_rc%lsm_index, coef_grid, coef(j, :))
+            enddo
+        endif
+
         deallocate(coef_grid)
         deallocate(coef_file)
 #endif
     end subroutine read_2d_coef_from_file
 
-    subroutine read_3d_coef_from_file(n, nid, ngrid, n2, n3, varname, coef)
+    subroutine read_3d_coef_from_file(n, nid, n1, n2, n3, varname, coef, &
+            ngrid_first)
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
         use netcdf
 #endif
         use LIS_historyMod, only: LIS_convertVarToLocalSpace
-        integer, intent(in) :: n, nid, ngrid, n2, n3
+        integer, intent(in) :: n, nid, n1, n2, n3
         character(len=*), intent(in) :: varname
         real, intent(inout) :: coef(:,:,:)
+        logical, intent(in), optional :: ngrid_first
 
+        logical :: ngrid_is_first
         real, allocatable :: coef_file(:,:,:)
         real, allocatable :: coef_grid(:)
         integer :: ios, varid, j2, j3
@@ -429,19 +447,35 @@ contains
         write(LIS_logunit,*) "[ERR] VODFM requires NETCDF"
         call LIS_endrun
 #else
-        allocate(coef_file(ngrid, n2, n3))
+        if (present(ngrid_first)) then
+            ngrid_is_first = ngrid_first
+        else
+            ngrid_is_first = .true.
+        endif
+
+        allocate(coef_file(n1, n2, n3))
         ios = nf90_inq_varid(nid, trim(varname), varid)
         call LIS_verify(ios, "Error nf90_inq_varid: "//trim(varname))
         ios = nf90_get_var(nid, varid, coef_file)
         call LIS_verify(ios, "Error nf90_get_var: "//trim(varname))
         allocate(coef_grid(LIS_rc%ngrid(n)))
-        do j2=1,n2
-            do j3=1,n3
-                call LIS_convertVarToLocalSpace(n, coef_file(:,j2,j3), coef_grid)
-                call gridvar_to_patchvar(&
-                     n, LIS_rc%lsm_index, coef_grid, coef(:, j2,j3))
-             enddo
-        enddo
+        if (ngrid_is_first) then
+            do j2=1,n2
+                do j3=1,n3
+                    call LIS_convertVarToLocalSpace(n, coef_file(:,j2,j3), coef_grid)
+                    call gridvar_to_patchvar(&
+                         n, LIS_rc%lsm_index, coef_grid, coef(:, j2,j3))
+                 enddo
+            enddo
+        else  ! ngrid is last
+            do j2=1,n1
+                do j3=1,n2
+                    call LIS_convertVarToLocalSpace(n, coef_file(j2,j3, :), coef_grid)
+                    call gridvar_to_patchvar(&
+                         n, LIS_rc%lsm_index, coef_grid, coef(j2,j3, :))
+                 enddo
+            enddo
+        endif
         deallocate(coef_grid)
         deallocate(coef_file)
 #endif
@@ -563,6 +597,13 @@ contains
 
     end subroutine VODFM_run
 
+    subroutine VODFM_prepare_run_default(self)
+        implicit none
+        class(vodfm_type_dec), intent(inout) :: self
+        write(LIS_logunit,*) "[ERR] VODFM should use linear or svr model"
+        call LIS_endrun
+    end subroutine VODFM_prepare_run_default
+
     subroutine VODFM_prepare_run_linear_model(self)
         implicit none
         class(vodfm_linear_model), intent(inout) :: self
@@ -583,13 +624,21 @@ contains
         class(vodfm_svr_model), intent(inout) :: self
     end subroutine VODFM_prepare_run_svr_model
 
+    subroutine VODFM_run_default(self, t, lai, sm1, sm2, sm3, sm4)
+        implicit none
+        class(vodfm_type_dec), intent(inout) :: self
+        integer, intent(in) :: t
+        real, intent(in)    :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
+        write(LIS_logunit,*) "[ERR] VODFM should use linear or svr model"
+        call LIS_endrun
+    end subroutine VODFM_run_default
+
     subroutine VODFM_run_linear_model(self, t, lai, sm1, sm2, sm3, sm4)
         implicit none
         class(vodfm_linear_model), intent(inout) :: self
         integer, intent(in) :: t
         real, intent(in)    :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
 
-        integer :: t, timeidx, j
         real                :: intercept
         real                :: laicoef, sm1coef, sm2coef, sm3coef, sm4coef
         logical             :: coefs_valid, values_valid
@@ -633,26 +682,24 @@ contains
         endif
     end subroutine VODFM_run_linear_model
 
-    subroutine VODFM_run_svr_model(self, t, vod, lai, sm1, sm2, sm3, sm4)
+    subroutine VODFM_run_svr_model(self, t, lai, sm1, sm2, sm3, sm4)
         ! calculates VOD based on modelled input values
         implicit none
 
-        class(vod_svr_model), intent(inout) :: self
+        class(vodfm_svr_model), intent(inout) :: self
         integer, intent(in) :: t
         real, intent(in)    :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
 
-        real                :: intercept
-        real                :: actual_n_SV
-        real, pointer       :: dual_coef(:), gam(:), support_vectors(:,:)
+        integer             :: j
+        real                :: intercept, actual_n_SV, dual_coef
+        real                :: gam(5), support_vectors(5)
         real                :: kernelval
         logical             :: coefs_valid, values_valid
 
 
         intercept = self%intercept(t)
         actual_n_SV = self%actual_n_SV(t)
-        dual_coef = self%dual_coef(t, :)
-        gam = self%gam(t, :)
-        support_vectors = self%support_vectors(t, :, :)
+        gam = self%gam(:, t)
 
         ! For some pixels no VOD was available and therefore no forward
         ! model was fitted. No assimilation will take place over these
@@ -669,16 +716,18 @@ contains
 
         if (coefs_valid.and.values_valid) then
             ! VOD = \sum_j dual_coef[j] * K(x, s[j])
-            self%VOD(t) = 0.0
+            self%VOD(t) = intercept
             do j=1, actual_n_SV
+                dual_coef = self%dual_coef(j, t)
+                support_vectors = self%support_vectors(:, j, t)
                 ! calculate kernel value
                 ! K = exp(-\sum_k gamma[k] * (x[k] - s[k])**2)
-                kernelval = exp(-gam(1) * (lai(t) - support_vectors(j,1))**2&
-                     - gam(2) * (sm1(t) - support_vectors(j,2))**2&
-                     - gam(3) * (sm2(t) - support_vectors(j,3))**2&
-                     - gam(4) * (sm3(t) - support_vectors(j,4))**2&
-                     - gam(5) * (sm4(t) - support_vectors(j,5))**2)
-                self%VOD(t) = self%VOD(t) + dual_coef(j) * kernelval
+                kernelval = exp(-gam(1) * (lai(t) - support_vectors(1))**2&
+                     - gam(2) * (sm1(t) - support_vectors(2))**2&
+                     - gam(3) * (sm2(t) - support_vectors(3))**2&
+                     - gam(4) * (sm3(t) - support_vectors(4))**2&
+                     - gam(5) * (sm4(t) - support_vectors(5))**2)
+                self%VOD(t) = self%VOD(t) + dual_coef * kernelval
             end do
         else
             self%VOD(t) = LIS_rc%udef
