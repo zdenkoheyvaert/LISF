@@ -291,6 +291,8 @@ module LIS_pluginIndices
         "Custom LAI"
    character*50, public,  parameter :: LIS_CustomVODobsId      = &
         "Custom VOD"
+   character*50, public,  parameter :: LIS_CustomVODonlySMobsId      = &
+        "Custom VOD with only soil moisture update"
    character*50, public,  parameter :: LIS_GLASSalbedoobsId      = &
         "GLASS Albedo"
    character*50, public,  parameter :: LIS_SMAPNRTsmobsId        = &

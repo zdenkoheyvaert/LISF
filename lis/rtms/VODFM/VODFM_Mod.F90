@@ -674,9 +674,6 @@ contains
                  + sm2coef * sm2(t)&
                  + sm3coef * sm3(t)&
                  + sm4coef * sm4(t)
-            ! if (self%VOD(t) .lt. 0.0) then
-            !     self%VOD(t) = LIS_rc%udef
-            ! endif
         else
             self%VOD(t)=LIS_rc%udef
         endif

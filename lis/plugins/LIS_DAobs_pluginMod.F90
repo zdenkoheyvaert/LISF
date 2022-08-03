@@ -991,6 +991,13 @@ subroutine LIS_DAobs_plugin
         read_CustomVOD)
    call registerwritedaobs(trim(LIS_CustomVODobsId)//char(0),&
         write_CustomVOD)
+   call registerdaobsclass(trim(LIS_CustomVODonlySMobsId),"LSM")
+   call registerdaobssetup(trim(LIS_CustomVODonlySMobsId)//char(0),&
+        CustomVOD_setup)
+   call registerreaddaobs(trim(LIS_CustomVODonlySMobsId)//char(0),&
+        read_CustomVOD)
+   call registerwritedaobs(trim(LIS_CustomVODonlySMobsId)//char(0),&
+        write_CustomVOD)
 #endif
 
 #if ( defined DA_OBS_NRT_SMAPSM )
