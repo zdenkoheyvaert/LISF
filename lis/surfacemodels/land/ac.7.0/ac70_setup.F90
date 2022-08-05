@@ -41,13 +41,6 @@ subroutine Ac70_setup()
            LTOVRC,  DILEFC,  DILEFW,  RMF25,  SLA,  FRAGR,  TMIN, &
            VCMX25,  TDLEF,  BP, MP, QE25, RMS25, RMR25, ARM, &
            FOLNMX, WDPOOL, WRRAT, MRP, DRYSMC ! SY: adding 
-           ! calibratable parameters + DVEG to this list for OPTUE to work by 
-           ! updating further below the corresponding values in Ac70_module 
-           ! after call to subroutine SOIL_VEG_GEN_PARM_70   
-           ! SY: Not used by Ac70 from REDPRM:  F11, DRYSMC            
-           ! SY: Not used by Ac70 from read_mp_veg_parameters : AQE and 
-           !     SLAREA (since subroutine BVOCFLUX not used), DEN
-           ! SY: Also added DRYSMC used as constraint by OPTUE
  
 
     use Ac70_lsmMod
@@ -93,8 +86,8 @@ subroutine Ac70_setup()
                          GetSumWaBal,&
                          GetRootZoneSalt,&
                          GetSimulation,&
-            GetSimulation_SumGDD,&
-            GetSimulation_SumGDDfromDay1,&
+                         GetSimulation_SumGDD,&
+                         GetSimulation_SumGDDfromDay1,&
                          SetTotalSaltContent,&
                          SetTotalWaterContent,&
                          Seteffectiverain,&
@@ -134,30 +127,30 @@ subroutine Ac70_setup()
                          SetRainRecord,&
                          SetEToRecord,&
                          GetSimulParam_GDDMethod,&
-                GetClimRecord_FromY,&
-                GetClimRecord_FromDayNr,&
-                GetClimRecord_ToDayNr,&
-                GetClimRecord_FromString,&
-                GetClimRecord_ToString,&
-                SetClimRecord_FromY,&
-                SetClimRecord_FromDayNr,&
-                SetClimRecord_ToDayNr,&
-                SetClimRecord_FromString,&
-                SetClimRecord_ToString,&
-                SetClimFile,&
-                SetClimDescription,&
-                SetClimRecord_DataType, &
-                SetClimRecord_fromd, &
-                SetClimRecord_fromm, &
-                SetClimRecord_fromy, &
-                SetClimRecord_NrObs, &
-                SetClimRecord_tod, &
-                SetClimRecord_tom, &
-                SetClimRecord_toy,&
-                SetCO2Description,&
-                SetProfFilefull,&
-                SetSimulation_Storage_CropString,&
-                         GetGenerateTimeMode,&
+                        GetClimRecord_FromY,&
+                        GetClimRecord_FromDayNr,&
+                        GetClimRecord_ToDayNr,&
+                        GetClimRecord_FromString,&
+                        GetClimRecord_ToString,&
+                        SetClimRecord_FromY,&
+                        SetClimRecord_FromDayNr,&
+                        SetClimRecord_ToDayNr,&
+                        SetClimRecord_FromString,&
+                        SetClimRecord_ToString,&
+                        SetClimFile,&
+                        SetClimDescription,&
+                        SetClimRecord_DataType, &
+                        SetClimRecord_fromd, &
+                        SetClimRecord_fromm, &
+                        SetClimRecord_fromy, &
+                        SetClimRecord_NrObs, &
+                        SetClimRecord_tod, &
+                        SetClimRecord_tom, &
+                        SetClimRecord_toy,&
+                        SetCO2Description,&
+                        SetProfFilefull,&
+                        SetSimulation_Storage_CropString,&
+                        GetGenerateTimeMode,&
                         GetGenerateDepthMode,&
                         GetIrriMode,&
                         GetIrriMethod,&
@@ -205,8 +198,6 @@ subroutine Ac70_setup()
                         SetOut7Clim,&
                         SetPart1Mult,&
                         SetPart2Eval,&
-
-
                         GetCCiActual,&
                         GetCCiprev,&
                         GetCCiTopEarlySen,&
@@ -374,7 +365,6 @@ subroutine Ac70_setup()
                         GetStartMode,&
                         GetNoMoreCrop,&
                         GetCGCadjustmentAfterCutting,&
-                    
                         SetGwTable,&
                         SetPlotVarCrop,&
                         SetStressTot,&
@@ -499,13 +489,7 @@ subroutine Ac70_setup()
     ! !DESCRIPTION:
     !
     !  This routine is the entry point to set up the parameters
-    !  required for Ac70.  These include: 
-    !    vegetype     - land cover type index [-]
-    !    soiltype     - soil type index [-]
-    !    slopetype    - slope type for Noah baseflow [-]
-    !    tbot         - deep-layer soil temperature [K]
-    !    pblh         - planetary boundary layer height [m]
-    ! 
+    !  required for Ac70.  
     !  The routines invoked are:
     !  \begin{description}
     !  \item[LIS\_read\_param](\ref{LIS_read_param}) \newline
@@ -534,7 +518,6 @@ subroutine Ac70_setup()
         integer(intEnum) :: TheProjectType
         logical :: ListProjectFileExist
         character(len=:), allocatable :: ListProjectsFile, TheProjectFile
-        !type(ProjectInput_type), dimension(:), allocatable :: ProjectInput
 
         logical ::  ProgramParametersAvailable 
         integer(int32) :: TotalSimRuns
@@ -596,59 +579,9 @@ subroutine Ac70_setup()
                 enddo 
             endif
 
-            ! read: slopetype
-            write(LIS_logunit,*) "Ac70: reading parameter SLOPETYPE from ", trim(LIS_rc%paramfile(n))
-            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_slopetype), placeholder)
-            do t = 1, LIS_rc%npatch(n, mtype)
-                col = LIS_surface(n, mtype)%tile(t)%col
-                row = LIS_surface(n, mtype)%tile(t)%row
-                AC70_struc(n)%ac70(t)%slopetype = placeholder(col, row)
-            enddo 
-
-            ! read: tbot
-            write(LIS_logunit,*) "Ac70: reading parameter TBOT from ", trim(LIS_rc%paramfile(n))
-            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_tbot), placeholder)
-            do t = 1, LIS_rc%npatch(n, mtype)
-                col = LIS_surface(n, mtype)%tile(t)%col
-                row = LIS_surface(n, mtype)%tile(t)%row
-                AC70_struc(n)%ac70(t)%tbot = placeholder(col, row)
-            enddo 
-
-            ! read: pblh
-            write(LIS_logunit,*) "Ac70: reading parameter PBLH from ", trim(LIS_rc%paramfile(n))
-            call LIS_read_param(n, trim(AC70_struc(n)%LDT_ncvar_pblh), placeholder)
-            do t = 1, LIS_rc%npatch(n, mtype)
-                col = LIS_surface(n, mtype)%tile(t)%col
-                row = LIS_surface(n, mtype)%tile(t)%row
-                AC70_struc(n)%ac70(t)%pblh = placeholder(col, row)
-            enddo 
-
             !----------------------------------------------!
             ! MULTILEVEL reading spatial spatial parameters !
             !----------------------------------------------!
-            ! read: shdfac_monthly
-            write(LIS_logunit,*) "Ac70: reading parameter SHDFAC_MONTHLY from ", trim(LIS_rc%paramfile(n))
-            do k = 1, 12
-                call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_shdfac_monthly, k, placeholder)
-                do t = 1, LIS_rc%npatch(n, mtype)
-                    col = LIS_surface(n, mtype)%tile(t)%col
-                    row = LIS_surface(n, mtype)%tile(t)%row
-                    AC70_struc(n)%ac70(t)%shdfac_monthly(k) = placeholder(col, row)
-                enddo 
-            enddo 
-
-            ! read: smceq for (opt_run=5)  Miguez-Macho & Fan groundwater with equilibrium water table
-            if(AC70_struc(n)%run_opt .eq. 5) then
-                write(LIS_logunit,*) "Ac70: reading parameter SMCEQ from ", trim(LIS_rc%paramfile(n))
-                do k = 1, AC70_struc(n)%nsoil
-                    call AC70_read_MULTILEVEL_param(n, AC70_struc(n)%LDT_ncvar_smceq, k, placeholder)
-                    do t = 1, LIS_rc%npatch(n, mtype)
-                        col = LIS_surface(n, mtype)%tile(t)%col
-                        row = LIS_surface(n, mtype)%tile(t)%row
-                        AC70_struc(n)%ac70(t)%smceq(k) = placeholder(col, row)
-                    enddo 
-                enddo 
-            endif
 
             deallocate(placeholder)
             call SOIL_VEG_GEN_PARM_70(AC70_struc(n)%landuse_tbl_name,   & 
@@ -656,7 +589,73 @@ subroutine Ac70_setup()
                                       AC70_struc(n)%gen_tbl_name,       &
                                       AC70_struc(n)%landuse_scheme_name,& 
                                       AC70_struc(n)%soil_scheme_name)
-            ! SY: Begin for enabling OPTUE 
+            
+
+            ! MB: AC70
+            TheProjectType = typeproject_typeprm
+
+            ! Create AquaCrop 'Run' Structure
+            call LIS_get_julhr(1901,1,1,0,0,0,timerefjulhours)
+            TotalSimRuns = LIS_rc%eyr - LIS_rc%syr + 1
+            call allocate_project_input(TotalSimRuns)
+            do l=1, TotalSimRuns  ! TotalSimRuns
+                ! MB: for current generic crop this is fixed to 1
+                call set_project_input(l, 'Simulation_YearSeason', 1_int8)
+                !
+                call LIS_get_julhr(LIS_rc%syr+(l-1), 1,1,0,0,0,time1julhours)
+                call LIS_get_julhr(LIS_rc%syr+(l-1),12,31,0,0,0,time2julhours)
+                time1days = (time1julhours - timerefjulhours)/24 + 1 
+                time2days = (time2julhours - timerefjulhours)/24 + 1
+                call set_project_input(l, 'Simulation_DayNr1', time1days)
+                call set_project_input(l, 'Simulation_DayNrN', time2days)
+                call set_project_input(l, 'Crop_Day1', time1days)
+                call set_project_input(l, 'Crop_DayN', time2days)
+                call set_project_input(l, 'Description', ' LIS ')
+                call set_project_input(l, 'Climate_Info', ' MERRA2_AC ')
+                call set_project_input(l, 'Climate_Filename', '(External)')
+                call set_project_input(l, 'Climate_Directory', '(None)')
+                call set_project_input(l, 'VersionNr', 7.0_dp)
+                call set_project_input(l, 'Temperature_Info', '(None)')
+                call set_project_input(l, 'Temperature_Filename', '(None)')
+                call set_project_input(l, 'Temperature_Directory', '(None)')
+                call set_project_input(l, 'ETo_Info', '(None)')
+                call set_project_input(l, 'ETo_Filename', '(External)')
+                call set_project_input(l, 'ETo_Directory', '(None)')
+                call set_project_input(l, 'Rain_Info', ' LIS ')
+                call set_project_input(l, 'Rain_Filename', '(External)')
+                call set_project_input(l, 'Rain_Directory', '(None)')
+                call set_project_input(l, 'CO2_Info', ' LIS ')
+                call set_project_input(l, 'CO2_Filename', trim(AC70_struc(n)%CO2_Filename))
+                call set_project_input(l, 'CO2_Directory', trim(AC70_struc(n)%PathNameSimul))
+                call set_project_input(l, 'Calendar_Info', '(None)')
+                call set_project_input(l, 'Calendar_Filename', '(None)')
+                call set_project_input(l, 'Calendar_Directory', '(None)')
+                call set_project_input(l, 'Crop_Info', '(None)')
+                call set_project_input(l, 'Crop_Filename', trim(AC70_struc(n)%Crop_Filename))
+                call set_project_input(l, 'Crop_Directory', trim(AC70_struc(n)%PathNameSimul))
+                call set_project_input(l, 'Irrigation_Info', '(None)')
+                call set_project_input(l, 'Irrigation_Filename', '(None)')
+                call set_project_input(l, 'Irrigation_Directory', '(None)')
+                call set_project_input(l, 'Management_Info', ' LIS ')
+                call set_project_input(l, 'Management_Filename',  trim(AC70_struc(n)%Management_Filename))
+                call set_project_input(l, 'Management_Directory', trim(AC70_struc(n)%PathNameSimul))
+                call set_project_input(l, 'GroundWater_Info', '(None)')
+                call set_project_input(l, 'GroundWater_Filename', '(None)')
+                call set_project_input(l, 'GroundWater_Directory', '(None)')
+                call set_project_input(l, 'Soil_Info', '(External)')
+                call set_project_input(l, 'Soil_Filename', '(External)')
+                call set_project_input(l, 'Soil_Directory', '(External)')
+                call set_project_input(l, 'SWCIni_Info', '(None)')
+                call set_project_input(l, 'SWCIni_Filename', '(None)')
+                call set_project_input(l, 'SWCIni_Directory', '(None)')
+                call set_project_input(l, 'OffSeason_Info', '(None)')
+                call set_project_input(l, 'OffSeason_Filename', '(None)')
+                call set_project_input(l, 'OffSeason_Directory', '(None)')
+                call set_project_input(l, 'Observations_Info', '(None)')
+                call set_project_input(l, 'Observations_Filename', '(None)')
+                call set_project_input(l, 'Observations_Directory', '(None)')
+            end do
+
             do t = 1, LIS_rc%npatch(n, mtype)
                 
                 col = LIS_surface(n, mtype)%tile(t)%col
@@ -664,15 +663,6 @@ subroutine Ac70_setup()
 
                 ! SY: Begin lines following those in REDPRM
 
-                ! SY: Begin SOIL PARAMETERS
-                !IF (AC70_struc(n)%ac70(t)%soiltype .gt. SLCATS) THEN
-                !   write(LIS_logunit, *) 'SOILTYP must be less than SLCATS:'
-                !   write(LIS_logunit, '("t = ", I6, "; SOILTYP = ", I6, ";    SLCATS = ", I6)') &
-                !             t, AC70_struc(n)%ac70(t)%soiltype, SLCATS
-                !   write(LIS_logunit, *) 'Ac70_setup: Error: too many input soil types'
-                !   write(LIS_logunit, *) 'program stopping ...'
-                !   call LIS_endrun
-                !END IF
                 AC70_struc(n)%ac70(t)%csoil = CSOIL_DATA
                 AC70_struc(n)%ac70(t)%bexp = BB(AC70_struc(n)%ac70(t)%soiltype)
                 AC70_struc(n)%ac70(t)%dksat = SATDK(AC70_struc(n)%ac70(t)%soiltype)
@@ -684,12 +674,9 @@ subroutine Ac70_setup()
                 AC70_struc(n)%ac70(t)%smcwlt = WLTSMC(AC70_struc(n)%ac70(t)%soiltype)
                 ! SY: End SOIL PARAMETERS
 
-                ! MB: AC70
-                TheProjectType = typeproject_typeprm
 
                 !!! Start the Program AC70
-                ! Everything below is the equivalent of "StartTheProgram()"
-                ! call InitializeTheProgram()
+                ! Part of AquaCrop "StartTheProgram()"
 
                 call SetPathNameOutp(trim(AC70_struc(n)%PathNameOutp))
                 call SetPathNameSimul(trim(AC70_struc(n)%PathNameSimul))
@@ -700,86 +687,7 @@ subroutine Ac70_setup()
                 call GetTimeAggregationResults()
                 call GetRequestDailyResults()
                 call GetRequestParticularResults()
-                !call PrepareReport()
 
-                !!!!! OLD , project related
-                !ListProjectsFile = GetListProjectsFile()
-                !inquire(file=trim(ListProjectsFile), exist=ListProjectFileExist)
-
-                !call WriteProjectsInfo('')
-                !call WriteProjectsInfo('Projects handled:')
-                
-                !iproject = 1
-                !TheProjectFile = GetProjectFileName(iproject)
-                !call GetProjectType(TheProjectFile, TheProjectType)
-                !!!!! NEW
-                ! To set the Climate_Info attribute of the input associated with
-                ! the third Run:
-                call LIS_get_julhr(1901,1,1,0,0,0,timerefjulhours)
-                TotalSimRuns = LIS_rc%eyr - LIS_rc%syr + 1
-                call allocate_project_input(TotalSimRuns)
-                do l=1, TotalSimRuns  ! TotalSimRuns
-                    ! for current generic crop this is fixed to 1
-                    call set_project_input(l, 'Simulation_YearSeason', 1_int8)
-                    !
-                    call LIS_get_julhr(LIS_rc%syr+(l-1), 1,1,0,0,0,time1julhours)
-                    call LIS_get_julhr(LIS_rc%syr+(l-1),12,31,0,0,0,time2julhours)
-                    time1days = (time1julhours - timerefjulhours)/24 + 1 
-                    time2days = (time2julhours - timerefjulhours)/24 + 1
-                    !call set_project_input(l, 'Simulation_DayNr1', 40178_int32)
-                    !call set_project_input(l, 'Simulation_DayNrN', 40542_int32)
-                    !call set_project_input(l, 'Crop_Day1', 40178_int32)
-                    !call set_project_input(l, 'Crop_DayN', 40542_int32)
-                    call set_project_input(l, 'Simulation_DayNr1', time1days)
-                    call set_project_input(l, 'Simulation_DayNrN', time2days)
-                    call set_project_input(l, 'Crop_Day1', time1days)
-                    call set_project_input(l, 'Crop_DayN', time2days)
-                    call set_project_input(l, 'Description', ' LIS ')
-                    call set_project_input(l, 'Climate_Info', ' MERRA2_AC ')
-                    call set_project_input(l, 'Climate_Filename', '(External)')
-                    !call set_project_input(l, 'Climate_Directory', trim(AC70_struc(n)%PathNameSimul))
-                    call set_project_input(l, 'Climate_Directory', '(None)')
-                    call set_project_input(l, 'VersionNr', 7.0_dp)
-                    call set_project_input(l, 'Temperature_Info', '(None)')
-                    call set_project_input(l, 'Temperature_Filename', '(None)')
-                    call set_project_input(l, 'Temperature_Directory', '(None)')
-                    call set_project_input(l, 'ETo_Info', '(None)')
-                    call set_project_input(l, 'ETo_Filename', '(External)')
-                    call set_project_input(l, 'ETo_Directory', '(None)')
-                    call set_project_input(l, 'Rain_Info', ' LIS ')
-                    call set_project_input(l, 'Rain_Filename', '(External)')
-                    call set_project_input(l, 'Rain_Directory', '(None)')
-                    call set_project_input(l, 'CO2_Info', ' LIS ')
-                    call set_project_input(l, 'CO2_Filename', trim(AC70_struc(n)%CO2_Filename))
-                    call set_project_input(l, 'CO2_Directory', trim(AC70_struc(n)%PathNameSimul))
-                    call set_project_input(l, 'Calendar_Info', '(None)')
-                    call set_project_input(l, 'Calendar_Filename', '(None)')
-                    call set_project_input(l, 'Calendar_Directory', '(None)')
-                    call set_project_input(l, 'Crop_Info', '(None)')
-                    call set_project_input(l, 'Crop_Filename', trim(AC70_struc(n)%Crop_Filename))
-                    call set_project_input(l, 'Crop_Directory', trim(AC70_struc(n)%PathNameSimul))
-                    call set_project_input(l, 'Irrigation_Info', '(None)')
-                    call set_project_input(l, 'Irrigation_Filename', '(None)')
-                    call set_project_input(l, 'Irrigation_Directory', '(None)')
-                    call set_project_input(l, 'Management_Info', ' LIS ')
-                    call set_project_input(l, 'Management_Filename',  trim(AC70_struc(n)%Management_Filename))
-                    call set_project_input(l, 'Management_Directory', trim(AC70_struc(n)%PathNameSimul))
-                    call set_project_input(l, 'GroundWater_Info', '(None)')
-                    call set_project_input(l, 'GroundWater_Filename', '(None)')
-                    call set_project_input(l, 'GroundWater_Directory', '(None)')
-                    call set_project_input(l, 'Soil_Info', '(External)')
-                    call set_project_input(l, 'Soil_Filename', '(External)')
-                    call set_project_input(l, 'Soil_Directory', '(External)')
-                    call set_project_input(l, 'SWCIni_Info', '(None)')
-                    call set_project_input(l, 'SWCIni_Filename', '(None)')
-                    call set_project_input(l, 'SWCIni_Directory', '(None)')
-                    call set_project_input(l, 'OffSeason_Info', '(None)')
-                    call set_project_input(l, 'OffSeason_Filename', '(None)')
-                    call set_project_input(l, 'OffSeason_Directory', '(None)')
-                    call set_project_input(l, 'Observations_Info', '(None)')
-                    call set_project_input(l, 'Observations_Filename', '(None)')
-                    call set_project_input(l, 'Observations_Directory', '(None)')
-                end do
                 
                 call SetClimRecord_DataType(0_int8)
                 call SetClimRecord_fromd(LIS_rc%sda)
@@ -802,23 +710,6 @@ subroutine Ac70_setup()
 
                 ! MB: ToDo for perennial herbaceous forage crops
                 call SetSimulation_Storage_CropString('None')
-
-                !call SetRainRecord_FromString('any date')
-                !call SetRainRecord_ToString('any date')
-                !call SetRainRecord_FromY(1901)
-                !write(LIS_logunit, *) GetClimRecord_FromY()
-                !write(LIS_logunit, *) GetClimRecord_FromDayNr()
-                !write(LIS_logunit, *) GetClimRecord_ToDayNr()
-                !write(LIS_logunit, *) GetClimRecord_FromString()
-                !write(LIS_logunit, *) GetClimRecord_ToString()
-                !call SetClimFile('EToRainTempFile')
-                !call SetClimDescription('Read ETo/RAIN/TEMP data set')
-                !call SetClimRecord_FromY(1901)
-                !call SetClimRecord_FromDayNr(0)
-                !call SetClimRecord_ToDayNr(0)
-                !call SetClimRecord_FromString('any date')
-                !call SetClimRecord_ToString('any date')
-
 
                 ! set AC70 soil parameters based on soiltype
                 !AC70_struc(n)%ac70(t)%SoilLayer(1)%oc = OC(AC70_struc(n)%ac70(t)%soiltype) * 100
@@ -925,31 +816,13 @@ subroutine Ac70_setup()
                 !!! Set all constant parameters from LIS_config
                  
 
-                !SetNumberSimulationRuns(AC70_struc(n)%NumberSimulationRuns)
                 !call InitializeProject(iproject, TheProjectFile, TheProjectType)
                 call InitializeSettings(use_default_soil_file=.false.)
-
-                !write(LIS_logunit, *) GetClimRecord_FromY()
-                !write(LIS_logunit, *) GetClimRecord_FromDayNr()
-                !write(LIS_logunit, *) GetClimRecord_ToDayNr()
-                !write(LIS_logunit, *) GetClimRecord_FromString()
-                !write(LIS_logunit, *) GetClimRecord_ToString()
-                !call SetClimRecord_NrObs(999)
-                !call SetClimFile('EToRainTempFile')
-                !call SetClimDescription('Read ETo/RAIN/TEMP data set')
-                !call SetClimRecord_FromY(
-                !call SetClimRecord_FromDayNr(
-                !call SetClimRecord_ToDayNr(
-                !call SetClimRecord_FromString(
-                !call SetClimRecord_ToString
 
                 AC70_struc(n)%ac70(t)%SoilLayer = GetSoilLayer()
                 AC70_struc(n)%ac70(t)%Soil = GetSoil()
                 AC70_struc(n)%ac70(t)%NrCompartments = GetNrCompartments()
-                ! Set again soil global variables 
-                
-                !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                ! Temporary: redo setting of parameters
+                ! Reset soil variables due to internal AquaCrop default routines 
                 AC70_struc(n)%ac70(t)%SoilLayer(1)%wp = WP(AC70_struc(n)%ac70(t)%soiltype) * 100
                 AC70_struc(n)%ac70(t)%SoilLayer(1)%sat = SAT(AC70_struc(n)%ac70(t)%soiltype) * 100
                 AC70_struc(n)%ac70(t)%SoilLayer(1)%fc = FC(AC70_struc(n)%ac70(t)%soiltype) * 100
@@ -1058,17 +931,7 @@ subroutine Ac70_setup()
                 call SetPathNameParam(trim(AC70_struc(n)%PathNameParam))
                 call SetPathNameProg('')
                 !
-                !TheProjectFile = "LIS"
-                !call SetMultipleProjectFile(TheProjectFile)
-                !call SetMultipleProjectFileFull(GetPathNameList() // &
-                !                        GetMultipleProjectFile())
-                !!call GetNumberSimulationRuns(GetMultipleProjectFileFull(), &
-                !                                            TotalSimRuns)
                 call SetMultipleProjectDescription('undefined')
-                !FullFileNameProgramParametersLocal = GetFullFileNameProgramParameters()
-                !call ComposeFileForProgramParameters(GetMultipleProjectFile(), &
-                !                          FullFileNameProgramParametersLocal)
-                !call SetFullFileNameProgramParameters(FullFileNameProgramParametersLocal)
                 ProgramParametersAvailable = .false.
                 call SetFullFileNameProgramParameters("(None)")
                 call LoadProgramParametersProjectPlugIn(&
@@ -1080,18 +943,10 @@ subroutine Ac70_setup()
                 MultipleRunConstZrx_temp = GetSimulation_MultipleRunConstZrx()
                 call CheckForKeepSWC(MultipleRunWithKeepSWC_temp, &
                                      MultipleRunConstZrx_temp)
-                !call CheckForKeepSWC(GetMultipleProjectFileFull(), &  
-                !    GetSimulation_NrRuns(), &       
-                !    MultipleRunWithKeepSWC_temp, & 
-                !    MultipleRunConstZrx_temp)  
                 call SetSimulation_MultipleRunWithKeepSWC(MultipleRunWithKeepSWC_temp) 
                 call SetSimulation_MultipleRunConstZrx(MultipleRunConstZrx_temp)        
 
-                ! The remainder of this loop is the equivalent of "RunSimulation()"
-                ! call InitializeSimulation(TheProjectFile, TheProjectType)
-                !call SetTheProjectFile(trim(TheProjectFile))
-
-                ! Overwrite all AC70_struc after Initialization
+                ! Set AC70_struc after Initialization
                 AC70_struc(n)%ac70(t)%RootZoneWC_Actual = GetRootZoneWC_Actual()
                 AC70_struc(n)%ac70(t)%RootZoneWC_FC = GetRootZoneWC_FC()
                 AC70_struc(n)%ac70(t)%RootZoneWC_WP = GetRootZoneWC_WP()
@@ -1266,143 +1121,13 @@ subroutine Ac70_setup()
             AC70_struc(n)%ac70(t)%NoMoreCrop = GetNoMoreCrop()
             AC70_struc(n)%ac70(t)%CGCadjustmentAfterCutting = GetCGCadjustmentAfterCutting()
                 
-
-            ! 
-            !!! MB_AC70
-            !call GetTimeAggregationResults()
-            !call GetRequestDailyResults()
-            !call GetRequestParticularResults()
-            !call PrepareReport()
-
-            !ListProjectsFile = GetListProjectsFile()
-            !inquire(file=trim(ListProjectsFile), exist=ListProjectFileExist)
-            !nprojects = GetNumberOfProjects()
-
-            !if (nprojects > 0) then
-            !    call WriteProjectsInfo('')
-            !    call WriteProjectsInfo('Projects handled:')
-            !end if
-            
-            !do iproject = 1, nprojects
-                !TheProjectFile = GetProjectFileName(iproject)
-                !TheProjectFile = GetProjectFileName(1)
-                !call GetProjectType(TheProjectFile, TheProjectType)
- !               TheProjectType = 1 ! for LIS always set to multiple years
- !               call InitializeProject(iproject, TheProjectFile, TheProjectType)
-            
-                ! The remainder of this loop is the equivalent of "RunSimulation()"
- !               call InitializeSimulation(TheProjectFile, TheProjectType)
-                ! 
-            !end do
             !!! MB_AC70
 
-
-            ! MB:
-
-            ! SY: Begin SOIL PARAMETER CONSTRAINT
-            AC70_struc(n)%ac70(t)%smcdry = DRYSMC(AC70_struc(n)%ac70(t)%soiltype)
-            ! SY: End SOIL PARAMETER CONSTRAINT
-
-            ! SY: Begin UNIVERSAL PARAMETERS
-            AC70_struc(n)%ac70(t)%czil = CZIL_DATA
-            AC70_struc(n)%ac70(t)%frzk = FRZK_DATA
-            AC70_struc(n)%ac70(t)%refdk = REFDK_DATA
-            AC70_struc(n)%ac70(t)%refkdt = REFKDT_DATA
-            AC70_struc(n)%ac70(t)%slope = SLOPE_DATA(AC70_struc(n)%ac70(t)%slopetype)
-            ! SY: End UNIVERSAL PARAMETERS
-
-            ! SY: Begin VEGETATION PARAMETERS
-            IF (AC70_struc(n)%ac70(t)%vegetype .gt. LUCATS) THEN
-               write(LIS_logunit, *) 'VEGTYP must be less than LUCATS:'
-               write(LIS_logunit, '("t = ", I6, "; VEGTYP = ", I6, ";    LUCATS = ", I6)') &
-                         t, AC70_struc(n)%ac70(t)%vegetype, LUCATS
-               write(LIS_logunit, *) 'Ac70_setup: Error: too many input landuse types'
-               write(LIS_logunit, *) 'program stopping ...'
-               call LIS_endrun
-            END IF
-            AC70_struc(n)%ac70(t)%topt = TOPT_DATA
-            AC70_struc(n)%ac70(t)%rgl = RGLTBL(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%rsmax = RSMAX_DATA
-            AC70_struc(n)%ac70(t)%rsmin = RSTBL(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%hs = HSTBL(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%nroot = & 
-                 NROTBL(AC70_struc(n)%ac70(t)%vegetype)
-
-            !IF (NROTBL(AC70_struc(n)%ac70(t)%vegetype) .gt. &
-            !    AC70_struc(n)%nsoil) THEN
-            !   WRITE (LIS_logunit,*) 'Warning: too many root layers'
-            !   write (LIS_logunit,*) 'NROOT = ', NROTBL(AC70_struc(n)%ac70(t)%vegetype)
-            !   write (LIS_logunit,*) 'NSOIL = ', AC70_struc(n)%nsoil
-            !   write(LIS_logunit, *) 'program stopping ...'
-            !   call LIS_endrun
-            !END IF
-            ! SY: End VEGETATION PARAMETERS
-
-            ! SY: End lines following those in REDPRM
-
-        enddo ! do t = 1, LIS_rc%npatch(n, mtype)
-        ! SY: End for enabling OPTUE 
-
-        call read_mp_veg_parameters(trim(AC70_struc(n)%ac_tbl_name), &
-                                    trim(AC70_struc(n)%landuse_scheme_name))
-
-        ! SY: Begin for enabling OPTUE 
-        do t = 1, LIS_rc%npatch(n, mtype)
-            
-            col = LIS_surface(n, mtype)%tile(t)%col
-            row = LIS_surface(n, mtype)%tile(t)%row
-
-            ! SY: Begin lines following those in read_mp_veg_parameters
-            AC70_struc(n)%ac70(t)%CH2OP = CH2OP(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%DLEAF = DLEAF(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%Z0MVT = Z0MVT(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%HVT = HVT(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%HVB = HVB(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%RC = RC(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%RHOL1 = RHOL(AC70_struc(n)%ac70(t)%vegetype,1)
-            AC70_struc(n)%ac70(t)%RHOL2 = RHOL(AC70_struc(n)%ac70(t)%vegetype,2)
-            AC70_struc(n)%ac70(t)%RHOS1 = RHOS(AC70_struc(n)%ac70(t)%vegetype,1)
-            AC70_struc(n)%ac70(t)%RHOS2 = RHOS(AC70_struc(n)%ac70(t)%vegetype,2)
-            AC70_struc(n)%ac70(t)%TAUL1 = TAUL(AC70_struc(n)%ac70(t)%vegetype,1)
-            AC70_struc(n)%ac70(t)%TAUL2 = TAUL(AC70_struc(n)%ac70(t)%vegetype,2)
-            AC70_struc(n)%ac70(t)%TAUS1 = TAUS(AC70_struc(n)%ac70(t)%vegetype,1)
-            AC70_struc(n)%ac70(t)%TAUS2 = TAUS(AC70_struc(n)%ac70(t)%vegetype,2)
-            AC70_struc(n)%ac70(t)%XL = XL(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%CWPVT = CWPVT(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%C3PSN = C3PSN(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%KC25 = KC25(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%AKC = AKC(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%KO25 = KO25(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%AKO = AKO(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%AVCMX = AVCMX(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%AQE = AQE(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%LTOVRC = LTOVRC(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%DILEFC = DILEFC(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%DILEFW = DILEFW(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%RMF25 = RMF25(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%SLA = SLA(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%FRAGR = FRAGR(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%TMIN = TMIN(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%VCMX25 = VCMX25(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%TDLEF = TDLEF(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%BP = BP(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%MP = MP(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%QE25 = QE25(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%RMS25 = RMS25(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%RMR25 = RMR25(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%ARM = ARM(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%FOLNMX = FOLNMX(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%WDPOOL = WDPOOL(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%WRRAT = WRRAT(AC70_struc(n)%ac70(t)%vegetype)
-            AC70_struc(n)%ac70(t)%MRP = MRP(AC70_struc(n)%ac70(t)%vegetype)
-            ! SY: End lines following those in read_mp_veg_parameters
-            
-            ! MB:
             AC70_struc(n)%ac70(t)%NrRuns = NrRuns
             AC70_struc(n)%ac70(t)%TheProjectType = TheProjectType
 
         enddo ! do t = 1, LIS_rc%npatch(n, mtype)
-        ! SY: End for enabling OPTUE 
+
     enddo
 
 end subroutine Ac70_setup

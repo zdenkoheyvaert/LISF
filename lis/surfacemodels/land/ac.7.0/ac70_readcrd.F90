@@ -335,12 +335,6 @@ subroutine Ac70_readcrd()
         call LIS_verify(ios, 'Error in nf90_get_att: NUMBER_LANDCATS')
     enddo
  
-    ! the number of total slope category for Noah baseflow
-    do n=1, LIS_rc%nnest
-        ios = nf90_get_att(nids(n), NF90_GLOBAL, 'NUMBER_SLOPETYPES', AC70_struc(n)%nslpcats)
-        call LIS_verify(ios, 'Error in nf90_get_att: NUMBER_SLOPETYPES')
-    enddo
- 
     do n=1, LIS_rc%nnest
       AC70_struc(n)%dt = AC70_struc(n)%ts
     enddo 
