@@ -136,7 +136,7 @@ contains
     call registerlsmparamprocwritedata(trim(LDT_noahmp401Id)//char(0),&
          NoahParms_writeData)
 
-  ! AquaCrop 7.0 LSM:
+  ! Aquacrop.7.0 LSM:
     call registerlsmparamprocinit(trim(LDT_ac70Id)//char(0),&
          AquaCropParms_init)
     call registerlsmparamprocwriteheader(trim(LDT_ac70Id)//char(0),&

@@ -1826,7 +1826,7 @@ module LDT_soilsMod
     endif
 
   ! Attributes serving AquaCrop only (at this time):
-    if (LDT_rc%lsm.eq."AquaCrop.7.0") then
+    if (LDT_rc%lsm.eq."Aquacrop.7.0") then
     ! Number of soil types:
       if( LDT_rc%soil_classification(1) == "STATSGO" ) then
          call LDT_verify(nf90_put_att(ftn,NF90_GLOBAL,"NUMBER_SOILTYPES", &

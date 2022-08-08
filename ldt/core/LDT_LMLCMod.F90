@@ -886,8 +886,8 @@ contains
       end select
     endif
 
-  ! Attributes serving AquaCrop only (at this time):
-    if (LDT_rc%lsm.eq."AquaCrop.7.0") then
+  ! Attributes serving Aquacrop only (at this time):
+    if (LDT_rc%lsm.eq."Aquacrop.7.0") then
       select case( LDT_rc%lc_type(n) ) 
        case( "IGBPNCEP" ) 
          call LDT_verify(nf90_put_att(ftn,NF90_GLOBAL,"NUMBER_LANDCATS", &
