@@ -23,6 +23,7 @@ subroutine noahmp401_sfc2vod(n, sfcState)
   use LIS_constantsMod,  only : LIS_CONST_RHOFW
 
   use Noahmp401_lsmMod
+  use NOAHMP_TABLES_401, ONLY : SMCMAX_TABLE,SMCWLT_TABLE, PSISAT_TABLE, BEXP_TABLE
 
   implicit none
 ! !ARGUMENTS: 
@@ -38,8 +39,12 @@ subroutine noahmp401_sfc2vod(n, sfcState)
 !
 !EOP
   type(ESMF_Field)    :: laiField, sm1field, sm2field, sm3field, sm4field
+  type(ESMF_Field)    :: cwcfield, psifield, tvegfield
   real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
-  integer             :: t,status
+  real, pointer       :: cwc(:), psi(:), tveg(:)
+  integer             :: t,status, soiltyp, nroot, iz
+  real, parameter     :: PSIWLT = -150.
+  real                :: smcmax, smcwlt, psisat, sh2o, tmp_psi, dz, ztotal
 
   call ESMF_StateGet(sfcState,"Leaf Area Index",laiField,rc=status)
   call LIS_verify(status)
@@ -66,12 +71,45 @@ subroutine noahmp401_sfc2vod(n, sfcState)
   call ESMF_FieldGet(sm4field,localDE=0,farrayPtr=sm4, rc=status)
   call LIS_verify(status)
 
+  call ESMF_StateGet(sfcState,"Canopy Water Content",cwcfield,rc=status)
+  call LIS_verify(status)
+  call ESMF_FieldGet(cwcfield,localDE=0,farrayPtr=cwc, rc=status)
+  call LIS_verify(status)
+
+  call ESMF_StateGet(sfcState,"Vegetation Transpiration",tvegfield,rc=status)
+  call LIS_verify(status)
+  call ESMF_FieldGet(tvegfield,localDE=0,farrayPtr=tveg, rc=status)
+  call LIS_verify(status)
+
+  call ESMF_StateGet(sfcState,"Root Zone Soil Water Potential",psifield,rc=status)
+  call LIS_verify(status)
+  call ESMF_FieldGet(psifield,localDE=0,farrayPtr=psi, rc=status)
+  call LIS_verify(status)
+
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
       lai(t) = noahmp401_struc(n)%noahmp401(t)%lai
       sm1(t) = noahmp401_struc(n)%noahmp401(t)%smc(1)
       sm2(t) = noahmp401_struc(n)%noahmp401(t)%smc(2)
       sm3(t) = noahmp401_struc(n)%noahmp401(t)%smc(3)
       sm4(t) = noahmp401_struc(n)%noahmp401(t)%smc(4)
+      cwc(t) = noahmp401_struc(n)%noahmp401(t)%canliq
+      tveg(t) = noahmp401_struc(n)%noahmp401(t)%etran
+
+      ! calculate root-zone averaged PSI
+      soiltyp = noahmp401_struc(n)%noahmp401(t)%soiltype
+      smcmax = SMCMAX_TABLE(soiltyp)
+      smcwlt = SMCWLT_TABLE(soiltyp)
+      psisat = PSISAT_TABLE(soiltyp)
+      bexp = BEXP_TABLE(soiltyp)
+      nroot = noahmp401_struc(n)%noahmp401(t)%param%nroot
+      ztotal = noahmp401_struc(n)%noahmp401(t)zss(nroot)
+      psi(t) = 0.0
+      do iz = 1, nroot
+          dz = noahmp401_struc(n)%noahmp401(t)%zss(iz-1) - noahmp401_struc(n)%noahmp401(t)%zss(iz)
+          sh2o = noahmp401_struc(n)%noahmp401(t)%sh2o(iz)
+          tmp_psi = max(PSIWLT, -psisat * (max(0.01, sh2o)/smcmax)**(-bexp))
+          psi(t) = psi(t) + dz / ztotal * tmp_psi
+      enddo
   enddo
 
 end subroutine noahmp401_sfc2vod

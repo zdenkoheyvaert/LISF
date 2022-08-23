@@ -92,7 +92,6 @@ module VODFM_Mod
         real, allocatable :: VOD(:)
         contains
         procedure, pass(self) :: initialize => VODFM_initialize_default
-        procedure, pass(self) :: prepare_run => VODFM_prepare_run_default
         procedure, pass(self) :: run => VODFM_run_default
     end type vodfm_type_dec
 
@@ -107,7 +106,6 @@ module VODFM_Mod
         real, allocatable :: sm4coef(:,:)
         contains
             procedure, pass(self) :: initialize => VODFM_initialize_linear_model
-            procedure, pass(self) :: prepare_run => VODFM_prepare_run_linear_model
             procedure, pass(self) :: run => VODFM_run_linear_model
     end type vodfm_linear_model
 
@@ -123,9 +121,21 @@ module VODFM_Mod
         real, allocatable :: gam(:,:)
         contains
             procedure, pass(self) :: initialize => VODFM_initialize_svr_model
-            procedure, pass(self) :: prepare_run => VODFM_prepare_run_svr_model
             procedure, pass(self) :: run => VODFM_run_svr_model
     end type vodfm_svr_model
+
+    type, extends(vodfm_type_dec) :: vodfm_X_model
+        integer           :: ntimes
+        integer           :: timeidx
+        real, allocatable :: intercept(:,:)
+        real, allocatable :: cwccoef(:,:)
+        real, allocatable :: laicoef(:,:)
+        real, allocatable :: laipsicoef(:,:)
+        real, allocatable :: laisqtvegcoef(:,:)
+        contains
+            procedure, pass(self) :: initialize => VODFM_initialize_X_model
+            procedure, pass(self) :: run => VODFM_run_X_model
+    end type vodfm_linear_model
 
 
     class(vodfm_type_dec), allocatable :: vodfm_struc(:)
@@ -166,8 +176,11 @@ contains
         do n=1, LIS_rc%nnest
             call ESMF_ConfigGetAttribute(LIS_config, modeltype(n), rc=rc)
             call LIS_verify(rc, "VODFM model type: not defined")
-            if (modeltype(n) .ne. "linear" .and. modeltype(n) .ne. "SVR") then
-                write(LIS_logunit,*) "[ERR] VODFM model type must be 'linear' or 'svr'"
+            if (modeltype(n) .ne. "linear"&
+                 .and. modeltype(n) .ne. "SVR"&
+                 .and. modeltype(n) .ne. "X") then
+                write(LIS_logunit, *)&
+                     "[ERR] VODFM model type must be 'linear', 'SVR' or 'X'"
                 call LIS_endrun
             endif
         enddo
@@ -182,8 +195,11 @@ contains
             allocate(vodfm_linear_model :: vodfm_struc(LIS_rc%nnest))
         elseif (modeltype(1) == "SVR") then
             allocate(vodfm_svr_model :: vodfm_struc(LIS_rc%nnest))
+        elseif (modeltype(1) == "X") then
+            allocate(vodfm_X_model :: vodfm_struc(LIS_rc%nnest))
         else
-            write(LIS_logunit, *) "[ERR] VODFM model type must be 'linear' or 'SVR'"
+            write(LIS_logunit, *)&
+                 "[ERR] VODFM model type must be 'linear', 'SVR' or 'X'"
             call LIS_endrun
         endif
 
@@ -196,6 +212,9 @@ contains
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 2")
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 3")
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 4")
+            call add_sfc_fields(n,LIS_sfcState(n), "Canopy Water Content")
+            call add_sfc_fields(n,LIS_sfcState(n), "Vegetation Transpiration")
+            call add_sfc_fields(n,LIS_sfcState(n), "Root Zone Soil Water Potential")
 
             call add_sfc_fields(n,LIS_forwardState(n),"VODFM_VOD")
         enddo
@@ -343,6 +362,69 @@ contains
              self%support_vectors, ngrid_first=.false.)
 #endif
     end subroutine VODFM_initialize_svr_model
+
+    subroutine VODFM_initialize_X_model(self, n)
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
+        use netcdf
+#endif
+        class(vodfm_X_model), intent(inout) :: self
+        integer, intent(in) :: n
+
+        integer :: ios, nid, npatch
+        integer :: ngridId, ntimesId, ngrid, ntimes
+
+#if !(defined USE_NETCDF3 || defined USE_NETCDF4)
+        write(LIS_logunit,*) "[ERR] VODFM requires NETCDF"
+        call LIS_endrun
+#else
+        ! try opening the parameter file
+        write(LIS_logunit,*) '[INFO] Reading ',&
+            trim(self%parameter_fname)
+        ios = nf90_open(path=trim(self%parameter_fname),&
+            mode=NF90_NOWRITE,ncid=nid)
+        call LIS_verify(ios,'Error opening file '&
+            //trim(vodfm_struc(n)%parameter_fname))
+
+        ! check if ngrid is as expected
+        ios = nf90_inq_dimid(nid, "ngrid", ngridId)
+        call LIS_verify(ios, "Error nf90_inq_varid: ngrid")
+        ios = nf90_inquire_dimension(nid, ngridId, len=ngrid)
+        call LIS_verify(ios, "Error nf90_inquire_dimension: ngrid")
+        if (ngrid /= LIS_rc%glbngrid_red(n)) then
+            write(LIS_logunit, *) "[ERR] ngrid in "//trim(self%parameter_fname)&
+                 //" not consistent with expected ngrid: ", ngrid,&
+                 " instead of ",LIS_rc%glbngrid_red(n)
+            call LIS_endrun
+        endif
+
+        ! read ntimes
+        ios = nf90_inq_dimid(nid, "ntimes", ntimesId)
+        call LIS_verify(ios, "Error nf90_inq_varid: ntimes")
+        ios = nf90_inquire_dimension(nid, ntimesId, len=ntimes)
+        call LIS_verify(ios, "Error nf90_inquire_dimension: ntimes")
+        self%ntimes = ntimes
+
+        ! now that we have ntimes, we can allocate the coefficient arrays
+        ! for the nest
+        npatch = LIS_rc%npatch(n, LIS_rc%lsm_index)
+        allocate(self%intercept(npatch, ntimes))
+        allocate(self%cwccoef(npatch, ntimes))
+        allocate(self%laicoef(npatch, ntimes))
+        allocate(self%laipsicoef(npatch, ntimes))
+        allocate(self%laisqtvegcoef(npatch, ntimes))
+
+        call read_2d_coef_from_file(n, nid, ngrid, ntimes, "intercept", &
+            self%intercept)
+        call read_2d_coef_from_file(n, nid, ngrid, ntimes, "CWC_coef", &
+            self%cwccoef)
+        call read_2d_coef_from_file(n, nid, ngrid, ntimes, "LAI_coef", &
+            self%laicoef)
+        call read_2d_coef_from_file(n, nid, ngrid, ntimes, "LAIPSI_coef", &
+            self%laipsicoef)
+        call read_2d_coef_from_file(n, nid, ngrid, ntimes, "LAI2TVEG_coef", &
+            self%laisqtvegcoef)
+#endif
+    end subroutine VODFM_initialize_X_model
 
     subroutine read_1d_coef_from_file(n, nid, ngrid, varname, coef)
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
@@ -551,8 +633,18 @@ contains
 
     end subroutine VODFM_geometry
 
-
     subroutine VODFM_run(n)
+        use LIS_histDataMod
+        ! !USES:
+        implicit none
+
+        integer, intent(in) :: n
+
+        call vodfm_struc(n)%run(n)
+
+    end subroutine VODFM_run
+
+    subroutine VODFM_run_linear_model(n)
         use LIS_histDataMod
         ! !USES:
         implicit none
@@ -564,6 +656,9 @@ contains
         integer             :: col,row
         real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
         real, pointer       :: vodval(:)
+        real                :: intercept
+        real                :: laicoef, sm1coef, sm2coef, sm3coef, sm4coef
+        logical             :: coefs_valid, values_valid
 
         !   map surface properties to SFC
         call getsfcvar(LIS_sfcState(n), "Leaf Area Index", lai)
@@ -572,14 +667,55 @@ contains
         call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 3", sm3)
         call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 4", sm4)
 
-        call vodfm_struc(n)%prepare_run()
+        if (vodfm_struc(n)%ntimes == 1) then
+            vodfm_struc(n)%timeidx = 1
+        elseif (vodfm_struc(n)%ntimes == 12) then
+            vodfm_struc(n)%timeidx = LIS_rc%mo
+        else
+            write(LIS_logunit, *) "[ERR] ntimes in "//trim(vodfm_struc(n)%parameter_fname)&
+                 //" must be 1 or 12, but is ", vodfm_struc(n)%ntimes
+            call LIS_endrun
+        endif
 
         !---------------------------------------------
         ! Patch loop
         !--------------------------------------------
         do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
 
-            call vodfm_struc(n)%run(t, lai, sm1, sm2, sm3, sm4)
+            intercept = vodfm_struc(n)%intercept(t, vodfm_struc(n)%timeidx)
+            laicoef = vodfm_struc(n)%laicoef(t, vodfm_struc(n)%timeidx)
+            sm1coef = vodfm_struc(n)%sm1coef(t, vodfm_struc(n)%timeidx)
+            sm2coef = vodfm_struc(n)%sm2coef(t, vodfm_struc(n)%timeidx)
+            sm3coef = vodfm_struc(n)%sm3coef(t, vodfm_struc(n)%timeidx)
+            sm4coef = vodfm_struc(n)%sm4coef(t, vodfm_struc(n)%timeidx)
+
+            ! For some pixels no VOD was available and therefore no forward
+            ! model was fitted. No assimilation will take place over these
+            ! pixels anyways, so it's no problem to not predict anything here
+            coefs_valid = (.not.isnan(intercept).and.intercept.ne.LIS_rc%udef&
+                 .and..not.isnan(sm1coef).and.sm1coef.ne.LIS_rc%udef&
+                 .and..not.isnan(sm2coef).and.sm2coef.ne.LIS_rc%udef&
+                 .and..not.isnan(sm3coef).and.sm3coef.ne.LIS_rc%udef&
+                 .and..not.isnan(sm4coef).and.sm4coef.ne.LIS_rc%udef)
+
+            ! normally the modelled values should not be invalid, but just to
+            ! be on the safe side
+            values_valid = (.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef)
+
+            if (coefs_valid.and.values_valid) then
+                vodfm_struc(n)%VOD(t) = intercept&
+                     + laicoef * lai(t)&
+                     + sm1coef * sm1(t)&
+                     + sm2coef * sm2(t)&
+                     + sm3coef * sm3(t)&
+                     + sm4coef * sm4(t)
+            else
+                vodfm_struc(n)%VOD(t)=LIS_rc%udef
+            endif
 
             if (vodfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodfm_struc(n)%VOD(t).lt.-10) then
                 write(LIS_logunit, *) "[WARN] VOD lower than -10"
@@ -595,98 +731,20 @@ contains
         call getsfcvar(LIS_forwardState(n),"VODFM_VOD", vodval)
         vodval = vodfm_struc(n)%VOD
 
-    end subroutine VODFM_run
-
-    subroutine VODFM_prepare_run_default(self)
-        implicit none
-        class(vodfm_type_dec), intent(inout) :: self
-        write(LIS_logunit,*) "[ERR] VODFM should use linear or svr model"
-        call LIS_endrun
-    end subroutine VODFM_prepare_run_default
-
-    subroutine VODFM_prepare_run_linear_model(self)
-        implicit none
-        class(vodfm_linear_model), intent(inout) :: self
-
-        if (self%ntimes == 1) then
-            self%timeidx = 1
-        elseif (self%ntimes == 12) then
-            self%timeidx = LIS_rc%mo
-        else
-            write(LIS_logunit, *) "[ERR] ntimes in "//trim(self%parameter_fname)&
-                 //" must be 1 or 12, but is ", self%ntimes
-            call LIS_endrun
-        endif
-    end subroutine VODFM_prepare_run_linear_model
-
-    subroutine VODFM_prepare_run_svr_model(self)
-        implicit none
-        class(vodfm_svr_model), intent(inout) :: self
-    end subroutine VODFM_prepare_run_svr_model
-
-    subroutine VODFM_run_default(self, t, lai, sm1, sm2, sm3, sm4)
-        implicit none
-        class(vodfm_type_dec), intent(inout) :: self
-        integer, intent(in) :: t
-        real, intent(in)    :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
-        write(LIS_logunit,*) "[ERR] VODFM should use linear or svr model"
-        call LIS_endrun
-    end subroutine VODFM_run_default
-
-    subroutine VODFM_run_linear_model(self, t, lai, sm1, sm2, sm3, sm4)
-        implicit none
-        class(vodfm_linear_model), intent(inout) :: self
-        integer, intent(in) :: t
-        real, intent(in)    :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
-
-        real                :: intercept
-        real                :: laicoef, sm1coef, sm2coef, sm3coef, sm4coef
-        logical             :: coefs_valid, values_valid
-
-        intercept = self%intercept(t, self%timeidx)
-        laicoef = self%laicoef(t, self%timeidx)
-        sm1coef = self%sm1coef(t, self%timeidx)
-        sm2coef = self%sm2coef(t, self%timeidx)
-        sm3coef = self%sm3coef(t, self%timeidx)
-        sm4coef = self%sm4coef(t, self%timeidx)
-
-        ! For some pixels no VOD was available and therefore no forward
-        ! model was fitted. No assimilation will take place over these
-        ! pixels anyways, so it's no problem to not predict anything here
-        coefs_valid = (.not.isnan(intercept).and.intercept.ne.LIS_rc%udef&
-             .and..not.isnan(sm1coef).and.sm1coef.ne.LIS_rc%udef&
-             .and..not.isnan(sm2coef).and.sm2coef.ne.LIS_rc%udef&
-             .and..not.isnan(sm3coef).and.sm3coef.ne.LIS_rc%udef&
-             .and..not.isnan(sm4coef).and.sm4coef.ne.LIS_rc%udef)
-
-        ! normally the modelled values should not be invalid, but just to
-        ! be on the safe side
-        values_valid = (.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef)
-
-        if (coefs_valid.and.values_valid) then
-            self%VOD(t) = intercept&
-                 + laicoef * lai(t)&
-                 + sm1coef * sm1(t)&
-                 + sm2coef * sm2(t)&
-                 + sm3coef * sm3(t)&
-                 + sm4coef * sm4(t)
-        else
-            self%VOD(t)=LIS_rc%udef
-        endif
     end subroutine VODFM_run_linear_model
 
-    subroutine VODFM_run_svr_model(self, t, lai, sm1, sm2, sm3, sm4)
-        ! calculates VOD based on modelled input values
+    subroutine VODFM_run_svr_model(n)
+        use LIS_histDataMod
+        ! !USES:
         implicit none
 
-        class(vodfm_svr_model), intent(inout) :: self
-        integer, intent(in) :: t
-        real, intent(in)    :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
+        integer, intent(in) :: n
 
+        integer             :: t
+        integer             :: status
+        integer             :: col,row
+        real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
+        real, pointer       :: vodval(:)
         integer             :: j
         real                :: intercept, actual_n_SV, dual_coef
         real                :: gam(5), support_vectors(5)
@@ -694,41 +752,148 @@ contains
         logical             :: coefs_valid, values_valid
 
 
-        intercept = self%intercept(t)
-        actual_n_SV = self%actual_n_SV(t)
-        gam = self%gam(:, t)
+        !   map surface properties to SFC
+        call getsfcvar(LIS_sfcState(n), "Leaf Area Index", lai)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 1", sm1)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 2", sm2)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 3", sm3)
+        call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 4", sm4)
 
-        ! For some pixels no VOD was available and therefore no forward
-        ! model was fitted. No assimilation will take place over these
-        ! pixels anyways, so it's no problem to not predict anything here
-        coefs_valid = (.not.isnan(intercept).and.intercept.ne.LIS_rc%udef)
+        !---------------------------------------------
+        ! Patch loop
+        !--------------------------------------------
+        do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
 
-        ! normally the modelled values should not be invalid, but just to
-        ! be on the safe side
-        values_valid = (.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
-             .and..not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef)
+            intercept = self%intercept(t)
+            actual_n_SV = self%actual_n_SV(t)
+            gam = self%gam(:, t)
 
-        if (coefs_valid.and.values_valid) then
-            ! VOD = \sum_j dual_coef[j] * K(x, s[j])
-            self%VOD(t) = intercept
-            do j=1, actual_n_SV
-                dual_coef = self%dual_coef(j, t)
-                support_vectors = self%support_vectors(:, j, t)
-                ! calculate kernel value
-                ! K = exp(-\sum_k gamma[k] * (x[k] - s[k])**2)
-                kernelval = exp(-gam(1) * (lai(t) - support_vectors(1))**2&
-                     - gam(2) * (sm1(t) - support_vectors(2))**2&
-                     - gam(3) * (sm2(t) - support_vectors(3))**2&
-                     - gam(4) * (sm3(t) - support_vectors(4))**2&
-                     - gam(5) * (sm4(t) - support_vectors(5))**2)
-                self%VOD(t) = self%VOD(t) + dual_coef * kernelval
-            end do
-        else
-            self%VOD(t) = LIS_rc%udef
-        endif
+            ! For some pixels no VOD was available and therefore no forward
+            ! model was fitted. No assimilation will take place over these
+            ! pixels anyways, so it's no problem to not predict anything here
+            coefs_valid = (.not.isnan(intercept).and.intercept.ne.LIS_rc%udef)
+
+            ! normally the modelled values should not be invalid, but just to
+            ! be on the safe side
+            values_valid = (.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef)
+
+            if (coefs_valid.and.values_valid) then
+                ! VOD = \sum_j dual_coef[j] * K(x, s[j])
+                self%VOD(t) = intercept
+                do j=1, actual_n_SV
+                    dual_coef = self%dual_coef(j, t)
+                    support_vectors = self%support_vectors(:, j, t)
+                    ! calculate kernel value
+                    ! K = exp(-\sum_k gamma[k] * (x[k] - s[k])**2)
+                    kernelval = exp(-gam(1) * (lai(t) - support_vectors(1))**2&
+                         - gam(2) * (sm1(t) - support_vectors(2))**2&
+                         - gam(3) * (sm2(t) - support_vectors(3))**2&
+                         - gam(4) * (sm3(t) - support_vectors(4))**2&
+                         - gam(5) * (sm4(t) - support_vectors(5))**2)
+                    self%VOD(t) = self%VOD(t) + dual_coef * kernelval
+                end do
+            else
+                self%VOD(t) = LIS_rc%udef
+            endif
+
+            if (vodfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodfm_struc(n)%VOD(t).lt.-10) then
+                write(LIS_logunit, *) "[WARN] VOD lower than -10"
+            endif
+
+            call LIS_diagnoseRTMOutputVar(n, t, LIS_MOC_RTM_VOD,&
+                 value=vodfm_struc(n)%VOD(t),&
+                 vlevel=1,&
+                 unit="-",&
+                 direction="-")
+        enddo
+
+        call getsfcvar(LIS_forwardState(n),"VODFM_VOD", vodval)
+        vodval = vodfm_struc(n)%VOD
+
+    end subroutine VODFM_run_svr_model
+
+
+    subroutine VODFM_run_X_model(n)
+        use LIS_histDataMod
+        ! !USES:
+        implicit none
+
+        integer, intent(in) :: n
+
+        integer             :: t
+        integer             :: status
+        integer             :: col,row
+        real, pointer       :: cwc(:), lai(:), psi(:), tveg(:)
+        real, pointer       :: vodval(:)
+        real                :: intercept, cwccoef, laicoef, laipsicoef, laisqtvegcoef
+        logical             :: coefs_valid, values_valid
+
+
+        !   map surface properties to SFC
+        call getsfcvar(LIS_sfcState(n), "Canopy Water Content", cwc)
+        call getsfcvar(LIS_sfcState(n), "Leaf Area Index", lai)
+        call getsfcvar(LIS_sfcState(n), "Root Zone Soil Water Potential", psi)
+        call getsfcvar(LIS_sfcState(n), "Vegetation Transpiration", tveg)
+
+        !---------------------------------------------
+        ! Patch loop
+        !--------------------------------------------
+        do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
+
+            intercept = self%intercept(t)
+            actual_n_SV = self%actual_n_SV(t)
+            gam = self%gam(:, t)
+
+            ! For some pixels no VOD was available and therefore no forward
+            ! model was fitted. No assimilation will take place over these
+            ! pixels anyways, so it's no problem to not predict anything here
+            coefs_valid = (.not.isnan(intercept).and.intercept.ne.LIS_rc%udef)
+
+            ! normally the modelled values should not be invalid, but just to
+            ! be on the safe side
+            values_valid = (.not.isnan(lai(t)).and.lai(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm1(t)).and.sm1(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm2(t)).and.sm2(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm3(t)).and.sm3(t).ne.LIS_rc%udef&
+                 .and..not.isnan(sm4(t)).and.sm4(t).ne.LIS_rc%udef)
+
+            if (coefs_valid.and.values_valid) then
+                ! VOD = \sum_j dual_coef[j] * K(x, s[j])
+                self%VOD(t) = intercept
+                do j=1, actual_n_SV
+                    dual_coef = self%dual_coef(j, t)
+                    support_vectors = self%support_vectors(:, j, t)
+                    ! calculate kernel value
+                    ! K = exp(-\sum_k gamma[k] * (x[k] - s[k])**2)
+                    kernelval = exp(-gam(1) * (lai(t) - support_vectors(1))**2&
+                         - gam(2) * (sm1(t) - support_vectors(2))**2&
+                         - gam(3) * (sm2(t) - support_vectors(3))**2&
+                         - gam(4) * (sm3(t) - support_vectors(4))**2&
+                         - gam(5) * (sm4(t) - support_vectors(5))**2)
+                    self%VOD(t) = self%VOD(t) + dual_coef * kernelval
+                end do
+            else
+                self%VOD(t) = LIS_rc%udef
+            endif
+
+            if (vodfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodfm_struc(n)%VOD(t).lt.-10) then
+                write(LIS_logunit, *) "[WARN] VOD lower than -10"
+            endif
+
+            call LIS_diagnoseRTMOutputVar(n, t, LIS_MOC_RTM_VOD,&
+                 value=vodfm_struc(n)%VOD(t),&
+                 vlevel=1,&
+                 unit="-",&
+                 direction="-")
+        enddo
+
+        call getsfcvar(LIS_forwardState(n),"VODFM_VOD", vodval)
+        vodval = vodfm_struc(n)%VOD
+
     end subroutine VODFM_run_svr_model
 
 
