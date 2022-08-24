@@ -44,7 +44,7 @@ subroutine noahmp401_sfc2vod(n, sfcState)
   real, pointer       :: cwc(:), psi(:), tveg(:)
   integer             :: t,status, soiltyp, nroot, iz
   real, parameter     :: PSIWLT = -150.
-  real                :: smcmax, smcwlt, psisat, sh2o, tmp_psi, dz, ztotal
+  real                :: smcmax, smcwlt, psisat, sh2o, tmp_psi, dz, ztotal, bexp
 
   call ESMF_StateGet(sfcState,"Leaf Area Index",laiField,rc=status)
   call LIS_verify(status)
@@ -102,7 +102,7 @@ subroutine noahmp401_sfc2vod(n, sfcState)
       psisat = PSISAT_TABLE(soiltyp)
       bexp = BEXP_TABLE(soiltyp)
       nroot = noahmp401_struc(n)%noahmp401(t)%param%nroot
-      ztotal = noahmp401_struc(n)%noahmp401(t)zss(nroot)
+      ztotal = noahmp401_struc(n)%noahmp401(t)%zss(nroot)
       psi(t) = 0.0
       do iz = 1, nroot
           dz = noahmp401_struc(n)%noahmp401(t)%zss(iz-1) - noahmp401_struc(n)%noahmp401(t)%zss(iz)
