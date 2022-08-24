@@ -1,9 +1,9 @@
 !-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
 ! NASA Goddard Space Flight Center
 ! Land Information System Framework (LISF)
-! Version 7.3
+! Version 7.4
 !
-! Copyright (c) 2020 United States Government as represented by the
+! Copyright (c) 2022 United States Government as represented by the
 ! Administrator of the National Aeronautics and Space Administration.
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
@@ -291,6 +291,10 @@ subroutine LIS_metforcing_plugin
 #if ( defined MF_MRMS )
    use mrms_grib_forcingMod
 #endif
+
+#if ( defined MF_GDDP )
+   use gddp_forcingMod
+#endif   
 
 #if ( defined MF_MET_TEMPLATE )
    external get_metForcTemplate
@@ -623,6 +627,13 @@ subroutine LIS_metforcing_plugin
    external reset_mrms_grib
 #endif
 
+#if ( defined MF_GDDP )
+   external get_gddp
+   external timeinterp_gddp
+   external finalize_gddp
+   external reset_gddp
+#endif
+   
 #if ( defined MF_MET_TEMPLATE )
 ! - Meteorological Forcing Template:
    call registerinitmetforc(trim(LIS_metForcTemplateId)//char(0), &
@@ -1118,6 +1129,14 @@ subroutine LIS_metforcing_plugin
                                   timeinterp_mrms_grib)
    call registerfinalmetforc(trim(LIS_mrmsId)//char(0),finalize_mrms_grib)
    call registerresetmetforc(trim(LIS_mrmsId)//char(0),reset_mrms_grib)
+#endif
+#if ( defined MF_GDDP)
+   call registerinitmetforc(trim(LIS_gddpId)//char(0),init_gddp)
+   call registerretrievemetforc(trim(LIS_gddpId)//char(0),get_gddp)
+   call registertimeinterpmetforc(trim(LIS_gddpId)//char(0), &
+                                  timeinterp_gddp)
+   call registerfinalmetforc(trim(LIS_gddpId)//char(0),finalize_gddp)
+   call registerresetmetforc(trim(LIS_gddpId)//char(0),reset_gddp)
 #endif
 end subroutine LIS_metforcing_plugin
 
