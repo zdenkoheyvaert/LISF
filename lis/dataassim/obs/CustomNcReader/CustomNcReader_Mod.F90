@@ -327,11 +327,13 @@ contains
              "Custom "//trim(varname)//" assimilation hour:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(LIS_rc%lt_assim) then
+            if(reader_struc(n)%lt_assim) then
                 call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lt_hr, &
                      rc=status)
                 call LIS_verify(status, &
                      "Custom "//trim(varname)//" assimilation hour: not defined")
+            else
+                reader_struc(n)%lt_hr = 0.0
             endif
         enddo
 
@@ -874,16 +876,15 @@ contains
             reader_struc(n)%daobs  = LIS_rc%udef
             do r=1,LIS_rc%obs_lnr(k)
                 do c=1,LIS_rc%obs_lnc(k)
-                    grid_index = LIS_obs_domain(n,k)%gindex(c,r)
-                    if(grid_index.ne.-1) then 
-                        if(daobs(c+(r-1)*LIS_rc%obs_lnc(k)).gt.0) then             
+                    if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
+                        if(observations(c+(r-1)*LIS_rc%obs_lnc(k)).gt.0) then             
                             reader_struc(n)%daobs(c,r) = &
                                  observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
                             lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
 
                             ! datime is the UTC/GMT time at which the
                             ! assimilation should take place
-                            lhour = reader_struc(n)%da_hr
+                            lhour = reader_struc(n)%lt_hr
                             call LIS_localtime2gmt (gmt,lon,lhour,zone)
                             reader_struc(n)%datime(c,r) = gmt
                         endif
@@ -906,7 +907,6 @@ contains
         do r=1,LIS_rc%obs_lnr(k)
             do c=1,LIS_rc%obs_lnc(k)
                 if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
-                    grid_index = c+(r-1)*LIS_rc%obs_lnc(k)
                     dt = (LIS_rc%gmt - reader_struc(n)%datime(c,r))*3600.0
                     if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
                         obs_current(c, r) = reader_struc(n)%daobs(c, r)
