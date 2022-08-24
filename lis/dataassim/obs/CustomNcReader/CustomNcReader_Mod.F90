@@ -119,6 +119,8 @@ module CustomNcReader_Mod
         real,    allocatable   :: w12(:)
         real,    allocatable   :: w21(:)
         real,    allocatable   :: w22(:)
+        logical                :: lt_assim
+        integer                :: lt_hr
 
         real                   :: ssdev_inp
         real,    allocatable   :: model_xrange(:,:,:)
@@ -132,6 +134,9 @@ module CustomNcReader_Mod
 
         integer                :: nbins
         integer                :: ntimes
+
+        real,     allocatable      :: daobs(:,:)
+        real,     allocatable      :: datime(:,:)
 
     end type CustomNcReader_dec
 
@@ -303,6 +308,32 @@ contains
                                        / reader_struc(n)%spatialres) + 1
         enddo
 
+        !------------------------------------------------------------
+        ! DA options
+        !------------------------------------------------------------
+
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" assimilate at local time:",&
+                 rc=status)
+            if (status .ne. 0) then
+                reader_struc(n)%lt_assim = .true.
+            else
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lt_assim,&
+                     rc=status)
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" assimilation hour:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(LIS_rc%lt_assim) then
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lt_hr, &
+                     rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" assimilation hour: not defined")
+            endif
+        enddo
 
         !------------------------------------------------------------
         ! Options for scaling
@@ -392,6 +423,9 @@ contains
             call LIS_verify(status)
 
         enddo
+
+        allocate(reader_struc(n)%daobs(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
+        allocate(reader_struc(n)%datime(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
 
         write(LIS_logunit,*)&
              "[INFO] read Custom "//trim(varname)//" data specifications"
@@ -801,6 +835,8 @@ contains
         real                   :: ssdev(LIS_rc%obs_ngrid(k))
         type(ESMF_Field)       :: pertfield
         integer                :: timeidx
+        real                   :: lon, lhour, gmt, dt
+        integer                :: zone
 
 
         call ESMF_AttributeGet(OBS_State,"Data Directory",&
@@ -814,10 +850,15 @@ contains
         obs_unsc = LIS_rc%udef
         obs_current = LIS_rc%udef
 
-        ! Read the data from file
+        ! Read the data from the file at 0UTC and store it
         alarmCheck = LIS_isAlarmRinging(LIS_rc, "Custom "&
              //trim(reader_struc(n)%varname)//" read alarm")
         if(alarmCheck) then
+
+            reader_struc(n)%daobs = LIS_rc%udef
+            reader_struc(n)%datime = -1
+            observations = LIS_rc%udef
+
             call create_CustomNetCDF_filename(reader_struc(n)%nc_prefix,&
                  obsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
 
@@ -825,172 +866,188 @@ contains
             if(file_exists) then
                 call read_CustomNetCDF_data(n,k, fname,observations,&
                     reader_struc)
-                fnd = 1
             else
-                fnd = 0
                 write(LIS_logunit,*) '[WARN] Missing observation file: ',trim(fname)
             endif
-        else
-            fnd = 0
-            observations = LIS_rc%udef
-        endif
 
-
-        ! process the data
-        if(alarmCheck.and.(fnd.eq.1)) then
-
-            call ESMF_StateGet(OBS_State,"Observation01",varfield,&
-                 rc=status)
-            call LIS_verify(status, 'Error: StateGet Observation01')
-
-            call ESMF_FieldGet(varfield,localDE=0,farrayPtr=obsl,rc=status)
-            call LIS_verify(status, 'Error: FieldGet')
-
+            ! set daobs and datime
+            reader_struc(n)%daobs  = LIS_rc%udef
             do r=1,LIS_rc%obs_lnr(k)
                 do c=1,LIS_rc%obs_lnc(k)
-                    if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
-                        if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
-                            obs_current(c,r) =&
-                                observations(c+(r-1)*LIS_rc%obs_lnc(k))
-                            obs_unsc(LIS_obs_domain(n,k)%gindex(c,r)) = &
-                                 obs_current(c,r)
+                    grid_index = LIS_obs_domain(n,k)%gindex(c,r)
+                    if(grid_index.ne.-1) then 
+                        if(daobs(c+(r-1)*LIS_rc%obs_lnc(k)).gt.0) then             
+                            reader_struc(n)%daobs(c,r) = &
+                                 observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
+                            lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
+
+                            ! datime is the UTC/GMT time at which the
+                            ! assimilation should take place
+                            lhour = reader_struc(n)%da_hr
+                            call LIS_localtime2gmt (gmt,lon,lhour,zone)
+                            reader_struc(n)%datime(c,r) = gmt
                         endif
                     endif
                 enddo
             enddo
+        endif ! alarm check
 
+        call ESMF_StateGet(OBS_State,"Observation01",varfield,&
+             rc=status)
+        call LIS_verify(status, 'Error: StateGet Observation01')
 
-            !-------------------------------------------------------------------------
-            !  Transform data to the LSM climatology using a CDF-scaling approach
-            !-------------------------------------------------------------------------
+        call ESMF_FieldGet(varfield,localDE=0,farrayPtr=obsl,rc=status)
+        call LIS_verify(status, 'Error: FieldGet')
 
-            if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then
+        fnd = 0
+        obs_current = LIS_rc%udef
 
-                write(LIS_logunit,*) '[INFO] perform CDF matching'
-                call LIS_rescale_with_CDF_matching(     &
-                     n,k,                               &
-                     reader_struc(n)%nbins,         &
-                     reader_struc(n)%ntimes,        &
-                     reader_struc(n)%max_value, &
-                     reader_struc(n)%min_value, &
-                     reader_struc(n)%model_xrange,  &
-                     reader_struc(n)%obs_xrange,    &
-                     reader_struc(n)%model_cdf,     &
-                     reader_struc(n)%obs_cdf,       &
-                     obs_current)
-            elseif ((LIS_rc%dascaloption(k).eq."seasonal"&
-                     .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
-                 .and.fnd.ne.0) then
-
-                write(LIS_logunit,*) '[INFO] perform seasonal rescaling'
-                call CustomNcReader_rescale_with_seasonal_scaling(&
-                     n,k,&
-                     nint(LIS_get_curr_calday(LIS_rc, 0)), &
-                     reader_struc(n)%ntimes,        &
-                     reader_struc(n)%max_value, &
-                     reader_struc(n)%min_value, &
-                     reader_struc(n)%mult_scaling, &
-                     reader_struc(n)%model_mu,  &
-                     reader_struc(n)%model_sigma,  &
-                     reader_struc(n)%obs_mu,  &
-                     reader_struc(n)%obs_sigma,  &
-                     obs_current)
-
-            endif
-
-            !-------------------------------------------------------------------------
-            !  End transforming
-            !-------------------------------------------------------------------------
-
-            ! write transformed data to ESMF pointer
-            obsl = LIS_rc%udef
-            do r=1, LIS_rc%obs_lnr(k)
-                do c=1, LIS_rc%obs_lnc(k)
-                    if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
-                        obsl(LIS_obs_domain(n,k)%gindex(c,r)) = obs_current(c,r)
+        ! write only the values that should be assimilated now into obs_current
+        do r=1,LIS_rc%obs_lnr(k)
+            do c=1,LIS_rc%obs_lnc(k)
+                if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
+                    grid_index = c+(r-1)*LIS_rc%obs_lnc(k)
+                    dt = (LIS_rc%gmt - reader_struc(n)%datime(c,r))*3600.0
+                    if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
+                        obs_current(c, r) = reader_struc(n)%daobs(c, r)
+                        if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
+                            obs_unsc(LIS_obs_domain(n,k)%gindex(c,r)) = &
+                                 obs_current(c,r)
+                        endif
+                        if(obs_current(c,r).ne.LIS_rc%udef) then 
+                            fnd = 1
+                        endif
                     endif
-                enddo
+                endif
             enddo
+        enddo
 
-            !-------------------------------------------------------------------------
-            !  Apply LSM-based QC and screening of observations
-            !-------------------------------------------------------------------------     
-            call lsmdaqcobsstate(trim(LIS_rc%lsm)//"+"&
-                 //trim(reader_struc(n)%obsid)//char(0),n, k,OBS_state)
-            call LIS_checkForValidObs(n,k,obsl,fnd,obs_current)
+
+        !-------------------------------------------------------------------------
+        !  Transform data to the LSM climatology using a CDF-scaling approach
+        !-------------------------------------------------------------------------
+
+        if(LIS_rc%dascaloption(k).eq."CDF matching".and.fnd.ne.0) then
+
+            write(LIS_logunit,*) '[INFO] perform CDF matching'
+            call LIS_rescale_with_CDF_matching(     &
+                 n,k,                               &
+                 reader_struc(n)%nbins,         &
+                 reader_struc(n)%ntimes,        &
+                 reader_struc(n)%max_value, &
+                 reader_struc(n)%min_value, &
+                 reader_struc(n)%model_xrange,  &
+                 reader_struc(n)%obs_xrange,    &
+                 reader_struc(n)%model_cdf,     &
+                 reader_struc(n)%obs_cdf,       &
+                 obs_current)
+        elseif ((LIS_rc%dascaloption(k).eq."seasonal"&
+                 .or.LIS_rc%dascaloption(k).eq."seasonal multiplicative")&
+             .and.fnd.ne.0) then
+
+            write(LIS_logunit,*) '[INFO] perform seasonal rescaling'
+            call CustomNcReader_rescale_with_seasonal_scaling(&
+                 n,k,&
+                 nint(LIS_get_curr_calday(LIS_rc, 0)), &
+                 reader_struc(n)%ntimes,        &
+                 reader_struc(n)%max_value, &
+                 reader_struc(n)%min_value, &
+                 reader_struc(n)%mult_scaling, &
+                 reader_struc(n)%model_mu,  &
+                 reader_struc(n)%model_sigma,  &
+                 reader_struc(n)%obs_mu,  &
+                 reader_struc(n)%obs_sigma,  &
+                 obs_current)
+
+        endif
+
+        !-------------------------------------------------------------------------
+        !  End transforming
+        !-------------------------------------------------------------------------
+
+        ! write transformed data to ESMF pointer
+        obsl = LIS_rc%udef
+        do r=1, LIS_rc%obs_lnr(k)
+            do c=1, LIS_rc%obs_lnc(k)
+                if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
+                    obsl(LIS_obs_domain(n,k)%gindex(c,r)) = obs_current(c,r)
+                endif
+            enddo
+        enddo
+
+        !-------------------------------------------------------------------------
+        !  Apply LSM-based QC and screening of observations
+        !-------------------------------------------------------------------------     
+        call lsmdaqcobsstate(trim(LIS_rc%lsm)//"+"&
+             //trim(reader_struc(n)%obsid)//char(0),n, k,OBS_state)
+        call LIS_checkForValidObs(n,k,obsl,fnd,obs_current)
             
 
-            data_upd_flag_local = (fnd.ne.0)
+        data_upd_flag_local = (fnd.ne.0)
 #if (defined SPMD)
-            call MPI_ALLGATHER(data_upd_flag_local,1, &
-                 MPI_LOGICAL, data_upd_flag(:),&
-                 1, MPI_LOGICAL, LIS_mpi_comm, status)
+        call MPI_ALLGATHER(data_upd_flag_local,1, &
+             MPI_LOGICAL, data_upd_flag(:),&
+             1, MPI_LOGICAL, LIS_mpi_comm, status)
 #endif
-            data_upd = .false.
-            do p=1,LIS_npes
-                data_upd = data_upd.or.data_upd_flag(p)
+        data_upd = .false.
+        do p=1,LIS_npes
+            data_upd = data_upd.or.data_upd_flag(p)
+        enddo
+
+        if(data_upd) then
+
+            do t=1,LIS_rc%obs_ngrid(k)
+                gid(t) = t
+                if(obsl(t).ne.-9999.0) then
+                    assimflag(t) = 1
+                else
+                    assimflag(t) = 0
+                endif
             enddo
 
-            if(data_upd) then
+            call ESMF_AttributeSet(OBS_State,"Data Update Status",&
+                 .true. , rc=status)
+            call LIS_verify(status)
 
-                do t=1,LIS_rc%obs_ngrid(k)
-                    gid(t) = t
-                    if(obsl(t).ne.-9999.0) then
-                        assimflag(t) = 1
-                    else
-                        assimflag(t) = 0
-                    endif
-                enddo
-
-                call ESMF_AttributeSet(OBS_State,"Data Update Status",&
-                     .true. , rc=status)
+            if(LIS_rc%obs_ngrid(k).gt.0) then
+                call ESMF_AttributeSet(varfield,"Grid Number",&
+                     gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                 call LIS_verify(status)
+
+                call ESMF_AttributeSet(varfield,"Assimilation Flag",&
+                     assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                call LIS_verify(status)
+
+                call ESMF_AttributeSet(varfield, "Unscaled Obs",&
+                     obs_unsc, itemCount=LIS_rc%obs_ngrid(k), rc=status)
+                call LIS_verify(status, 'Error in setting Unscaled Obs attribute')
+
+            endif
+
+            ! rescale perturbation standard deviations if rescaling of the
+            ! data is performed
+            if(LIS_rc%dascaloption(k).ne."none".and.reader_struc(n)%useSsdevScal.eq.1) then
+                call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
+                     rc=status)
+                call LIS_verify(status, 'Error: StateGet Observation01')
+
+                ssdev = reader_struc(n)%ssdev_inp
+
+                timeidx = CustomNcReader_timeidx(reader_struc(n)%ntimes)
+
+                call CustomNcReader_updateSsdev(k,&
+                     reader_struc(n)%obs_sigma(:, timeidx),&
+                     reader_struc(n)%model_sigma(:, timeidx),&
+                     ssdev)
 
                 if(LIS_rc%obs_ngrid(k).gt.0) then
-                    call ESMF_AttributeSet(varfield,"Grid Number",&
-                         gid,itemCount=LIS_rc%obs_ngrid(k),rc=status)
+                    call ESMF_AttributeSet(pertfield,"Standard Deviation",&
+                         ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
                     call LIS_verify(status)
-
-                    call ESMF_AttributeSet(varfield,"Assimilation Flag",&
-                         assimflag,itemCount=LIS_rc%obs_ngrid(k),rc=status)
-                    call LIS_verify(status)
-
-                    call ESMF_AttributeSet(varfield, "Unscaled Obs",&
-                         obs_unsc, itemCount=LIS_rc%obs_ngrid(k), rc=status)
-                    call LIS_verify(status, 'Error in setting Unscaled Obs attribute')
-
                 endif
-
-                ! rescale perturbation standard deviations if rescaling of the
-                ! data is performed
-                if(LIS_rc%dascaloption(k).ne."none".and.reader_struc(n)%useSsdevScal.eq.1) then
-                    call ESMF_StateGet(OBS_Pert_State,"Observation01",pertfield,&
-                         rc=status)
-                    call LIS_verify(status, 'Error: StateGet Observation01')
-
-                    ssdev = reader_struc(n)%ssdev_inp
-
-                    timeidx = CustomNcReader_timeidx(reader_struc(n)%ntimes)
-
-                    call CustomNcReader_updateSsdev(k,&
-                         reader_struc(n)%obs_sigma(:, timeidx),&
-                         reader_struc(n)%model_sigma(:, timeidx),&
-                         ssdev)
-
-                    if(LIS_rc%obs_ngrid(k).gt.0) then
-                        call ESMF_AttributeSet(pertfield,"Standard Deviation",&
-                             ssdev,itemCount=LIS_rc%obs_ngrid(k),rc=status)
-                        call LIS_verify(status)
-                    endif
-                endif
-
-
-            else
-                call ESMF_AttributeSet(OBS_State,"Data Update Status",&
-                     .false., rc=status)
-                call LIS_verify(status)
             endif
-        else
+
+        else ! no data update
             call ESMF_AttributeSet(OBS_State,"Data Update Status",&
                  .false., rc=status)
             call LIS_verify(status)
