@@ -6455,6 +6455,8 @@ end subroutine LIS_diagnoseIrrigationOutputVar
     logical                 :: dir_status
     real                    :: mfactor
     real                    :: value
+    integer                 :: gindex, zone
+    real                    :: lhour, lmin, gmt, dt
        
     unit_status = .false.
     do i=1,dataEntry%nunits
@@ -6602,6 +6604,8 @@ end subroutine LIS_diagnoseIrrigationOutputVar
     logical                 :: dir_status
     real                    :: mfactor
     real                    :: value
+    integer                 :: gindex, zone
+    real                    :: lhour, lmin, gmt, dt
        
     unit_status = .false.
     do i=1,dataEntry%nunits
