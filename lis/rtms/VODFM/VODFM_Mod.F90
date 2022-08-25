@@ -88,6 +88,7 @@ module VODFM_Mod
     type, public ::  vodfm_type_dec
         character*5   :: predictors
         integer       :: npred
+        logical       :: apply_tcorr
         character*256 :: parameter_fname
         !-------output------------!
         real, allocatable :: VOD(:)
@@ -149,6 +150,7 @@ contains
         character*100 :: modeltype(LIS_rc%nnest)
         character*5 :: predictors(LIS_rc%nnest)
         character*256 :: parameter_fname(LIS_rc%nnest)
+        logical :: apply_tcorr(LIS_rc%nnest)
 
         write(LIS_logunit,*) "[INFO] Starting VODFM setup"
 
@@ -178,6 +180,16 @@ contains
             endif
         enddo
 
+        call ESMF_ConfigFindLabel(LIS_config, "VODFM apply temperature correction:",rc = rc)
+        do n=1, LIS_rc%nnest
+            if (rc.ne.0) then
+                apply_tcorr(n) = .true.
+            else
+                call ESMF_ConfigGetAttribute(LIS_config, predictors(n), rc=rc)
+                call LIS_verify(rc, "VODFM apply temperature correction: not defined")
+            endif
+        enddo
+
         call ESMF_ConfigFindLabel(LIS_config, "VODFM parameter file:",rc = rc)
         do n=1, LIS_rc%nnest
             call ESMF_ConfigGetAttribute(LIS_config, parameter_fname(n), rc=rc)
@@ -202,6 +214,7 @@ contains
                 vodfm_struc(n)%npred = 8
             endif
             vodfm_struc(n)%parameter_fname = parameter_fname(n)
+            vodfm_struc(n)%apply_tcorr = apply_tcorr(n)
             allocate(vodfm_struc(n)%VOD(LIS_rc%npatch(n,LIS_rc%lsm_index)))
 
             call add_sfc_fields(n,LIS_sfcState(n), "Canopy Water Content")
@@ -560,8 +573,7 @@ contains
         real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:), psi(:), cwc(:), tc(:), vpd(:)
         real, pointer       :: vodval(:)
         real                :: intercept
-        real                :: laicoef, sm1coef, sm2coef, sm3coef, sm4coef
-        logical             :: coefs_valid, values_valid
+        real                :: eps_water, deltaT
         real                :: pred(vodfm_struc(n)%npred)
 
         !   map surface properties to SFC
@@ -598,6 +610,13 @@ contains
             endif
 
             call vodfm_struc(n)%run(n, t, pred)
+
+            ! apply temperature correction
+            if (vodfm_struc(n)%apply_tcorr) then
+                deltaT = tc(t) - 273.15 - 25
+                eps_water = 78.54 * (1 - 4.579e-3*deltaT + 1.19e-5*deltaT**2 - 2.8e-8*deltaT**3)
+                vodfm_struc(n)%VOD(t) = vodfm_struc(n)%VOD(t) * eps_water / 78.54
+            endif
 
             if (vodfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodfm_struc(n)%VOD(t).lt.-10) then
                 write(LIS_logunit, *) "[WARN] VOD lower than -10"
