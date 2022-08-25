@@ -6497,8 +6497,8 @@ end subroutine LIS_diagnoseIrrigationOutputVar
              dataEntry%valid_max = vmin
           endif
           if(value.ne.LIS_rc%udef) then 
-             ! accumulate values and record instantaneous values
              if(dataEntry%timeAvgOpt.eq.2) then 
+                ! accumulate values and record instantaneous values
                 dataEntry%modelOutput(1,t,vlevel) = &
                      dataEntry%modelOutput(1,t,vlevel) + value
                 dataEntry%modelOutput(2,t,vlevel) = value
@@ -6506,8 +6506,8 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                 dataEntry%count(t,vlevel) = &
                      dataEntry%count(t,vlevel)+1
                 !$OMP END CRITICAL 
-                ! accumulate values
              elseif(dataEntry%timeAvgOpt.eq.1 .or. &
+                ! accumulate values
                   dataEntry%timeAvgOpt.eq.3) then 
                 dataEntry%modelOutput(1,t,vlevel) = &
                      dataEntry%modelOutput(1,t,vlevel) + value
@@ -6515,8 +6515,21 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                 dataEntry%count(t,vlevel) = &
                      dataEntry%count(t,vlevel)+1
                 !$OMP END CRITICAL 
-                ! record instantaneous values
+             elseif(dataEntry%timeAvgOpt.eq.4) then
+                ! record only matching local time values
+                gindex = LIS_domain(n)%tile(t)%index
+                lon = LIS_domain(n)%grid(gindex)%lon
+                lhour = LIS_histData(n)%hour
+                lmin = LIS_histData(n)%min
+                call LIS_localtime2gmt(gmt, lon, lhour, zone)
+                gmt = gmt - lmin
+                dt = (LIS_rc%gmt - gmt)*3600.0
+                if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
+                    dataEntry%modelOutput(1,t,vlevel) = value
+                    dataEntry%count(t,vlevel) = 1
+                endif
              else 
+                ! record instantaneous values
                 dataEntry%modelOutput(1,t,vlevel) = value
                 dataEntry%count(t,vlevel) = 1
              endif
@@ -6631,8 +6644,8 @@ end subroutine LIS_diagnoseIrrigationOutputVar
              dataEntry%valid_max = vmin
           endif
           if(value.ne.LIS_rc%udef) then 
-             ! accumulate values and record instantaneous values
              if(dataEntry%timeAvgOpt.eq.2) then 
+                ! accumulate values and record instantaneous values
                 dataEntry%modelOutput(1,t,vlevel) = &
                      dataEntry%modelOutput(1,t,vlevel) + value
                 dataEntry%modelOutput(2,t,vlevel) = value
@@ -6640,8 +6653,8 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                 dataEntry%count(t,vlevel) = &
                      dataEntry%count(t,vlevel)+1
                 !$OMP END CRITICAL 
-                ! accumulate values
              elseif(dataEntry%timeAvgOpt.eq.1 .or. &
+                ! accumulate values
                   dataEntry%timeAvgOpt.eq.3) then 
                 dataEntry%modelOutput(1,t,vlevel) = &
                      dataEntry%modelOutput(1,t,vlevel) + value
@@ -6649,8 +6662,21 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                 dataEntry%count(t,vlevel) = &
                      dataEntry%count(t,vlevel)+1
                 !$OMP END CRITICAL 
-                ! record instantaneous values
+             elseif(dataEntry%timeAvgOpt.eq.4) then
+                ! record only matching local time values
+                gindex = LIS_domain(n)%tile(t)%index
+                lon = LIS_domain(n)%grid(gindex)%lon
+                lhour = LIS_histData(n)%hour
+                lmin = LIS_histData(n)%min
+                call LIS_localtime2gmt(gmt, lon, lhour, zone)
+                gmt = gmt - lmin
+                dt = (LIS_rc%gmt - gmt)*3600.0
+                if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
+                    dataEntry%modelOutput(1,t,vlevel) = value
+                    dataEntry%count(t,vlevel) = 1
+                endif
              else 
+                ! record instantaneous values
                 dataEntry%modelOutput(1,t,vlevel) = value
                 dataEntry%count(t,vlevel) = 1
              endif

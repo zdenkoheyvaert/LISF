@@ -815,7 +815,6 @@ contains
         integer                :: cyr, cmo, cda, chr,cmn,css,cdoy
         real                   :: wt1, wt2,ts
         integer                :: count
-        real                   :: cgmt
         real*8                 :: time
         logical                :: alarmCheck, file_exists
         integer                :: c,r,i,j,p,t
@@ -884,8 +883,9 @@ contains
                             ! datime is the UTC/GMT time at which the
                             ! assimilation should take place
                             lhour = reader_struc(n)%da_hr
+                            lmin = reader_struc(n)%da_mn
                             call LIS_localtime2gmt (gmt,lon,lhour,zone)
-                            reader_struc(n)%datime(c,r) = gmt
+                            reader_struc(n)%datime(c,r) = gmt - lmin
                         endif
                     endif
                 enddo
