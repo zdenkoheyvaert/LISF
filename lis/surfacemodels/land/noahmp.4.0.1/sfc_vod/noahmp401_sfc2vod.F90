@@ -101,7 +101,7 @@ subroutine noahmp401_sfc2vod(n, sfcState)
       tc(t) = noahmp401_struc(n)%noahmp401(t)%tah
       eah = noahmp401_struc(n)%noahmp401(t)%eah
       ! magnus formula
-      esat = 610.94 * exp(17.625 * (tc - 273.15) / ((tc - 273.15) + 243.04))
+      esat = 610.94 * exp(17.625 * (tc(t) - 273.15) / ((tc(t) - 273.15) + 243.04))
       cvpd(t) = esat - eah
 
       ! calculate root-zone averaged PSI
