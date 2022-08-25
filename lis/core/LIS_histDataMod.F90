@@ -6429,6 +6429,7 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                                direction, vmin, vmax, nsiblings, &
                                siblings,model_patch)
 ! !USES: 
+    use LIS_timeMgrMod
 
     implicit none
 ! !ARGUMENTS:     
@@ -6456,7 +6457,7 @@ end subroutine LIS_diagnoseIrrigationOutputVar
     real                    :: mfactor
     real                    :: value
     integer                 :: gindex, zone
-    real                    :: lhour, lmin, gmt, dt
+    real                    :: lhour, lmin, gmt, dt, lon
        
     unit_status = .false.
     do i=1,dataEntry%nunits
@@ -6581,6 +6582,7 @@ end subroutine LIS_diagnoseIrrigationOutputVar
   subroutine diagnoseRoutingDataEntry(n,dataentry, t, vlevel,in_value, unit, &
                                direction, vmin, vmax)
 ! !USES: 
+    use LIS_timeMgrMod
 
     implicit none
 ! !ARGUMENTS:     
@@ -6605,7 +6607,7 @@ end subroutine LIS_diagnoseIrrigationOutputVar
     real                    :: mfactor
     real                    :: value
     integer                 :: gindex, zone
-    real                    :: lhour, lmin, gmt, dt
+    real                    :: lhour, lmin, gmt, dt, lon
        
     unit_status = .false.
     do i=1,dataEntry%nunits

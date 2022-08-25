@@ -850,7 +850,7 @@ contains
         real                   :: ssdev(LIS_rc%obs_ngrid(k))
         type(ESMF_Field)       :: pertfield
         integer                :: timeidx
-        real                   :: lon, lhour, gmt, dt
+        real                   :: lon, lhour, lmin, gmt, dt
         integer                :: zone
 
 
