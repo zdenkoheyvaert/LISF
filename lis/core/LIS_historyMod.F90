@@ -2571,6 +2571,8 @@ contains
                    short_name = trim(dataEntry%short_name)//'_tavg'
                 elseif(dataEntry%timeAvgOpt.eq.3) then
                    short_name = trim(dataEntry%short_name)//'_acc'
+                elseif(dataEntry%timeAvgOpt.eq.4) then
+                   short_name = trim(dataEntry%short_name)//'_locinst'
                 endif
              else
                 short_name = trim(dataEntry%short_name)
@@ -2861,6 +2863,8 @@ contains
                    short_name = trim(dataEntry%short_name)//'_tavg'
                 elseif(dataEntry%timeAvgOpt.eq.3) then
                    short_name = trim(dataEntry%short_name)//'_acc'
+                elseif(dataEntry%timeAvgOpt.eq.4) then
+                   short_name = trim(dataEntry%short_name)//'_locinst'
                 endif
              else
                 short_name = trim(dataEntry%short_name)
@@ -3148,6 +3152,8 @@ contains
                    short_name = trim(dataEntry%short_name)//'_tavg'
                 elseif(dataEntry%timeAvgOpt.eq.3) then
                    short_name = trim(dataEntry%short_name)//'_acc'
+                elseif(dataEntry%timeAvgOpt.eq.4) then
+                   short_name = trim(dataEntry%short_name)//'_locinst'
                 endif
              else
                 short_name = trim(dataEntry%short_name)
