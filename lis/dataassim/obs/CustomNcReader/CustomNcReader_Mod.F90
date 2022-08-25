@@ -122,7 +122,11 @@ module CustomNcReader_Mod
         logical                :: lt_assim
         integer                :: da_hr, da_mn
 
+        logical                :: sv_ssdev  ! spatially variable ssdev
         real                   :: ssdev_inp
+        real,    allocatable   :: ssdev_inp_field(:)
+        character*256          :: obs_pert_file
+        character*100          :: obs_pert_varname
         real,    allocatable   :: model_xrange(:,:,:)
         real,    allocatable   :: obs_xrange(:,:,:)
         real,    allocatable   :: model_cdf(:,:,:)
@@ -316,7 +320,7 @@ contains
             call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" assimilate at local time:",&
                  rc=status)
             if (status .ne. 0) then
-                reader_struc(n)%lt_assim = .true.
+                reader_struc(n)%lt_assim = .false.
             else
                 call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lt_assim,&
                      rc=status)
@@ -351,9 +355,34 @@ contains
             endif
         enddo
 
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" observation perturbation file:",&
+                 rc=status)
+            if (status .ne. 0) then
+                reader_struc(n)%sv_ssdev = .false.
+            else
+                reader_struc(n)%sv_ssdev = .true.
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%obs_pert_file,&
+                     rc=status)
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" observation perturbation variable name:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(reader_struc(n)%sv_ssdev) then
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%obs_pert_varname, &
+                     rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" observation perturbation variable name: not defined")
+            endif
+        enddo
+
         !------------------------------------------------------------
         ! Options for scaling
         !------------------------------------------------------------
+
         call ESMF_ConfigFindLabel(LIS_config,&
              "Custom "//trim(varname)//" use scaled standard deviation model:",&
              rc=status)
@@ -492,15 +521,22 @@ contains
                 allocate(obs_pert%ycorr(1))
                 allocate(obs_pert%ccorr(1,1))
 
-                call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
-                     obs_pert)
+                if (reader_struc(n)%sv_ssdev) then
+                    call CustomNcReader_readSsdevData(n, k, reader_struc(n)%obs_pert_file,&
+                         reader_struc(n)%obs_pert_varname, ssdev)
+                    allocate(reader_struc(n)%ssdev_inp_field(LIS_rc%obs_ngrid(k)))
+                    reader_struc(n)%ssdev_inp_field = ssdev
+                else
+                    call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
+                         obs_pert)
 
-                ! Set obs err to be uniform (will be rescaled later for each grid point).
-                ssdev = obs_pert%ssdev(1)
-                reader_struc(n)%ssdev_inp = obs_pert%ssdev(1)
-                write(LIS_logunit,*)&
-                     "[INFO] observation perturbation size for "//trim(varname)//":",&
-                     reader_struc(n)%ssdev_inp
+                    ! Set obs err to be uniform (will be rescaled later for each grid point).
+                    ssdev = obs_pert%ssdev(1)
+                    reader_struc(n)%ssdev_inp = obs_pert%ssdev(1)
+                    write(LIS_logunit,*)&
+                         "[INFO] observation perturbation size for "//trim(varname)//":",&
+                         reader_struc(n)%ssdev_inp
+                endif
 
                 pertField(n) = ESMF_FieldCreate(arrayspec=pertArrSpec,&
                      grid=LIS_obsEnsOnGrid(n,k),name="Observation"//vid(1)//vid(2),&
@@ -687,7 +723,11 @@ contains
                 if (reader_struc(n)%useSsdevScal) then
 
                     allocate(ssdev(LIS_rc%obs_ngrid(k)))
-                    ssdev = obs_pert%ssdev(1)
+                    if (read ssdev from nc) then
+                        ssdev = reader_struc(n)%ssdev_inp_field
+                    else
+                        ssdev = reader_struc(n)%ssdev_inp
+                    endif
 
                     timeidx = CustomNcReader_timeidx(reader_struc(n)%ntimes)
 
@@ -1045,7 +1085,11 @@ contains
                      rc=status)
                 call LIS_verify(status, 'Error: StateGet Observation01')
 
-                ssdev = reader_struc(n)%ssdev_inp
+                if (reader_struc(n)%sv_ssdev) then
+                    ssdev = reader_struc(n)%ssdev_inp_field
+                else
+                    ssdev = reader_struc(n)%ssdev_inp
+                endif
 
                 timeidx = CustomNcReader_timeidx(reader_struc(n)%ntimes)
 
@@ -1618,6 +1662,92 @@ contains
              trim(filename)
 #endif
     end subroutine CustomNcReader_readSeasonalScalingData
+
+    !BOP
+    ! !ROUTINE: CustomNcReader_readSsdevData
+    ! \label{CustomNcReader_readSsdevData}
+    !
+    ! !INTERFACE:
+    subroutine CustomNcReader_readSsdevData(&
+         n, k, filename, ssdev)
+
+#if(defined USE_NETCDF3 || defined USE_NETCDF4)
+        use netcdf
+#endif
+        use LIS_coreMod, only: LIS_rc
+        use LIS_logMod, only: LIS_logunit, LIS_verify, LIS_endrun
+        use LIS_DAobservationsMod, only: LIS_convertObsVarToLocalSpace
+
+        implicit none
+        ! !ARGUMENTS:
+        integer,   intent(in)         :: n
+        integer,   intent(in)         :: k
+        character(len=*), intent(in)  :: filename
+        character(len=*), intent(in)  :: varname
+        real, intent(inout)           :: ssdev(:)
+        !
+        ! !DESCRIPTION:
+        !  This routine reads the input seasonal mean file.
+        !
+        !  The arguments are:
+        !  \begin{description}
+        !  \item[n]             index of the nest
+        !  \item[k]             index of observation state
+        !  \item[ngrid]         length of ngrid dimension
+        !  \item[filename]      name of the CDF file
+        !  \item[varname]       name of the variable being extracted.
+        !  \item[ssdev]         observation perturbation values
+        ! \end{description}
+        !EOP
+        integer                  :: j
+        integer                  :: gId
+        integer                  :: ngrid_file
+        integer                  :: ssdevid
+        real, allocatable        :: ssdev_file(:)
+        integer                  :: nid
+
+#if !(defined USE_NETCDF3 || defined USE_NETCDF4)
+        write(LIS_logunit,*) "[ERR] read_CustomNetCDF requires NETCDF"
+        call LIS_endrun
+#else
+        write(LIS_logunit,*) "[INFO] Reading ssdev from file ",trim(filename)
+        call LIS_verify(nf90_open(path=trim(filename),mode=NF90_NOWRITE,&
+             ncid=nid),"failed to open file "//trim(filename))
+
+        call LIS_verify(nf90_inq_dimid(nid, "ngrid",gId), &
+             "Error nf90_inq_dimid: ngrid")
+
+        call LIS_verify(nf90_inquire_dimension(nid, gId, len=ngrid_file), &
+             "Error nf90_inquire_dimension:ngrid")
+
+        if (ngrid_file /= LIS_rc%obs_glbngrid_red(k)) then
+            write(LIS_logunit, *) "[ERR] ngrid in "//trim(filename)//" not consistent "//&
+                 "with expected ngrid: ", ngrid_file,&
+                 " instead of ",LIS_rc%obs_glbngrid_red(k)
+            call LIS_endrun
+        endif
+
+        allocate(ssdev_file(ngrid_file))
+
+        call LIS_verify(nf90_inq_varid(nid,trim(varname),ssdevid),&
+             "nf90_inq_varid failed for for "//trim(varname))
+
+        call LIS_verify(nf90_get_var(nid,ssdevid,ssdev_file),&
+             "nf90_get_var failed for "//trim(varname))
+
+        if(LIS_rc%obs_ngrid(k).gt.0) then
+            call LIS_convertObsVarToLocalSpace(n,k,ssdev_file(:), ssdev(:))
+        endif
+
+        deallocate(ssdev_file)
+
+        call LIS_verify(nf90_close(nid),&
+             "failed to close file "//trim(filename))
+        write(LIS_logunit,*)&
+             "[INFO] Successfully read ssdev file ",&
+             trim(filename)
+#endif
+    end subroutine CustomNcReader_readSsdevData
 
     subroutine CustomNcReader_updateSsdev(k, obs_sigma, model_sigma, ssdev)
         use LIS_coreMod
