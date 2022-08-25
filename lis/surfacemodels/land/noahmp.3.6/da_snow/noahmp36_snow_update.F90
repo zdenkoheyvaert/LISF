@@ -145,38 +145,51 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
   
   ! snow with layers
 
-  IF(ISNOW <  0 .AND. NEWNODE == 0 .and. &
-       (dsneqv.gt.0.and.dsnowh.gt.0)) then
-     SNICE(ISNOW+1)  = SNICE(ISNOW+1)   + dsneqv
-     DZSNSO(ISNOW+1) = DZSNSO(ISNOW+1)  + dsnowh
-  ENDIF
+!  IF(ISNOW <  0 .AND. NEWNODE == 0 .and. &
+!       (dsneqv.gt.0.and.dsnowh.gt.0)) then
+!     SNICE(0)  = SNICE(0)   + dsneqv
+!     DZSNSO(0) = DZSNSO(0)  + dsnowh
+!  ENDIF
   
   if(isnow.eq.0.and.(dsneqv.lt.0.or.dsnowh.lt.0)) then !no snow, 
 
   else
-     if(dsneqv.lt.0.and.dsnowh.lt.0) then
+ !    if(dsneqv.lt.0.and.dsnowh.lt.0) then
         snowh1 = snowh + dsnowh
         sneqv1 = sneqv + dsneqv
-        if(snowh1.ge.0.and.sneqv1.ge.0) then         
-           SNOWH = SNOWH + dsnowh
-           SNEQV = SNEQV + dsneqv
-! Update dzsnso
-! how do you determine the thickness of a layer?
-           if(snowh.le.dzsnso(0)) then 
-              isnow = 0
-              dzsnso(-nsnow+1:(isnow-1)) = 0 
-              dzsnso(isnow) = snowh
-           elseif(snowh.le.(dzsnso(0)+dzsnso(-1))) then 
-              isnow = -1
-              dzsnso(-nsnow+1:(isnow-1)) = 0 
-              dzsnso(isnow) = snowh -dzsnso(isnow+1)
-           elseif(snowh.le.(dzsnso(0)+dzsnso(-1)+dzsnso(-2))) then 
-              isnow = -2
-              dzsnso(-nsnow+1:(isnow-2)) = 0 
-              dzsnso(isnow) = snowh -dzsnso(isnow+2)
-           endif
+        if(snowh1.ge.0.and.sneqv1.ge.0.and.snowh.gt.0.and.sneqv.gt.0) then         
+           dzsnso(-nsnow+1:(isnow-1)) = 0 
+           snice(-nsnow+1:(isnow-1))=0
+           do iz=isnow+1,0
+              dzsnso(iz) = dzsnso(iz)+dsnowh* dzsnso(iz)/snowh
+              snice(iz) = snice(iz)+dsneqv* snice(iz)/sneqv
+           enddo 
         endif
-     endif
+        SNOWH = SNOWH + dsnowh
+        SNEQV = SNEQV + dsneqv
+!! Update dzsnso
+!! how do you determine the thickness of a layer?
+!           if(snowh.le.dzsnso(0)) then 
+!              isnow = -1
+!              dzsnso(-nsnow+1:(isnow)) = 0 
+!              dzsnso(0) = snowh
+!              snice(-nsnow+1:(isnow)) = 0
+!              snice(0) = sneqv
+!           elseif(snowh.le.(dzsnso(0)+dzsnso(-1))) then 
+!              isnow = -2
+!              dzsnso(-nsnow+1:(isnow)) = 0 
+!              dzsnso(0) = snowh -dzsnso(-1)
+!              snice(-nsnow+1:(isnow)) = 0
+!              snice(0) = sneqv -snice(-1)
+!           elseif(snowh.le.(dzsnso(0)+dzsnso(-1)+dzsnso(-2))) then 
+!              isnow = -3
+!              dzsnso(-nsnow+1:(isnow)) = 0 
+!              dzsnso(0) = snowh -dzsnso(-1) -dzsnso(-2)
+!              snice(-nsnow+1:(isnow)) = 0
+!              snice(0) = sneqv -snice(-1) -snice(-2)
+!           endif
+!        endif
+!     endif
 
   ! ice fraction at the last timestep, add check for both snice and snliq are 0.0
      do snl_idx=isnow+1,0
