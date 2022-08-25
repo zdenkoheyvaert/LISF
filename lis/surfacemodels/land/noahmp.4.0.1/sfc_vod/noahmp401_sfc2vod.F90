@@ -39,12 +39,12 @@ subroutine noahmp401_sfc2vod(n, sfcState)
 !
 !EOP
   type(ESMF_Field)    :: laiField, sm1field, sm2field, sm3field, sm4field
-  type(ESMF_Field)    :: cwcfield, psifield, tvegfield
+  type(ESMF_Field)    :: cwcfield, psifield, cvpdfield, tcfield
   real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
-  real, pointer       :: cwc(:), psi(:), tveg(:)
+  real, pointer       :: cwc(:), psi(:), cvpd(:), tc(:)
   integer             :: t,status, soiltyp, nroot, iz
   real, parameter     :: PSIWLT = -150.
-  real                :: smcmax, smcwlt, psisat, sh2o, tmp_psi, dz, ztotal, bexp
+  real                :: smcmax, smcwlt, psisat, sh2o, tmp_psi, dz, ztotal, bexp, eah, esat
 
   call ESMF_StateGet(sfcState,"Leaf Area Index",laiField,rc=status)
   call LIS_verify(status)
@@ -76,9 +76,14 @@ subroutine noahmp401_sfc2vod(n, sfcState)
   call ESMF_FieldGet(cwcfield,localDE=0,farrayPtr=cwc, rc=status)
   call LIS_verify(status)
 
-  call ESMF_StateGet(sfcState,"Vegetation Transpiration",tvegfield,rc=status)
+  call ESMF_StateGet(sfcState,"Canopy Temperature",tcfield,rc=status)
   call LIS_verify(status)
-  call ESMF_FieldGet(tvegfield,localDE=0,farrayPtr=tveg, rc=status)
+  call ESMF_FieldGet(tcfield,localDE=0,farrayPtr=tc, rc=status)
+  call LIS_verify(status)
+
+  call ESMF_StateGet(sfcState,"Canopy Vapor Pressure Deficit",cvpdfield,rc=status)
+  call LIS_verify(status)
+  call ESMF_FieldGet(cvpdfield,localDE=0,farrayPtr=cvpd, rc=status)
   call LIS_verify(status)
 
   call ESMF_StateGet(sfcState,"Root Zone Soil Water Potential",psifield,rc=status)
@@ -93,7 +98,11 @@ subroutine noahmp401_sfc2vod(n, sfcState)
       sm3(t) = noahmp401_struc(n)%noahmp401(t)%smc(3)
       sm4(t) = noahmp401_struc(n)%noahmp401(t)%smc(4)
       cwc(t) = noahmp401_struc(n)%noahmp401(t)%canliq
-      tveg(t) = noahmp401_struc(n)%noahmp401(t)%etran
+      tc(t) = noahmp401_struc(n)%noahmp401(t)%tah
+      eah = noahmp401_struc(n)%noahmp401(t)%eah
+      ! magnus formula
+      esat = 610.94 * exp(17.625 * (tc - 273.15) / ((tc - 273.15) + 243.04))
+      cvpd(t) = esat - eah
 
       ! calculate root-zone averaged PSI
       soiltyp = noahmp401_struc(n)%noahmp401(t)%soiltype
