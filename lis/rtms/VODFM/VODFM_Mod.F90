@@ -199,7 +199,7 @@ contains
             if (predictors(n) == "mech") then
                 vodfm_struc(n)%npred = 5
             else
-                vodfm_struc(n)%pred = 8
+                vodfm_struc(n)%npred = 8
             endif
             vodfm_struc(n)%parameter_fname = parameter_fname(n)
             allocate(vodfm_struc(n)%VOD(LIS_rc%npatch(n,LIS_rc%lsm_index)))
@@ -562,7 +562,7 @@ contains
         real                :: intercept
         real                :: laicoef, sm1coef, sm2coef, sm3coef, sm4coef
         logical             :: coefs_valid, values_valid
-        real                :: pred(self%npred)
+        real                :: pred(vodfm_struc(n)%npred)
 
         !   map surface properties to SFC
         call getsfcvar(LIS_sfcState(n), "Canopy Water Content", cwc)
@@ -580,7 +580,7 @@ contains
         !--------------------------------------------
         do t=1, LIS_rc%npatch(n,LIS_rc%lsm_index)
 
-            if (self%predictors .eq. "mech") then
+            if (vodfm_struc(n)%predictors .eq. "mech") then
                 pred(1) = cwc(t)
                 pred(2) = lai(t)
                 pred(3) = psi(t) * lai(t)
@@ -599,19 +599,19 @@ contains
 
             call vodfm_struc(n)%run(n, t, pred)
 
-            if (self%VOD(t).ne.LIS_rc%udef.and.self%VOD(t).lt.-10) then
+            if (vodfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodfm_struc(n)%VOD(t).lt.-10) then
                 write(LIS_logunit, *) "[WARN] VOD lower than -10"
             endif
 
             call LIS_diagnoseRTMOutputVar(n, t, LIS_MOC_RTM_VOD,&
-                 value=self%VOD(t),&
+                 value=vodfm_struc(n)%VOD(t),&
                  vlevel=1,&
                  unit="-",&
                  direction="-")
         enddo
 
         call getsfcvar(LIS_forwardState(n),"VODFM_VOD", vodval)
-        vodval = self%VOD
+        vodval = vodfm_struc(n)%VOD
 
 
     end subroutine VODFM_run
