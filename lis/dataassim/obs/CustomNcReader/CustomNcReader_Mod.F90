@@ -934,16 +934,9 @@ contains
                             reader_struc(n)%daobs(c,r) = &
                                  observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
                             lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
-
-                            ! datime is the UTC/GMT time at which the
-                            ! assimilation should take place
-                            lhour = reader_struc(n)%da_hr
-                            lmin = reader_struc(n)%da_mn
-                            call LIS_localtime2gmt (gmt,lon,lhour,zone)
-                            gmt = gmt - lmin/60.0
-                            if (gmt.lt.0) gmt = gmt + 24
-                            if (gmt.ge.24) gmt = gmt - 24
-                            reader_struc(n)%datime(c,r) = gmt
+                            localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
+                            gmtdatime = localdatime - 240 * lon
+                            reader_struc(n)%datime(c,r) = gmtdatime
                         endif
                     endif
                 enddo
@@ -964,7 +957,7 @@ contains
         do r=1,LIS_rc%obs_lnr(k)
             do c=1,LIS_rc%obs_lnc(k)
                 if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
-                    dt = (LIS_rc%gmt - reader_struc(n)%datime(c,r))*3600.0
+                    dt = (LIS_rc%gmt*3600.0 - reader_struc(n)%datime(c,r))
                     if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
                         obs_current(c, r) = reader_struc(n)%daobs(c, r)
                         if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then

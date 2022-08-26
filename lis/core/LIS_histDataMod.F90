@@ -1064,6 +1064,9 @@ module LIS_histDataMod
      integer :: min         ! specific output writing time (min)
      integer :: sec         ! specific output writing time (sec)
 
+     integer :: lhour        ! local output writing time (hour)
+     integer :: lmin         ! local output writing time (min)
+
      type(LIS_metadataEntry), pointer :: head_lsm_list
      type(LIS_metadataEntry), pointer :: head_routing_list
      type(LIS_metadataEntry), pointer :: head_rtm_list
@@ -6429,7 +6432,6 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                                direction, vmin, vmax, nsiblings, &
                                siblings,model_patch)
 ! !USES: 
-    use LIS_timeMgrMod
 
     implicit none
 ! !ARGUMENTS:     
@@ -6456,8 +6458,9 @@ end subroutine LIS_diagnoseIrrigationOutputVar
     logical                 :: dir_status
     real                    :: mfactor
     real                    :: value
-    integer                 :: gindex, zone
-    real                    :: lhour, lmin, gmt, dt, lon
+    integer                 :: gindex
+    real                    :: lon, localtime, localoutputtime
+    real                    :: lhour, lmin, dt
        
     unit_status = .false.
     do i=1,dataEntry%nunits
@@ -6522,13 +6525,18 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                 ! record only matching local time values
                 gindex = LIS_domain(n)%tile(t)%index
                 lon = LIS_domain(n)%grid(gindex)%lon
-                lhour = LIS_histData(n)%hour
-                lmin = LIS_histData(n)%min
-                call LIS_localtime2gmt(gmt, lon, lhour, zone)
-                gmt = gmt - lmin/60.0
-                if (gmt.lt.0) gmt = gmt + 24
-                if (gmt.ge.24) gmt = gmt - 24
-                dt = (LIS_rc%gmt - gmt)*3600.0
+                localtime = LIS_rc%gmt*3600.0 + lon * 240
+                if (LIS_histData(n)%lhour.eq.-1.and.LIS_histData(n)%lmin.eq.-1) then
+                    ! no local time given, using the specific output time if it
+                    ! exists otherwise 0
+                    lhour = min(LIS_histData(n)%hour, 0)
+                    lmin = min(LIS_histData(n)%min, 0)
+                else
+                    lhour = min(LIS_histData(n)%lhour, 0)
+                    lmin = min(LIS_histData(n)%lmin, 0)
+                endif
+                localoutputtime = lhour * 3600.0 + lmin * 60.0
+                dt = localtime - localoutputtime
                 if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
                     dataEntry%modelOutput(1,t,vlevel) = value
                     dataEntry%count(t,vlevel) = 1
@@ -6608,8 +6616,8 @@ end subroutine LIS_diagnoseIrrigationOutputVar
     logical                 :: dir_status
     real                    :: mfactor
     real                    :: value
-    integer                 :: gindex, zone
-    real                    :: lhour, lmin, gmt, dt, lon
+    real                    :: lon, localtime, localoutputtime
+    real                    :: lhour, lmin, dt
        
     unit_status = .false.
     do i=1,dataEntry%nunits
@@ -6674,11 +6682,18 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                 ! record only matching local time values
                 gindex = LIS_domain(n)%tile(t)%index
                 lon = LIS_domain(n)%grid(gindex)%lon
-                lhour = LIS_histData(n)%hour
-                lmin = LIS_histData(n)%min
-                call LIS_localtime2gmt(gmt, lon, lhour, zone)
-                gmt = gmt - lmin
-                dt = (LIS_rc%gmt - gmt)*3600.0
+                localtime = LIS_rc%gmt*3600.0 + lon * 240
+                if (LIS_histData(n)%lhour.eq.-1.and.LIS_histData(n)%lmin.eq.-1) then
+                    ! no local time given, using the specific output time if it
+                    ! exists otherwise 0
+                    lhour = min(LIS_histData(n)%hour, 0)
+                    lmin = min(LIS_histData(n)%min, 0)
+                else
+                    lhour = min(LIS_histData(n)%lhour, 0)
+                    lmin = min(LIS_histData(n)%lmin, 0)
+                endif
+                localoutputtime = lhour * 3600.0 + lmin * 60.0
+                dt = localtime - localoutputtime
                 if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
                     dataEntry%modelOutput(1,t,vlevel) = value
                     dataEntry%count(t,vlevel) = 1

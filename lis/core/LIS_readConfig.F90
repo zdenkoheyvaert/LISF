@@ -1032,6 +1032,15 @@ subroutine LIS_readConfig()
      enddo
   endif
 
+  if(LIS_rc%output_at_specifictime.eq.1) then 
+     do i=1,LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config,LIS_histData(i)%lhour,&
+             label="Local output writing time (hour):",default=-1,rc=rc)
+        call ESMF_ConfigGetAttribute(LIS_config,LIS_histData(i)%lmin,&
+             label="Local output writing time (minute):",default=-1,rc=rc)
+     enddo
+  endif
+
 !
 !------------------------------------------------------------------------
 !  Setting Satellite LAI variables
