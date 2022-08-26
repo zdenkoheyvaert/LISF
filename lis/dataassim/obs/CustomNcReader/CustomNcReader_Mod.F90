@@ -940,7 +940,10 @@ contains
                             lhour = reader_struc(n)%da_hr
                             lmin = reader_struc(n)%da_mn
                             call LIS_localtime2gmt (gmt,lon,lhour,zone)
-                            reader_struc(n)%datime(c,r) = gmt - lmin
+                            gmt = gmt - lmin/60.0
+                            if (gmt.lt.0) gmt = gmt + 24
+                            if (gmt.ge.24) gmt = gmt - 24
+                            reader_struc(n)%datime(c,r) = gmt
                         endif
                     endif
                 enddo

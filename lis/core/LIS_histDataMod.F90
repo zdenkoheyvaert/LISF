@@ -6525,7 +6525,9 @@ end subroutine LIS_diagnoseIrrigationOutputVar
                 lhour = LIS_histData(n)%hour
                 lmin = LIS_histData(n)%min
                 call LIS_localtime2gmt(gmt, lon, lhour, zone)
-                gmt = gmt - lmin
+                gmt = gmt - lmin/60.0
+                if (gmt.lt.0) gmt = gmt + 24
+                if (gmt.ge.24) gmt = gmt - 24
                 dt = (LIS_rc%gmt - gmt)*3600.0
                 if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
                     dataEntry%modelOutput(1,t,vlevel) = value
