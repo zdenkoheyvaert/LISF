@@ -723,7 +723,7 @@ contains
                 if (reader_struc(n)%useSsdevScal) then
 
                     allocate(ssdev(LIS_rc%obs_ngrid(k)))
-                    if (read ssdev from nc) then
+                    if (reader_struc(n)%sv_ssdev) then
                         ssdev = reader_struc(n)%ssdev_inp_field
                     else
                         ssdev = reader_struc(n)%ssdev_inp
@@ -1669,7 +1669,7 @@ contains
     !
     ! !INTERFACE:
     subroutine CustomNcReader_readSsdevData(&
-         n, k, filename, ssdev)
+         n, k, filename, varname, ssdev)
 
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
         use netcdf
