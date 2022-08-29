@@ -138,7 +138,6 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
      ISNOW    = -1
      NEWNODE  =  1
      DZSNSO(0)= SNOWH
-     SNOWH    = 0.
      STC(0)   = MIN(273.16, NOAHMP36_struc(n)%noahmp36(t)%sfctmp)   ! temporary setup
      SNICE(0) = SNEQV
      SNLIQ(0) = 0.
@@ -150,10 +149,10 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
   else
      snowh1 = snowh + dsnowh
      sneqv1 = sneqv + dsneqv
-     if(isnow.lt.0.and.snowh1.ge.0.and.sneqv1.ge.0.and.&
-          newnode==0) then !snowh.gt.0.and.sneqv.gt.0) then         
+     if(isnow.lt.0.and.snowh1.ge.0.and.sneqv1.ge.0.and.newnode==0) then          
         dzsnso(-nsnow+1:(isnow-1)) = 0 
         snice(-nsnow+1:(isnow-1))=0
+        ! divide perturbation over layers relative to their size
         do iz=isnow+1,0
            dzsnso(iz) = dzsnso(iz)+dsnowh* dzsnso(iz)/snowh
            snice(iz) = snice(iz)+dsneqv* snice(iz)/sneqv
