@@ -111,14 +111,16 @@ subroutine noahmp401_sfc2vod(n, sfcState)
       psisat = PSISAT_TABLE(soiltyp)
       bexp = BEXP_TABLE(soiltyp)
       nroot = noahmp401_struc(n)%noahmp401(t)%param%nroot
-      ztotal = noahmp401_struc(n)%noahmp401(t)%zss(nroot)
+      ztotal = 0.0
       psi(t) = 0.0
       do iz = 1, nroot
-          dz = noahmp401_struc(n)%noahmp401(t)%zss(iz-1) - noahmp401_struc(n)%noahmp401(t)%zss(iz)
+          dz = noahmp401_struc(n)%sldpth(iz)
+          ztotal = ztotal + dz
           sh2o = noahmp401_struc(n)%noahmp401(t)%sh2o(iz)
           tmp_psi = max(PSIWLT, -psisat * (max(0.01, sh2o)/smcmax)**(-bexp))
-          psi(t) = psi(t) + dz / ztotal * tmp_psi
+          psi(t) = psi(t) + dz * tmp_psi
       enddo
+      if (ztotal.gt.0) psi(t) = psi(t) / ztotal
   enddo
 
 end subroutine noahmp401_sfc2vod

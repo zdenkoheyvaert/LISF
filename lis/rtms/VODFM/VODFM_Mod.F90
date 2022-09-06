@@ -612,7 +612,7 @@ contains
             call vodfm_struc(n)%run(n, t, pred)
 
             ! apply temperature correction
-            if (vodfm_struc(n)%apply_tcorr) then
+            if (vodfm_struc(n)%apply_tcorr.and.vodfm_struc(n)%VOD(t).ne.LIS_rc%udef) then
                 deltaT = tc(t) - 273.15 - 25
                 eps_water = 78.54 * (1 - 4.579e-3*deltaT + 1.19e-5*deltaT**2 - 2.8e-8*deltaT**3)
                 vodfm_struc(n)%VOD(t) = vodfm_struc(n)%VOD(t) * eps_water / 78.54
@@ -620,6 +620,7 @@ contains
 
             if (vodfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodfm_struc(n)%VOD(t).lt.-10) then
                 write(LIS_logunit, *) "[WARN] VOD lower than -10"
+                vodfm_struc(n)%VOD(t) = LIS_rc%udef
             endif
 
             call LIS_diagnoseRTMOutputVar(n, t, LIS_MOC_RTM_VOD,&
@@ -680,7 +681,7 @@ contains
         real, intent(in) :: pred(self%npred)
 
         integer             :: j
-        real                :: intercept, actual_n_SV, dual_coef
+        real                :: intercept, actual_n_SV, dual_coef, vod
         real                :: gam(self%npred), support_vectors(self%npred)
         real                :: kernelval
         logical             :: coefs_valid, values_valid
@@ -697,18 +698,23 @@ contains
 
         if (coefs_valid) then
             ! VOD = \sum_j dual_coef[j] * K(x, s[j])
-            self%VOD(t) = intercept
+            vod = intercept
             do j=1, actual_n_SV
                 dual_coef = self%dual_coef(j, t)
                 support_vectors = self%support_vectors(:, j, t)
                 ! calculate kernel value
                 ! K = exp(-\sum_k gamma[k] * (x[k] - s[k])**2)
                 kernelval = exp(-sum(gam * (pred - support_vectors)**2))
-                self%VOD(t) = self%VOD(t) + dual_coef * kernelval
+                vod = vod + dual_coef * kernelval
             end do
+            if (vod.lt.0) then
+                ! write(LIS_logunit, *) "[WARN] VOD lower than 0"
+                vod = LIS_rc%udef
+            endif
         else
-            self%VOD(t) = LIS_rc%udef
+            vod = LIS_rc%udef
         endif
+        self%VOD(t) = vod
     end subroutine VODFM_run_svr_model
 
 

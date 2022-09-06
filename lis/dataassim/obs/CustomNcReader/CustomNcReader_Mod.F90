@@ -469,8 +469,10 @@ contains
 
         enddo
 
-        allocate(reader_struc(n)%daobs(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
-        allocate(reader_struc(n)%datime(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
+        do n=1, LIS_rc%nnest
+            allocate(reader_struc(n)%daobs(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
+            allocate(reader_struc(n)%datime(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
+        enddo
 
         write(LIS_logunit,*)&
              "[INFO] read Custom "//trim(varname)//" data specifications"
@@ -890,8 +892,7 @@ contains
         real                   :: ssdev(LIS_rc%obs_ngrid(k))
         type(ESMF_Field)       :: pertfield
         integer                :: timeidx
-        real                   :: lon, lhour, lmin, gmt, dt
-        integer                :: zone
+        real                   :: localdatime, gmtdatime, lon, dt
 
 
         call ESMF_AttributeGet(OBS_State,"Data Directory",&
