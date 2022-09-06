@@ -119,7 +119,7 @@ module CustomNcReader_Mod
         real,    allocatable   :: w12(:)
         real,    allocatable   :: w21(:)
         real,    allocatable   :: w22(:)
-        logical                :: lt_assim
+        integer                :: lt_assim
         integer                :: da_hr, da_mn
 
         logical                :: sv_ssdev  ! spatially variable ssdev
@@ -320,7 +320,7 @@ contains
             call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" assimilate at local time:",&
                  rc=status)
             if (status .ne. 0) then
-                reader_struc(n)%lt_assim = .false.
+                reader_struc(n)%lt_assim = 0
             else
                 call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%lt_assim,&
                      rc=status)
@@ -331,7 +331,7 @@ contains
              "Custom "//trim(varname)//" assimilation time (hour):",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(reader_struc(n)%lt_assim) then
+            if(reader_struc(n)%lt_assim.ne.0) then
                 call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%da_hr, &
                      rc=status)
                 call LIS_verify(status, &
@@ -345,7 +345,7 @@ contains
              "Custom "//trim(varname)//" assimilation time (minute):",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(reader_struc(n)%lt_assim) then
+            if(reader_struc(n)%lt_assim.ne.0) then
                 call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%da_mn, &
                      rc=status)
                 call LIS_verify(status, &
@@ -935,7 +935,7 @@ contains
                             reader_struc(n)%daobs(c,r) = &
                                  observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
                             lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
-                            if (reader_struc(n)%lt_assim) then
+                            if (reader_struc(n)%lt_assim.ne.0) then
                                 localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
                                 gmtdatime = localdatime - 240 * lon
                                 if (gmtdatime.lt.0) gmtdatime = gmtdatime + 86400
