@@ -935,9 +935,15 @@ contains
                             reader_struc(n)%daobs(c,r) = &
                                  observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
                             lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
-                            localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
-                            gmtdatime = localdatime - 240 * lon
-                            reader_struc(n)%datime(c,r) = gmtdatime
+                            if (reader_struc(n)%lt_assim) then
+                                localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
+                                gmtdatime = localdatime - 240 * lon
+                                if (gmtdatime.lt.0) gmtdatime = gmtdatime + 86400
+                                if (gmtdatime.ge.86400) gmtdatime = gmtdatime - 86400
+                                reader_struc(n)%datime(c, r) = gmtdatime
+                            else
+                                reader_struc(n)%datime(c, r) = 0
+                            endif
                         endif
                     endif
                 enddo
@@ -959,7 +965,10 @@ contains
             do c=1,LIS_rc%obs_lnc(k)
                 if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
                     dt = (LIS_rc%gmt*3600.0 - reader_struc(n)%datime(c,r))
+                    ! we assimilate if the assimiliation time is now or within the next
+                    ! integration interval
                     if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
+                        ! if local time assimilation is off, dt == 0 at gmt == 0
                         obs_current(c, r) = reader_struc(n)%daobs(c, r)
                         if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
                             obs_unsc(LIS_obs_domain(n,k)%gindex(c,r)) = &
