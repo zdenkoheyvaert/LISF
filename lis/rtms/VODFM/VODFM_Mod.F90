@@ -707,10 +707,10 @@ contains
                 kernelval = exp(-sum(gam * (pred - support_vectors)**2))
                 vod = vod + dual_coef * kernelval
             end do
-            if (vod.lt.0) then
-                ! write(LIS_logunit, *) "[WARN] VOD lower than 0"
-                vod = LIS_rc%udef
-            endif
+            ! if (vod.lt.0) then
+            !     ! write(LIS_logunit, *) "[WARN] VOD lower than 0"
+            !     vod = LIS_rc%udef
+            ! endif
         else
             vod = LIS_rc%udef
         endif
