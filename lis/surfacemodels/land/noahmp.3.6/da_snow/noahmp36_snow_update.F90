@@ -138,6 +138,7 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
      ISNOW    = -1
      NEWNODE  =  1
      DZSNSO(0)= SNOWH
+     SNOWH    = 0
      STC(0)   = MIN(273.16, NOAHMP36_struc(n)%noahmp36(t)%sfctmp)   ! temporary setup
      SNICE(0) = SNEQV
      SNLIQ(0) = 0.
@@ -229,8 +230,8 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
         endif
      enddo
 
-
-     if(isnow < 0) &     
+# if 0
+     if(isnow < 0 .and. dzsnso(0) > 0 .and. snice(0) > 0) then  
           call  compact (nsnow  ,&
           nsoil  ,&
           noahmp36_struc(n)%dt     ,&
@@ -243,7 +244,9 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
           iloc   , jloc ,& !in
           isnow  ,&
           dzsnso ,zsnso  )                   !inoutl
-     
+     endif     
+# endif
+
      if(isnow < 0) &
           call  combine (nsnow  ,&
           nsoil  ,iloc   ,jloc   ,         & !in
@@ -333,6 +336,11 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
         DZSNSO(IZ) = -DZSNSO(IZ)
      END DO
      
+     if (sneqv.le.0 .or. snowh.le.0) then
+         sneqv=0
+        snowh=0
+     endif
+
      noahmp36_struc(n)%noahmp36(t)%isnow = isnow
      noahmp36_struc(n)%noahmp36(t)%sneqv = sneqv
      noahmp36_struc(n)%noahmp36(t)%snowh = snowh 
