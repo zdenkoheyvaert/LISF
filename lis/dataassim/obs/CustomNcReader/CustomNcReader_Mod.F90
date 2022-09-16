@@ -964,9 +964,10 @@ contains
         do r=1,LIS_rc%obs_lnr(k)
             do c=1,LIS_rc%obs_lnc(k)
                 if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
-                    dt = (LIS_rc%gmt*3600.0 - reader_struc(n)%datime(c,r))
                     ! we assimilate if the assimiliation time is now or within the next
-                    ! integration interval
+                    ! integration interval, therefore we have to subtract now
+                    ! (LIC_rc%gmt) from the da time
+                    dt = (reader_struc(n)%datime(c, r) - LIS_rc%gmt*3600.0)
                     if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
                         ! if local time assimilation is off, dt == 0 at gmt == 0
                         obs_current(c, r) = reader_struc(n)%daobs(c, r)
