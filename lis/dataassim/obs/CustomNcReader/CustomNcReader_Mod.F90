@@ -122,11 +122,13 @@ module CustomNcReader_Mod
         integer                :: lt_assim
         integer                :: da_hr, da_mn
 
-        logical                :: sv_ssdev  ! spatially variable ssdev
+        character*20           :: obs_pert_option
+        integer                :: ssdev_opt
         real                   :: ssdev_inp
         real,    allocatable   :: ssdev_inp_field(:)
-        character*256          :: obs_pert_file
-        character*100          :: obs_pert_varname
+        character*256          :: mean_obs_unc_file
+        character*100          :: mean_obs_unc_varname
+        character*100          :: obs_unc_varname
         real,    allocatable   :: model_xrange(:,:,:)
         real,    allocatable   :: obs_xrange(:,:,:)
         real,    allocatable   :: model_cdf(:,:,:)
@@ -140,6 +142,7 @@ module CustomNcReader_Mod
         integer                :: ntimes
 
         real,     allocatable      :: daobs(:,:)
+        real,     allocatable      :: daobs_unc(:,:)
         real,     allocatable      :: datime(:,:)
 
     end type CustomNcReader_dec
@@ -356,26 +359,61 @@ contains
         enddo
 
         do n=1,LIS_rc%nnest
-            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" observation perturbation file:",&
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//" observation perturbation option:",&
                  rc=status)
             if (status .ne. 0) then
-                reader_struc(n)%sv_ssdev = .false.
+                reader_struc(n)%obs_pert_option = 0  ! scalar
             else
-                reader_struc(n)%sv_ssdev = .true.
-                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%obs_pert_file,&
+                call ESMF_ConfigGetAttribute(LIS_config,obs_pert_option,&
                      rc=status)
+                if (obs_pert_option.eq."scalar") then
+                    reader_struc(n)%obs_pert_option = 0
+                else if (obs_pert_option.eq."spatial") then
+                    reader_struc(n)%obs_pert_option = 1
+                else if (obs_pert_option.eq."full") then
+                    reader_struc(n)%obs_pert_option = 2
+                else
+                    write(LIS_logunit,*)&
+                         "[ERROR] Custom "//trim(varname)" observation perturbation option"&
+                         //" must be one of 'scalar', 'spatial', or 'full'"
+                    call LIS_endrun
+                endif
+            endif
+        enddo
+
+
+        do n=1,LIS_rc%nnest
+            call ESMF_ConfigFindLabel(LIS_config,"Custom "//trim(varname)//"mean observation uncertainty file:",&
+                 rc=status)
+            if (reader_struc(n)%obs_pert_option .ne. 0) then
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%mean_obs_unc_file,&
+                     rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" observation perturbation variable name: not defined")
             endif
         enddo
 
         call ESMF_ConfigFindLabel(LIS_config,&
-             "Custom "//trim(varname)//" observation perturbation variable name:",&
+             "Custom "//trim(varname)//" mean observation uncertainty variable name:",&
              rc=status)
         do n=1,LIS_rc%nnest
-            if(reader_struc(n)%sv_ssdev) then
-                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%obs_pert_varname, &
+            if(reader_struc(n)%obs_pert_option .ne. 0) then
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%mean_obs_unc_varname, &
                      rc=status)
                 call LIS_verify(status, &
-                     "Custom "//trim(varname)//" observation perturbation variable name: not defined")
+                     "Custom "//trim(varname)//" mean observation uncertainty variable name: not defined")
+            endif
+        enddo
+
+        call ESMF_ConfigFindLabel(LIS_config,&
+             "Custom "//trim(varname)//" observation uncertainty variable name:",&
+             rc=status)
+        do n=1,LIS_rc%nnest
+            if(reader_struc(n)%obs_pert_option .eq. 2) then  ! option "full"
+                call ESMF_ConfigGetAttribute(LIS_config,reader_struc(n)%obs_unc_varname, &
+                     rc=status)
+                call LIS_verify(status, &
+                     "Custom "//trim(varname)//" observation uncertainty variable name: not defined")
             endif
         enddo
 
@@ -523,21 +561,32 @@ contains
                 allocate(obs_pert%ycorr(1))
                 allocate(obs_pert%ccorr(1,1))
 
-                if (reader_struc(n)%sv_ssdev) then
-                    call CustomNcReader_readSsdevData(n, k, reader_struc(n)%obs_pert_file,&
-                         reader_struc(n)%obs_pert_varname, ssdev)
-                    allocate(reader_struc(n)%ssdev_inp_field(LIS_rc%obs_ngrid(k)))
-                    reader_struc(n)%ssdev_inp_field = ssdev
-                else
+                if (reader_stru(n)%obs_pert_option.eq.0) then ! option "scalar"
                     call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
                          obs_pert)
-
-                    ! Set obs err to be uniform (will be rescaled later for each grid point).
-                    ssdev = obs_pert%ssdev(1)
                     reader_struc(n)%ssdev_inp = obs_pert%ssdev(1)
+                    ! Set obs err to be uniform (will be rescaled later for each grid point).
+                    reader_struc(n)%ssdev_inp = obs_pert%ssdev(1)
+                    ssdev = obs_pert%ssdev(1)
                     write(LIS_logunit,*)&
                          "[INFO] observation perturbation size for "//trim(varname)//":",&
                          reader_struc(n)%ssdev_inp
+                else if (reader_stru(n)%obs_pert_option.eq.1) then ! option "spatial"
+                    call CustomNcReader_readSsdevData(n, k, reader_struc(n)%mean_obs_unc_file,&
+                         reader_struc(n)%mean_obs_unc_varname, ssdev)
+                    allocate(reader_struc(n)%ssdev_inp_field(LIS_rc%obs_ngrid(k)))
+                    reader_struc(n)%ssdev_inp_field = ssdev
+                else if (reader_stru(n)%obs_pert_option.eq.2) then ! option "full"
+                    call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
+                         obs_pert)
+                    call CustomNcReader_readSsdevData(n, k, reader_struc(n)%mean_obs_unc_file,&
+                         reader_struc(n)%mean_obs_unc_varname, ssdev)
+                    allocate(reader_struc(n)%ssdev_inp_field(LIS_rc%obs_ngrid(k)))
+                    ! in the "full" option, we use the spatial field for some
+                    ! spatial scaling (typically the mean uncertainty over
+                    ! time), and scale this by the value in the observation
+                    ! perturbation attributes file, to have a tuning factor
+                    reader_struc(n)%ssdev_inp_field = ssdev * obs_pert%ssdev(1)
                 endif
 
                 pertField(n) = ESMF_FieldCreate(arrayspec=pertArrSpec,&
@@ -725,7 +774,7 @@ contains
                 if (reader_struc(n)%useSsdevScal) then
 
                     allocate(ssdev(LIS_rc%obs_ngrid(k)))
-                    if (reader_struc(n)%sv_ssdev) then
+                    if (reader_struc(n)%obs_pert_option.ne.0) then
                         ssdev = reader_struc(n)%ssdev_inp_field
                     else
                         ssdev = reader_struc(n)%ssdev_inp
@@ -885,8 +934,11 @@ contains
         logical                :: data_upd_flag_local
         logical                :: data_upd
         real                   :: observations(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real                   :: observations_unc(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         real                   :: obs_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+        real                   :: obs_unc_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
         real                   :: obs_unsc(LIS_rc%obs_ngrid(k))
+        real                   :: obs_unc_ngrid(LIS_rc%obs_ngrid(k))
         integer                :: fnd
         real                   :: timenow
         real                   :: ssdev(LIS_rc%obs_ngrid(k))
@@ -904,6 +956,7 @@ contains
 
         data_upd = .false.
         obs_unsc = LIS_rc%udef
+        obs_unc_ngrid = LIS_rc%udef
         obs_current = LIS_rc%udef
 
         ! Read the data from the file at 0UTC and store it
@@ -914,6 +967,7 @@ contains
             reader_struc(n)%daobs = LIS_rc%udef
             reader_struc(n)%datime = -1
             observations = LIS_rc%udef
+            observations_unc = LIS_rc%udef
 
             call create_CustomNetCDF_filename(reader_struc(n)%nc_prefix,&
                  obsdir, LIS_rc%yr, LIS_rc%mo, LIS_rc%da, fname)
@@ -921,7 +975,7 @@ contains
             inquire(file=fname,exist=file_exists)
             if(file_exists) then
                 call read_CustomNetCDF_data(n,k, fname,observations,&
-                    reader_struc)
+                    observations_unc, reader_struc)
             else
                 write(LIS_logunit,*) '[WARN] Missing observation file: ',trim(fname)
             endif
@@ -934,6 +988,8 @@ contains
                         if(observations(c+(r-1)*LIS_rc%obs_lnc(k)).gt.0) then             
                             reader_struc(n)%daobs(c,r) = &
                                  observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
+                            reader_struc(n)%daobs_unc(c, r) = &
+                                 observations_unc(c+(r-1)*LIS_rc%obs_lnc(k))
                             lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
                             if (reader_struc(n)%lt_assim.ne.0) then
                                 localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
@@ -959,6 +1015,7 @@ contains
 
         fnd = 0
         obs_current = LIS_rc%udef
+        obs_unc_current = LIS_rc%udef
 
         ! write only the values that should be assimilated now into obs_current
         do r=1,LIS_rc%obs_lnr(k)
@@ -970,6 +1027,7 @@ contains
                     if (dt.ge.0.and.dt.lt.LIS_rc%ts) then
                         ! if local time assimilation is off, dt == 0 at gmt == 0
                         obs_current(c, r) = reader_struc(n)%daobs(c, r)
+                        obs_unc_current(c, r) = reader_struc(n)%daobs_unc(c, r)
                         if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
                             obs_unsc(LIS_obs_domain(n,k)%gindex(c,r)) = &
                                  obs_current(c,r)
@@ -1027,10 +1085,12 @@ contains
 
         ! write transformed data to ESMF pointer
         obsl = LIS_rc%udef
+        obs_unc_ngrid = LIS_rc%udef
         do r=1, LIS_rc%obs_lnr(k)
             do c=1, LIS_rc%obs_lnc(k)
                 if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
                     obsl(LIS_obs_domain(n,k)%gindex(c,r)) = obs_current(c,r)
+                    obs_unc_ngrid(LIS_obs_domain(n,k)%gindex(c,r)) = obs_unc_current(c,r)
                 endif
             enddo
         enddo
@@ -1091,10 +1151,12 @@ contains
                      rc=status)
                 call LIS_verify(status, 'Error: StateGet Observation01')
 
-                if (reader_struc(n)%sv_ssdev) then
-                    ssdev = reader_struc(n)%ssdev_inp_field
-                else
+                if (reader_struc(n)%obs_pert_option.eq.0) then
                     ssdev = reader_struc(n)%ssdev_inp
+                else if (reader_struc(n)%obs_pert_option.eq.1) then
+                    ssdev = reader_struc(n)%ssdev_inp_field
+                else ! option 2, i.e. "full"
+                    ssdev = reader_struc(n)%ssdev_inp_field * obs_unc_ngrid
                 endif
 
                 timeidx = CustomNcReader_timeidx(reader_struc(n)%ntimes)
@@ -1125,7 +1187,7 @@ contains
     ! \label{read_CustomNetCDF_data}
     !
     ! !INTERFACE:
-    subroutine read_CustomNetCDF_data(n, k, fname, observations_ip, reader_struc)
+    subroutine read_CustomNetCDF_data(n, k, fname, obs_ip, reader_struc)
         !
         ! !USES:
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
@@ -1142,7 +1204,7 @@ contains
         integer                       :: n
         integer                       :: k
         character (len=*)             :: fname
-        real                          :: observations_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real                          :: obs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         type(CustomNcReader_dec)      :: reader_struc(LIS_rc%nnest)
 
 
@@ -1168,8 +1230,8 @@ contains
         integer                 :: lat_offset, lon_offset
         real                    :: observation(reader_struc(n)%nc,reader_struc(n)%nr)
         real                    :: obs_in(reader_struc(n)%nc*reader_struc(n)%nr)
-        logical*1               :: obs_data_b(reader_struc(n)%nc*reader_struc(n)%nr)
-        logical*1               :: observations_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        logical*1               :: obs_b_in(reader_struc(n)%nc*reader_struc(n)%nr)
+        logical*1               :: obs_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         integer                 :: c,r,t
         integer                 :: nid, lid, latsize_file, lonsize_file
         integer                 :: lat(reader_struc(n)%nr)
@@ -1183,7 +1245,7 @@ contains
 #else
         !values
 
-        obs_data_b = .false.
+        obs_b_in = .false.
 
         lat_offset = 1  ! no offset
         lon_offset = 1
@@ -1235,61 +1297,81 @@ contains
         ios = nf90_close(ncid=nid)
         call LIS_verify(ios,'Error closing file '//trim(fname))
 
-        ! the data is already read into 'observation', but we have to replace
-        ! NaNs/invalid values with LIS_rc%udef
-        do r=1, reader_struc(n)%nr
-            do c=1, reader_struc(n)%nc
-                if (isnan(observation(c, r))) then
-                    observation(c, r) = LIS_rc%udef
-                else if (.not. (reader_struc(n)%qcmin_value < observation(c, r) &
-                     .and. observation(c, r) < reader_struc(n)%qcmax_value)) then
-                    observation(c, r) = LIS_rc%udef
-                endif
+
+        call make_data_nice(observation, obs_in, obs_b_in, obs_ip, obs_b_ip, &
+             reader_struc(n)%qcmin_value, reader_struc(n)%qcmin_value)
+
+    contains
+
+        subroutine make_data_nice(data, data_in, data_b_in, data_ip, data_b_ip, qcmin, qcmax)
+
+            real, intent(inout)        :: data(reader_struc(n)%nc,reader_struc(n)%nr)
+            real, intent(inout)        :: data_in(reader_struc(n)%nc*reader_struc(n)%nr)
+            logical*1, intent(inout)   :: data_b_in(reader_struc(n)%nc*reader_struc(n)%nr)
+            real, intent(inout)        :: data_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+            logical*1, intent(inout)   :: data_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+            real, intent(in)           :: qcmin, qcmax
+
+            integer                    :: c,r,t
+
+
+
+            ! the data is already read into 'observation', but we have to replace
+            ! NaNs/invalid values with LIS_rc%udef
+            do r=1, reader_struc(n)%nr
+                do c=1, reader_struc(n)%nc
+                    if (isnan(data(c, r))) then
+                        data(c, r) = LIS_rc%udef
+                    else if (.not. (qcmin < data(c, r) &
+                         .and. data(c, r) < qcmax)) then
+                        data(c, r) = LIS_rc%udef
+                    endif
+                end do
             end do
-        end do
 
-        ! fill obs_in and obs_data_b, which are required further on
-        do r=1, reader_struc(n)%nr
-            do c=1, reader_struc(n)%nc
-                obs_in(c+(r-1)*reader_struc(n)%nc) = observation(c,r)
-                if(observation(c,r).ne.LIS_rc%udef) then
-                    obs_data_b(c+(r-1)*reader_struc(n)%nc) = .true.
-                else
-                    obs_data_b(c+(r-1)*reader_struc(n)%nc) = .false.
-                endif
+            ! fill data_in and data_b, which are required further on
+            do r=1, reader_struc(n)%nr
+                do c=1, reader_struc(n)%nc
+                    data_in(c+(r-1)*reader_struc(n)%nc) = data(c,r)
+                    if(data(c,r).ne.LIS_rc%udef) then
+                        data_b(c+(r-1)*reader_struc(n)%nc) = .true.
+                    else
+                        data_b(c+(r-1)*reader_struc(n)%nc) = .false.
+                    endif
+                enddo
             enddo
-        enddo
 
-        if(LIS_rc%obs_gridDesc(k,10).le.reader_struc(n)%dlon) then
-            write(LIS_logunit,*) '[INFO] interpolating Custom',&
-                 trim(reader_struc(n)%varname),&
-                 trim(fname)
-            !--------------------------------------------------------------------------
-            ! Interpolate to the LIS running domain if model has finer resolution
-            ! than observations
-            !--------------------------------------------------------------------------
-            call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
-                 obs_data_b, obs_in, observations_b_ip, observations_ip, &
-                 reader_struc(n)%nc*reader_struc(n)%nr, &
-                 LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
-                 reader_struc(n)%rlat,reader_struc(n)%rlon,&
-                 reader_struc(n)%w11,reader_struc(n)%w12,&
-                 reader_struc(n)%w21,reader_struc(n)%w22,&
-                 reader_struc(n)%n11,reader_struc(n)%n12,&
-                 reader_struc(n)%n21,reader_struc(n)%n22,LIS_rc%udef,ios)
-         else
-            write(LIS_logunit,*) '[INFO] upscaling Custom',&
-                 trim(reader_struc(n)%varname),&
-                 trim(fname)
-            !--------------------------------------------------------------------------
-            ! Upscale to the LIS running domain if model has coarser resolution
-            ! than observations
-            !--------------------------------------------------------------------------
-            call upscaleByAveraging(reader_struc(n)%nc*reader_struc(n)%nr,&
-                 LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
-                 LIS_rc%udef, reader_struc(n)%n11,&
-                 obs_data_b,obs_in, observations_b_ip, observations_ip)
-        endif
+            if(LIS_rc%obs_gridDesc(k,10).le.reader_struc(n)%dlon) then
+                write(LIS_logunit,*) '[INFO] interpolating Custom',&
+                     trim(reader_struc(n)%varname),&
+                     trim(fname)
+                !--------------------------------------------------------------------------
+                ! Interpolate to the LIS running domain if model has finer resolution
+                ! than observations
+                !--------------------------------------------------------------------------
+                call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
+                     data_b, data_in, data_b_ip, data_ip, &
+                     reader_struc(n)%nc*reader_struc(n)%nr, &
+                     LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
+                     reader_struc(n)%rlat,reader_struc(n)%rlon,&
+                     reader_struc(n)%w11,reader_struc(n)%w12,&
+                     reader_struc(n)%w21,reader_struc(n)%w22,&
+                     reader_struc(n)%n11,reader_struc(n)%n12,&
+                     reader_struc(n)%n21,reader_struc(n)%n22,LIS_rc%udef,ios)
+             else
+                write(LIS_logunit,*) '[INFO] upscaling Custom',&
+                     trim(reader_struc(n)%varname),&
+                     trim(fname)
+                !--------------------------------------------------------------------------
+                ! Upscale to the LIS running domain if model has coarser resolution
+                ! than observations
+                !--------------------------------------------------------------------------
+                call upscaleByAveraging(reader_struc(n)%nc*reader_struc(n)%nr,&
+                     LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
+                     LIS_rc%udef, reader_struc(n)%n11,&
+                     data_b,data_in, data_b_ip, data_ip)
+            endif
+        end subroutine make_data_nice
 
 #endif
     end subroutine read_CustomNetCDF_data
