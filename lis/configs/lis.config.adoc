@@ -2838,7 +2838,7 @@ deviation.
 `ESA CCI soil moisture number of bins in the CDF:` specifies the number of
 bins in the CDF.
 
-`ESA CCI CDF read option:` specifies whether to read all months of
+`ESA CCI CDF read option:` specifies whether to read all months at once
 or to read month by month from a monthly CDF file.
 
 Acceptable values are:
@@ -2874,6 +2874,9 @@ ESA CCI use scaled standard deviation model:
 ESA CCI model CDF file:
 ESA CCI observation CDF file:
 ESA CCI soil moisture number of bins in the CDF:
+ESA CCI CDF read option:
+ESA CCI soil moisture assimilate at 0UTC:
+
 ....
 
 
