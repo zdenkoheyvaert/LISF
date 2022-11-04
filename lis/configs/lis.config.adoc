@@ -2838,6 +2838,33 @@ deviation.
 `ESA CCI soil moisture number of bins in the CDF:` specifies the number of
 bins in the CDF.
 
+`ESA CCI CDF read option:` specifies whether to read all months of
+or to read month by month from a monthly CDF file.
+
+Acceptable values are:
+
+|====
+|Value    | Description
+
+|0 | Read all months
+|1 | Read month by month
+|====
+
+NOTE: Select 0 for yearly CDF data.
+
+`ESA CCI soil moisture assimilate at 0UTC:` specifies whether to assimilate at 00:00 UTC
+or at local noon.
+
+Acceptable values are:
+
+|====
+|Value    | Description
+
+|.true. | Assimilate at 00:00 UTC
+|.false. | Assimilate at local noon
+|====
+
+
 .Example _lis.config_ entry
 ....
 ESA CCI soil moisture data directory:
