@@ -8163,6 +8163,14 @@ the _lis.config_ file, the default value of 2000.0 mm is used.
 This maximum only applies to tiles identified as glacier in the
 landcover classification.
 
+`Noah-MP.4.0.1 apply soil moisture observation QC:` specifies whether
+quality control should reject observations which are too close to the
+tails. Defaults to `.true.`.
+
+`Noah-MP.4.0.1 apply soil moisture DA over forests:` specifies whether
+soil moisture data assimilaion may be performed over forests. Defaults
+to `.false.`.
+
 .Example _lis.config_ entry
 ....
 Noah-MP.4.0.1 model timestep:                15mn
@@ -8204,6 +8212,8 @@ Noah-MP.4.0.1 initial water table depth:                    2.5
 Noah-MP.4.0.1 initial water in the aquifer:                 4900.0
 Noah-MP.4.0.1 initial water in aquifer and saturated soil:  4900.0
 Noah-MP.4.0.1 snow depth glacier model option:              2000
+Noah-MP.4.0.1 apply soil moisture observation QC:           .true.
+Noah-MP.4.0.1 apply soil moisture DA over forests:          .false.
 ....
 
 
