@@ -22,8 +22,8 @@ module VODFM_Mod
     !    VODFM model type: 
     !        "linear" or "SVR"
     !    VODFM predictors:
-    !        "mech" or "stat". "mech": (CWC, LAI, PSI*LAI, VPD*LAI**2, TC),
-    !        "stat": (CWC, LAI, SM1, SM2, SM3, SM4, VPD, TC)
+    !        "mech" or "stat". "mech": (CWC, LAI, PSI*LAI, VPD*LAI**2),
+    !        "stat": (CWC, LAI, SM1, SM2, SM3, SM4, VPD)
     !    VODFM parameter file:
     !        Pathname to the parameter file
     !
@@ -86,9 +86,8 @@ module VODFM_Mod
     ! subclasses below, this is just to provide a common interface.
     ! Using instances of this type will raise an error.
     type, public ::  vodfm_type_dec
-        character*5   :: predictors
+        character*10   :: predictors
         integer       :: npred
-        logical       :: apply_tcorr
         character*256 :: parameter_fname
         !-------output------------!
         real, allocatable :: VOD(:)
@@ -148,9 +147,8 @@ contains
         integer :: rc, ios
         integer :: n, nid, ngrid, ngridId
         character*100 :: modeltype(LIS_rc%nnest)
-        character*5 :: predictors(LIS_rc%nnest)
+        character*10 :: predictors(LIS_rc%nnest)
         character*256 :: parameter_fname(LIS_rc%nnest)
-        logical :: apply_tcorr(LIS_rc%nnest)
 
         write(LIS_logunit,*) "[INFO] Starting VODFM setup"
 
@@ -172,21 +170,12 @@ contains
         do n=1, LIS_rc%nnest
             call ESMF_ConfigGetAttribute(LIS_config, predictors(n), rc=rc)
             call LIS_verify(rc, "VODFM predictors: not defined")
-            if (predictors(n) .ne. "stat"&
-                 .and. predictors(n) .ne. "mech") then
+            if (predictors(n) .ne. "mech"&
+                 .and. predictors(n) .ne. "stat_sm"&
+                 .and. predictors(n) .ne. "stat_rzsm") then
                 write(LIS_logunit, *)&
-                     "[ERR] VODFM predictors must be 'mech' or 'stat'"
+                     "[ERR] VODFM predictors must be 'mech', 'stat_sm' or 'stat_rzsm'"
                 call LIS_endrun
-            endif
-        enddo
-
-        call ESMF_ConfigFindLabel(LIS_config, "VODFM apply temperature correction:",rc = rc)
-        do n=1, LIS_rc%nnest
-            if (rc.ne.0) then
-                apply_tcorr(n) = .true.
-            else
-                call ESMF_ConfigGetAttribute(LIS_config, predictors(n), rc=rc)
-                call LIS_verify(rc, "VODFM apply temperature correction: not defined")
             endif
         enddo
 
@@ -210,11 +199,12 @@ contains
             vodfm_struc(n)%predictors = predictors(n)
             if (predictors(n) == "mech") then
                 vodfm_struc(n)%npred = 5
-            else
-                vodfm_struc(n)%npred = 8
+            else if (predictors(n) == "stat_sm") then
+                vodfm_struc(n)%npred = 7
+            else if (predictors(n) == "stat_rzsm") then
+                vodfm_struc(n)%npred = 4
             endif
             vodfm_struc(n)%parameter_fname = parameter_fname(n)
-            vodfm_struc(n)%apply_tcorr = apply_tcorr(n)
             allocate(vodfm_struc(n)%VOD(LIS_rc%npatch(n,LIS_rc%lsm_index)))
 
             call add_sfc_fields(n,LIS_sfcState(n), "Canopy Water Content")
@@ -224,6 +214,7 @@ contains
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 3")
             call add_sfc_fields(n,LIS_sfcState(n), "Soil Moisture Layer 4")
             call add_sfc_fields(n,LIS_sfcState(n), "Root Zone Soil Water Potential")
+            call add_sfc_fields(n,LIS_sfcState(n), "Root Zone Soil Moisture")
             call add_sfc_fields(n,LIS_sfcState(n), "Canopy Vapor Pressure Deficit")
             call add_sfc_fields(n,LIS_sfcState(n), "Canopy Temperature")
             call add_sfc_fields(n,LIS_forwardState(n),"VODFM_VOD")
@@ -571,7 +562,7 @@ contains
         integer             :: status
         integer             :: col,row
         real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:), psi(:), cwc(:), tc(:), vpd(:)
-        real, pointer       :: vodval(:)
+        real, pointer       :: vodval(:), rzsm(:)
         real                :: intercept
         real                :: eps_water, deltaT
         real                :: pred(vodfm_struc(n)%npred)
@@ -584,6 +575,7 @@ contains
         call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 3", sm3)
         call getsfcvar(LIS_sfcState(n), "Soil Moisture Layer 4", sm4)
         call getsfcvar(LIS_sfcState(n), "Root Zone Soil Water Potential", psi)
+        call getsfcvar(LIS_sfcState(n), "Root Zone Soil Moisture", rzsm)
         call getsfcvar(LIS_sfcState(n), "Canopy Temperature", tc)
         call getsfcvar(LIS_sfcState(n), "Canopy Vapor Pressure Deficit", vpd)
 
@@ -598,7 +590,7 @@ contains
                 pred(3) = psi(t) * lai(t)
                 pred(4) = vpd(t) * lai(t)**2
                 pred(5) = tc(t)
-            else
+            else if (vodfm_struc(n)%predictors .eq. "stat_sm") then
                 pred(1) = cwc(t)
                 pred(2) = lai(t)
                 pred(3) = sm1(t)
@@ -606,17 +598,14 @@ contains
                 pred(5) = sm3(t)
                 pred(6) = sm4(t)
                 pred(7) = vpd(t)
-                pred(8) = tc(t)
+            else if (vodfm_struc(n)%predictors .eq. "stat_rzsm") then
+                pred(1) = cwc(t)
+                pred(2) = lai(t)
+                pred(3) = rzsm(t)
+                pred(4) = vpd(t)
             endif
 
             call vodfm_struc(n)%run(n, t, pred)
-
-            ! apply temperature correction
-            if (vodfm_struc(n)%apply_tcorr.and.vodfm_struc(n)%VOD(t).ne.LIS_rc%udef) then
-                deltaT = tc(t) - 273.15 - 25
-                eps_water = 78.54 * (1 - 4.579e-3*deltaT + 1.19e-5*deltaT**2 - 2.8e-8*deltaT**3)
-                vodfm_struc(n)%VOD(t) = vodfm_struc(n)%VOD(t) * eps_water / 78.54
-            endif
 
             if (vodfm_struc(n)%VOD(t).ne.LIS_rc%udef.and.vodfm_struc(n)%VOD(t).lt.-10) then
                 write(LIS_logunit, *) "[WARN] VOD lower than -10"

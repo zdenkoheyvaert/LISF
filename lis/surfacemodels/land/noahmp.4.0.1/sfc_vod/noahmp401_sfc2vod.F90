@@ -39,9 +39,9 @@ subroutine noahmp401_sfc2vod(n, sfcState)
 !
 !EOP
   type(ESMF_Field)    :: laiField, sm1field, sm2field, sm3field, sm4field
-  type(ESMF_Field)    :: cwcfield, psifield, cvpdfield, tcfield
+  type(ESMF_Field)    :: cwcfield, psifield, cvpdfield, tcfield, rzsmfield
   real, pointer       :: lai(:), sm1(:), sm2(:), sm3(:), sm4(:)
-  real, pointer       :: cwc(:), psi(:), cvpd(:), tc(:)
+  real, pointer       :: cwc(:), psi(:), cvpd(:), tc(:), rzsm(:)
   integer             :: t,status, soiltyp, nroot, iz
   real, parameter     :: PSIWLT = -150.
   real                :: smcmax, smcwlt, psisat, sh2o, tmp_psi, dz, ztotal, bexp, eah, esat
@@ -91,6 +91,11 @@ subroutine noahmp401_sfc2vod(n, sfcState)
   call ESMF_FieldGet(psifield,localDE=0,farrayPtr=psi, rc=status)
   call LIS_verify(status)
 
+  call ESMF_StateGet(sfcState,"Root Zone Soil Moisture",rzsmfield,rc=status)
+  call LIS_verify(status)
+  call ESMF_FieldGet(rzsmfield,localDE=0,farrayPtr=rzsm, rc=status)
+  call LIS_verify(status)
+
   do t=1,LIS_rc%npatch(n,LIS_rc%lsm_index)
       lai(t) = noahmp401_struc(n)%noahmp401(t)%lai
       sm1(t) = noahmp401_struc(n)%noahmp401(t)%smc(1)
@@ -113,14 +118,19 @@ subroutine noahmp401_sfc2vod(n, sfcState)
       nroot = noahmp401_struc(n)%noahmp401(t)%param%nroot
       ztotal = 0.0
       psi(t) = 0.0
+      rzsm(t) = 0.0
       do iz = 1, nroot
           dz = noahmp401_struc(n)%sldpth(iz)
           ztotal = ztotal + dz
           sh2o = noahmp401_struc(n)%noahmp401(t)%sh2o(iz)
           tmp_psi = max(PSIWLT, -psisat * (max(0.01, sh2o)/smcmax)**(-bexp))
           psi(t) = psi(t) + dz * tmp_psi
+          rzsm(t) = rzsm(t) + dz * sh2o
       enddo
-      if (ztotal.gt.0) psi(t) = psi(t) / ztotal
+      if (ztotal.gt.0) then
+          psi(t) = psi(t) / ztotal
+          rzsm(t) = rzsm(t) / ztotal
+      endif
   enddo
 
 end subroutine noahmp401_sfc2vod
