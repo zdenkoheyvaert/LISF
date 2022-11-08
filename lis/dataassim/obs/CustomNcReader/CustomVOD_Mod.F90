@@ -35,7 +35,7 @@ contains
             CustomVOD_struc(n)%qcmax_value = 100.0
         enddo
 
-        call CustomNcReader_setup(k, OBS_State, OBS_Pert_State, CustomVOD_struc)
+        call CustomNcReader_setup(CustomVOD_struc, k, OBS_State, OBS_Pert_State)
 
     end subroutine CustomVOD_setup
 

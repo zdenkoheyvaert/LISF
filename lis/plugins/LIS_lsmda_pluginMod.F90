@@ -2965,6 +2965,7 @@ subroutine LIS_lsmda_plugin
 
    call register_noahmp401_laida(LIS_CustomLAIobsId)
    call register_noahmp401_vodda(LIS_CustomVODobsId)
+   call register_noahmp401_vodda_only_lai(LIS_CustomVODonlyLAIobsId)
    call register_noahmp401_vodda_only_sm(LIS_CustomVODonlySMobsId)
 
 ! Yeosang Yoon, SNODEP DA
@@ -4199,6 +4200,31 @@ contains
        call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
             trim(obsId)//char(0),noahmp401_qc_VODobs)
     end subroutine register_noahmp401_vodda_only_sm
+
+    subroutine register_noahmp401_vodda_only_lai(obsId)
+        implicit none
+        character*50, intent(in) :: obsId
+
+       call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_daveg_init)
+       call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_getvegvars)
+       call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_setvegvars)
+       call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_updatevegvars)
+       call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_qcveg)
+       call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_scale_veg)
+       call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_descale_veg)
+
+       call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_getVODpred)
+       call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
+            trim(obsId)//char(0),noahmp401_qc_VODobs)
+    end subroutine register_noahmp401_vodda_only_lai
 
 
 #endif  !endif for DA_DIRECT_INSERTION, DA_ENKS, or DA_ENKF

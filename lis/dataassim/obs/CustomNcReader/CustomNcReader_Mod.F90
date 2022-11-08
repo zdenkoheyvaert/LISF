@@ -46,6 +46,35 @@
 !   Custom <varname> lon min:
 !      Minimum longitude value in case data has been resampled and cropped to a
 !      subdomain. (Optional)
+!   Custom <varname> assimilate at local time:
+!       Whether to perform the assimilation at local time (Optional, default:
+!       0).
+!   Custom <varname> assimilation time (hour):
+!   Custom <varname> assimilation time (minute):
+!       Time when to assimilate, default is 0:00
+!   Custom <varname> observation perturbation option:
+!       One of "scalar", "spatial", "full".
+!       - "scalar": a scalar is read from the observation perturbation
+!         attributes file and used for the complete domain and period (but might
+!         be rescaled according to the rescaling rules)
+!       - "spatial": Observation perturbations are read from the mean
+!         observation uncertainty file, observation perturbation attributes are
+!         ignored. Additionally, the rescaling rules are applied.
+!       - "full": Each day a new observation uncertainty is read from the image
+!         files, and scaled with the product of the scalar factor in the
+!         observations perturbations attributes file and the mean uncertainty
+!         map. Additionally, the rescaling rules are applied.
+!   Custom <varname> mean observation uncertainty file:
+!       File containting uncertainty map for observation perturbation option
+!       "spatial" or "full".
+!   Custom <varname> mean observation uncertainty variable name:
+!       Variable name of uncertainty map for observation perturbation option
+!       "spatial" or "full".
+!   Custom <varname> observation uncertainty variable name:
+!       Name of the uncertainty variable that is read from the image files.
+!   Custom <varname> use scaled standard devation model:
+!       Whether to rescale the observation perturbations if observations are
+!       rescaled.
 !   Data assimilation scaling strategy:
 !       Options are "none", "CDF matching", "seasonal", "seasonal multiplicative"
 !   Custom <varname> model scaling file:
@@ -91,7 +120,7 @@ module CustomNcReader_Mod
     ! !PUBLIC TYPES:
     !-----------------------------------------------------------------------------
     !EOP
-    type, public:: BaseCustomNcReader_dec
+    type, public:: CustomNcReader_dec
 
         ! This first set of attributes needs to be set in the
         ! <readername>_setup subroutine
@@ -129,7 +158,7 @@ module CustomNcReader_Mod
         integer                :: lt_assim
         integer                :: da_hr, da_mn
 
-        character*20           :: obs_pert_option
+        integer                :: obs_pert_option
         integer                :: ssdev_opt
         real                   :: ssdev_inp
         real,    allocatable   :: ssdev_inp_field(:)
@@ -162,7 +191,7 @@ contains
     ! \label{CustomNcReader_setup}
     !
     ! !INTERFACE:
-    subroutine BaseCustomNcReader_setup(reader_struc, k, OBS_State, OBS_Pert_State)
+    subroutine CustomNcReader_setup(reader_struc, k, OBS_State, OBS_Pert_State)
         ! !USES:
         use ESMF
         use LIS_coreMod
@@ -214,6 +243,7 @@ contains
         character*100          :: obsscalingfile(LIS_rc%nnest)
         character*100          :: modelscalingvarname(LIS_rc%nnest)
         character*100          :: obsscalingvarname(LIS_rc%nnest)
+        character*20           :: obs_pert_option(LIS_rc%nnest)
         integer                :: c,r
         integer                :: ngrid
         integer                :: timeidx
@@ -371,17 +401,17 @@ contains
             if (status .ne. 0) then
                 reader_struc(n)%obs_pert_option = 0  ! scalar
             else
-                call ESMF_ConfigGetAttribute(LIS_config,obs_pert_option,&
+                call ESMF_ConfigGetAttribute(LIS_config,obs_pert_option(n),&
                      rc=status)
-                if (obs_pert_option.eq."scalar") then
+                if (obs_pert_option(n).eq."scalar") then
                     reader_struc(n)%obs_pert_option = 0
-                else if (obs_pert_option.eq."spatial") then
+                else if (obs_pert_option(n).eq."spatial") then
                     reader_struc(n)%obs_pert_option = 1
-                else if (obs_pert_option.eq."full") then
+                else if (obs_pert_option(n).eq."full") then
                     reader_struc(n)%obs_pert_option = 2
                 else
                     write(LIS_logunit,*)&
-                         "[ERROR] Custom "//trim(varname)" observation perturbation option"&
+                         "[ERROR] Custom "//trim(varname)//" observation perturbation option"&
                          //" must be one of 'scalar', 'spatial', or 'full'"
                     call LIS_endrun
                 endif
@@ -568,7 +598,7 @@ contains
                 allocate(obs_pert%ycorr(1))
                 allocate(obs_pert%ccorr(1,1))
 
-                if (reader_stru(n)%obs_pert_option.eq.0) then ! option "scalar"
+                if (reader_struc(n)%obs_pert_option.eq.0) then ! option "scalar"
                     call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
                          obs_pert)
                     reader_struc(n)%ssdev_inp = obs_pert%ssdev(1)
@@ -578,12 +608,12 @@ contains
                     write(LIS_logunit,*)&
                          "[INFO] observation perturbation size for "//trim(varname)//":",&
                          reader_struc(n)%ssdev_inp
-                else if (reader_stru(n)%obs_pert_option.eq.1) then ! option "spatial"
+                else if (reader_struc(n)%obs_pert_option.eq.1) then ! option "spatial"
                     call CustomNcReader_readSsdevData(n, k, reader_struc(n)%mean_obs_unc_file,&
                          reader_struc(n)%mean_obs_unc_varname, ssdev)
                     allocate(reader_struc(n)%ssdev_inp_field(LIS_rc%obs_ngrid(k)))
                     reader_struc(n)%ssdev_inp_field = ssdev
-                else if (reader_stru(n)%obs_pert_option.eq.2) then ! option "full"
+                else if (reader_struc(n)%obs_pert_option.eq.2) then ! option "full"
                     call LIS_readPertAttributes(1,LIS_rc%obspertAttribfile(k),&
                          obs_pert)
                     call CustomNcReader_readSsdevData(n, k, reader_struc(n)%mean_obs_unc_file,&
@@ -889,7 +919,7 @@ contains
     ! \label{read_CustomNetCDF}
     !
     ! !INTERFACE:
-    subroutine BaseCustomNcReader_read(reader_struc, n, k, OBS_State, OBS_Pert_State)
+    subroutine read_CustomNetCDF(reader_struc, n, k, OBS_State, OBS_Pert_State)
         ! !USES:
         use ESMF
         use LIS_mpiMod
@@ -944,7 +974,7 @@ contains
         logical                :: data_upd
         real                   :: observations(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         real                   :: obs_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
-        real, allocatable      :: obs_unscaled(LIS_rc%obs_ngrid(k))
+        real, allocatable      :: obs_unscaled(:) ! (LIS_rc%obs_ngrid(k))
         real, allocatable      :: observations_unc(:) !(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         real, allocatable      :: obs_unc_current(:,:) !(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
         real, allocatable      :: obs_unc_ngrid(:) !(LIS_rc%obs_ngrid(k))
@@ -965,8 +995,8 @@ contains
 
         data_upd = .false.
         if (reader_struc(n)%obs_pert_option.eq.2) then
-            allocate(observations_unc(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
-            allocate(obs_unc_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
+            allocate(observations_unc(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k)))
+            allocate(obs_unc_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k)))
             allocate(obs_unc_ngrid(LIS_rc%obs_ngrid(k)))
             obs_unc_ngrid = LIS_rc%udef
             obs_unc_ngrid = LIS_rc%udef
@@ -1229,7 +1259,7 @@ contains
             call LIS_verify(status)
         endif
 
-    end subroutine BaseCustomNcReader_read
+    end subroutine read_CustomNetCDF
 
     !BOP
     !
@@ -1255,8 +1285,8 @@ contains
         integer                       :: n
         integer                       :: k
         character (len=*)             :: fname
-        real                          :: obs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
-        real, pointer                 :: obs_unc_ip(:) !(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real, intent(inout)           :: obs_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
+        real, intent(inout)           :: obs_unc_ip(:) !(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
 
 
         ! !OUTPUT PARAMETERS:
@@ -1393,7 +1423,7 @@ contains
                 do c=1, reader_struc(n)%nc
                     if (isnan(observation(c, r)) &
                          .or.(observation(c, r) < reader_struc(n)%qcmin_value) &
-                         .or.(observation(c, r) > reader_struc(n)%qcmax_value) &
+                         .or.(observation(c, r) > reader_struc(n)%qcmax_value)) then
                         observation(c, r) = LIS_rc%udef
                     endif
                     ! fill obs_in and obs_b_in, which are required further on
@@ -1404,9 +1434,9 @@ contains
 
         endif !obs_pert_opton.eq.2
 
-        interp_data(obs_in, obs_b_in, obs_ip, obs_b_ip)
+        call interp_data(obs_in, obs_b_in, obs_ip, obs_b_ip)
         if (reader_struc(n)%obs_pert_option.eq.2) then
-            interp_data(obs_unc_in, obs_unc_b_in, obs_unc_ip, obs_unc_b_ip)
+            call interp_data(obs_unc_in, obs_unc_b_in, obs_unc_ip, obs_unc_b_ip)
         endif
 
     contains
@@ -1426,7 +1456,7 @@ contains
                 ! than observations
                 !--------------------------------------------------------------------------
                 call bilinear_interp(LIS_rc%obs_gridDesc(k,:),&
-                     data_b, data_in, data_b_ip, data_ip, &
+                     data_b_in, data_in, data_b_ip, data_ip, &
                      reader_struc(n)%nc*reader_struc(n)%nr, &
                      LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
                      reader_struc(n)%rlat,reader_struc(n)%rlon,&
@@ -1445,7 +1475,7 @@ contains
                 call upscaleByAveraging(reader_struc(n)%nc*reader_struc(n)%nr,&
                      LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k), &
                      LIS_rc%udef, reader_struc(n)%n11,&
-                     data_b,data_in, data_b_ip, data_ip)
+                     data_b_in,data_in, data_b_ip, data_ip)
             endif
         end subroutine interp_data
 
