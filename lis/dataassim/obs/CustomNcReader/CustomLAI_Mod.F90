@@ -16,7 +16,7 @@ module CustomLAI_Mod
 
 contains
 
-    subroutine CustomLAI_setup
+    subroutine CustomLAI_setup(k, OBS_State, OBS_Pert_State)
         use ESMF, only: ESMF_State
         use LIS_coreMod, only: LIS_rc
         use CustomNcReader_Mod, only: CustomNcReader_setup
@@ -61,5 +61,6 @@ contains
         type(ESMF_State)         :: OBS_State
         call write_CustomNetCDF(n, k, OBS_State)
     end subroutine write_CustomLAI
+
 
 end module CustomLAI_Mod
