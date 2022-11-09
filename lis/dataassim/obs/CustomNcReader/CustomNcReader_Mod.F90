@@ -974,7 +974,7 @@ contains
         logical                :: data_upd
         real                   :: observations(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         real                   :: obs_current(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
-        real, allocatable      :: obs_unscaled(:) ! (LIS_rc%obs_ngrid(k))
+        real                   :: obs_unscaled(LIS_rc%obs_ngrid(k))
         real, allocatable      :: observations_unc(:) !(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
         real, allocatable      :: obs_unc_current(:,:) !(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
         real, allocatable      :: obs_unc_ngrid(:) !(LIS_rc%obs_ngrid(k))
@@ -1027,28 +1027,51 @@ contains
 
             ! set daobs and datime
             reader_struc(n)%daobs  = LIS_rc%udef
-            do r=1,LIS_rc%obs_lnr(k)
-                do c=1,LIS_rc%obs_lnc(k)
-                    if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
-                        if(observations(c+(r-1)*LIS_rc%obs_lnc(k)).gt.0) then             
-                            reader_struc(n)%daobs(c,r) = &
-                                 observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
-                            reader_struc(n)%daobs_unc(c, r) = &
-                                 observations_unc(c+(r-1)*LIS_rc%obs_lnc(k))
-                            lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
-                            if (reader_struc(n)%lt_assim.ne.0) then
-                                localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
-                                gmtdatime = localdatime - 240 * lon
-                                if (gmtdatime.lt.0) gmtdatime = gmtdatime + 86400
-                                if (gmtdatime.ge.86400) gmtdatime = gmtdatime - 86400
-                                reader_struc(n)%datime(c, r) = gmtdatime
-                            else
-                                reader_struc(n)%datime(c, r) = 0
+            if (reader_struc(n)%obs_pert_option.eq.2) then
+                do r=1,LIS_rc%obs_lnr(k)
+                    do c=1,LIS_rc%obs_lnc(k)
+                        if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
+                            if(observations(c+(r-1)*LIS_rc%obs_lnc(k)).gt.0) then             
+                                reader_struc(n)%daobs(c,r) = &
+                                     observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
+                                reader_struc(n)%daobs_unc(c, r) = &
+                                     observations_unc(c+(r-1)*LIS_rc%obs_lnc(k))
+                                lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
+                                if (reader_struc(n)%lt_assim.ne.0) then
+                                    localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
+                                    gmtdatime = localdatime - 240 * lon
+                                    if (gmtdatime.lt.0) gmtdatime = gmtdatime + 86400
+                                    if (gmtdatime.ge.86400) gmtdatime = gmtdatime - 86400
+                                    reader_struc(n)%datime(c, r) = gmtdatime
+                                else
+                                    reader_struc(n)%datime(c, r) = 0
+                                endif
                             endif
                         endif
-                    endif
+                    enddo
                 enddo
-            enddo
+            else ! obs_pert_option != 2
+                do r=1,LIS_rc%obs_lnr(k)
+                    do c=1,LIS_rc%obs_lnc(k)
+                        if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then
+                            if(observations(c+(r-1)*LIS_rc%obs_lnc(k)).gt.0) then             
+                                reader_struc(n)%daobs(c,r) = &
+                                     observations(c+(r-1)*LIS_rc%obs_lnc(k))                 
+                                lon = LIS_obs_domain(n,k)%lon(c+(r-1)*LIS_rc%obs_lnc(k))
+                                if (reader_struc(n)%lt_assim.ne.0) then
+                                    localdatime = reader_struc(n)%da_hr * 3600.0 + reader_struc(n)%da_mn * 60.0
+                                    gmtdatime = localdatime - 240 * lon
+                                    if (gmtdatime.lt.0) gmtdatime = gmtdatime + 86400
+                                    if (gmtdatime.ge.86400) gmtdatime = gmtdatime - 86400
+                                    reader_struc(n)%datime(c, r) = gmtdatime
+                                else
+                                    reader_struc(n)%datime(c, r) = 0
+                                endif
+                            endif
+                        endif
+                    enddo
+                enddo
+            endif ! obs_pert_option == 2
         endif ! alarm check
 
         call ESMF_StateGet(OBS_State,"Observation01",varfield,&
@@ -1438,6 +1461,7 @@ contains
         if (reader_struc(n)%obs_pert_option.eq.2) then
             call interp_data(obs_unc_in, obs_unc_b_in, obs_unc_ip, obs_unc_b_ip)
         endif
+        write(LIS_logunit,*) '[INFO] Finished reading ',trim(fname)
 
     contains
 
@@ -1448,8 +1472,8 @@ contains
             logical*1, intent(inout)   :: data_b_ip(LIS_rc%obs_lnc(k)*LIS_rc%obs_lnr(k))
 
             if(LIS_rc%obs_gridDesc(k,10).le.reader_struc(n)%dlon) then
-                write(LIS_logunit,*) '[INFO] interpolating Custom',&
-                     trim(reader_struc(n)%varname),&
+                write(LIS_logunit,*) '[INFO] interpolating Custom ',&
+                     trim(reader_struc(n)%varname), ' ',&
                      trim(fname)
                 !--------------------------------------------------------------------------
                 ! Interpolate to the LIS running domain if model has finer resolution
