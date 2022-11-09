@@ -1,9 +1,9 @@
 !-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
 ! NASA Goddard Space Flight Center
 ! Land Information System Framework (LISF)
-! Version 7.3
+! Version 7.4
 !
-! Copyright (c) 2020 United States Government as represented by the
+! Copyright (c) 2022 United States Government as represented by the
 ! Administrator of the National Aeronautics and Space Administration.
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
@@ -253,8 +253,8 @@ subroutine NoahMP401_qc_soilmobs(n,k,OBS_State)
            smobs(t) = LIS_rc%udef 
         elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
            smobs(t) = LIS_rc%udef
-     !   elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
-     !      smobs(t) = LIS_rc%udef
+        elseif((vegt_obs(t).le.4).and.(NOAHMP401_struc(n)%forestDA_opt.eq..false.)) then !forest types ! Var name Noah36 --> vegt
+           smobs(t) = LIS_rc%udef
  ! MN: check for snow  
         elseif(sneqv_obs(t).gt.0.001) then 
            smobs(t) = LIS_rc%udef
@@ -267,10 +267,12 @@ subroutine NoahMP401_qc_soilmobs(n,k,OBS_State)
      !                                      ! while Noah3.9 uses monthly climatological greenness. 
      !      smobs(t) = LIS_rc%udef        
 !too close to the tails, could be due to scaling, so reject. 
-        elseif(smcmax_obs(t)-smobs(t).lt.0.02) then 
-           smobs(t) = LIS_rc%udef
-        elseif(smobs(t) - smcwlt_obs(t).lt.0.02) then 
-           smobs(t) = LIS_rc%udef
+        elseif(NOAHMP401_struc(n)%QC_opt.eq..true.) then
+            if(smcmax_obs(t)-smobs(t).lt.0.02) then 
+                 smobs(t) = LIS_rc%udef
+            elseif(smobs(t) - smcwlt_obs(t).lt.0.02) then 
+                 smobs(t) = LIS_rc%udef
+            endif
         endif
      endif
   enddo

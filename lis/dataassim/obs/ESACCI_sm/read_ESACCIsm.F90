@@ -1,9 +1,9 @@
 !-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
 ! NASA Goddard Space Flight Center
 ! Land Information System Framework (LISF)
-! Version 7.3
+! Version 7.4
 !
-! Copyright (c) 2020 United States Government as represented by the
+! Copyright (c) 2022 United States Government as represented by the
 ! Administrator of the National Aeronautics and Space Administration.
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
@@ -16,6 +16,7 @@
 !  01 Oct 2012: Sujay Kumar, Initial Specification
 !  13 Jul 2016: Sujay Kumar, Updated the code to support DA in observation space
 !  22 Dec 2021: Zdenko Heyvaert, Updated for reading monthly CDF for the current month
+!  03 Nov 2022: Zdenko Heyvaert, Added option to assimilate at 00:00 UTC
 !
 ! !INTERFACE: 
 subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
@@ -29,6 +30,7 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
   use map_utils
   use LIS_pluginIndices
   use LIS_DAobservationsMod
+  use LIS_constantsMod, only : LIS_CONST_PATH_LEN
   use ESACCI_sm_Mod, only : ESACCI_sm_struc
 
   implicit none
@@ -60,8 +62,7 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
   real,  parameter       :: MAX_SM_VALUE=0.45, MIN_SM_VALUE=0.0001
   integer                :: status
   integer                :: grid_index
-  character*100          :: smobsdir
-  character*100          :: fname
+  character(len=LIS_CONST_PATH_LEN)          :: smobsdir, fname
   logical                :: alarmCheck, file_exists
   integer                :: t,c,r,i,j,p,jj
   real,          pointer :: obsl(:)
@@ -110,7 +111,7 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
      ESACCI_sm_struc(n)%smtime = -1
      
      call create_ESACCIsm_filename(smobsdir, &
-          ESACCI_sm_struc(n)%version, &
+          ESACCI_sm_struc(n)%version, ESACCI_sm_struc(n)%sensor,&
           LIS_rc%yr, LIS_rc%mo, &
           LIS_rc%da, fname)
 
@@ -160,8 +161,13 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
      do c=1,LIS_rc%obs_lnc(k)
         if(LIS_obs_domain(n,k)%gindex(c,r).ne.-1) then 
            grid_index = c+(r-1)*LIS_rc%obs_lnc(k)
+           
+           if(ESACCI_sm_struc(n)%midnight_assimilation.eq..true.) then
+              dt = (LIS_rc%gmt)*3600.0 ! assimilate at 0 UTC
+           else
+              dt = (LIS_rc%gmt - ESACCI_sm_struc(n)%smtime(c,r))*3600.0 ! assimilate at local noon
+           endif
 
-           dt = (LIS_rc%gmt - ESACCI_sm_struc(n)%smtime(c,r))*3600.0
            if(dt.ge.0.and.dt.lt.LIS_rc%ts) then 
               sm_current(c,r) = & 
                    ESACCI_sm_struc(n)%smobs(c,r)
@@ -179,11 +185,10 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
 
 !-------------------------------------------------------------------------
 !  Transform data to the LSM climatology using a CDF-scaling approach
-!-------------------------------------------------------------------------
-  
+!-------------------------------------------------------------------------     
   if (ESACCI_sm_struc(n)%ntimes.gt.1.and.ESACCI_sm_struc(n)%cdf_read_opt.eq.1) then
    if (.not. ESACCI_sm_struc(n)%cdf_read_mon.or.LIS_rc%da.eq.1.and.LIS_rc%hr.eq.0.and.LIS_rc%mn.eq.0.and.LIS_rc%ss.eq.0) then
-      
+
       call LIS_readMeanSigmaData(n,k,&
             ESACCI_sm_struc(n)%ntimes, & 
             LIS_rc%obs_ngrid(k), &
@@ -225,7 +230,6 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
       ESACCI_sm_struc(n)%cdf_read_mon = .true.
    endif
   endif
-  
 
   if(trim(LIS_rc%dascaloption(k)).eq."CDF matching".and.fnd.ne.0) then  
    if (ESACCI_sm_struc(n)%ntimes.gt.1.and.ESACCI_sm_struc(n)%cdf_read_opt.eq.1) then
@@ -328,7 +332,6 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
 
         allocate(ssdev(LIS_rc%obs_ngrid(k)))
         ssdev = ESACCI_sm_struc(n)%ssdev_inp
-
         if(ESACCI_sm_struc(n)%cdf_read_opt .eq. 1) then
            jj = 1
         else if(ESACCI_sm_struc(n)%ntimes.eq.1) then 
@@ -509,13 +512,15 @@ end subroutine read_ESACCI_data
 ! \label{create_ESACCIsm_filename}
 ! 
 ! !INTERFACE: 
-subroutine create_ESACCIsm_filename(ndir, version, yr, mo,da, filename)
+subroutine create_ESACCIsm_filename(ndir, version, sensor, yr, mo,da, filename)
 ! !USES:   
+  use LIS_logMod
 
   implicit none
 ! !ARGUMENTS: 
   character(len=*)  :: filename
   real              :: version
+  character(len=*)  :: sensor
   integer           :: yr, mo, da
   character (len=*) :: ndir
 ! 
@@ -536,7 +541,8 @@ subroutine create_ESACCIsm_filename(ndir, version, yr, mo,da, filename)
   character (len=2) :: fmo,fda
   character (len=3) :: cversion3
   character (len=4) :: cversion4
-  
+  character (len=8) :: sensortxt !20220622 Pang 
+ 
   write(unit=fyr, fmt='(i4.4)') yr
   write(unit=fmo, fmt='(i2.2)') mo
   write(unit=fda, fmt='(i2.2)') da
@@ -546,7 +552,19 @@ subroutine create_ESACCIsm_filename(ndir, version, yr, mo,da, filename)
      ! For future version, version number > 10, e.g., 10.2
      write(unit=cversion4, fmt='(f4.1)') version
   endif
-  
+ 
+  if(sensor == 'passive') then
+      sensortxt = 'PASSIVE'
+  elseif(sensor == 'active') then
+      sensortxt = 'ACTIVE'
+  elseif(sensor == 'combined') then
+      sensortxt = 'COMBINED'
+  else
+      write(LIS_logunit,*) "[ERR] Invalid ESA CCI soil moisture sensor type was chosen."
+      write(LIS_logunit,*) "[ERR] Please choose either 'passive', 'active', or 'combined'."
+      call LIS_endrun
+  endif
+ 
   if(version.eq.1) then 
      filename = trim(ndir)//'/'//trim(fyr)//&
           '/ESACCI-L3S_SOILMOISTURE-SSMV-MERGED-' &
@@ -564,11 +582,11 @@ subroutine create_ESACCIsm_filename(ndir, version, yr, mo,da, filename)
      ! NT: for versions after 2.2
      if (version .lt. 10.0) then
          filename = trim(ndir)//'/'//trim(fyr)//&
-              '/ESACCI-SOILMOISTURE-L3S-SSMV-COMBINED-' & 
+              '/ESACCI-SOILMOISTURE-L3S-SSMV-'//trim(sensortxt)//'-' &  !20220622 Pang
               //trim(fyr)//trim(fmo)//trim(fda)//'000000-fv0'//cversion3//'.nc'
      else
          filename = trim(ndir)//'/'//trim(fyr)//&
-              '/ESACCI-SOILMOISTURE-L3S-SSMV-COMBINED-' & 
+              '/ESACCI-SOILMOISTURE-L3S-SSMV-'//trim(sensortxt)//'-' & !20220622 Pang
               //trim(fyr)//trim(fmo)//trim(fda)//'000000-fv'//cversion4//'.nc'
      endif
   endif

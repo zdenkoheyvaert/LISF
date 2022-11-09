@@ -1,9 +1,9 @@
 !-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
 ! NASA Goddard Space Flight Center
 ! Land Information System Framework (LISF)
-! Version 7.3
+! Version 7.4
 !
-! Copyright (c) 2020 United States Government as represented by the
+! Copyright (c) 2022 United States Government as represented by the
 ! Administrator of the National Aeronautics and Space Administration.
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
@@ -396,6 +396,29 @@ subroutine NoahMP401_readcrd()
         write(LIS_logunit,33) "urban physics:", &
                               NOAHMP401_struc(n)%urban_opt
     enddo
+
+    ! ZH: remove QC relating to the tails of soil moisture distributions; 
+    ! can be useful when performing a run excluding the increment updates (e.g., before CDF matching)
+    call ESMF_ConfigFindLabel(LIS_config, &
+         "Noah-MP.4.0.1 apply soil moisture observation QC:", rc=rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, NOAHMP401_struc(n)%QC_opt, &
+             default=.true., rc=rc)
+        write(LIS_logunit,33) "applying QC:", &
+                              NOAHMP401_struc(n)%QC_opt
+    enddo
+
+    ! ZH: option to assimilate soil moisture over forests
+    call ESMF_ConfigFindLabel(LIS_config, &
+         "Noah-MP.4.0.1 apply soil moisture DA over forests:", rc=rc)
+    do n=1, LIS_rc%nnest
+        call ESMF_ConfigGetAttribute(LIS_config, NOAHMP401_struc(n)%forestDA_opt, &
+             default=.false., rc=rc)
+        write(LIS_logunit,33) "soil moisture DA over forests:", &
+                              NOAHMP401_struc(n)%forestDA_opt
+    enddo
+
+
 
     ! The following lines hard code the LDT NetCDF variable names. 
     ! Modified by Zhuo Wang on 11/08/2018

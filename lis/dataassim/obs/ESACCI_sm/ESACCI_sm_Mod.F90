@@ -1,9 +1,9 @@
 !-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
 ! NASA Goddard Space Flight Center
 ! Land Information System Framework (LISF)
-! Version 7.3
+! Version 7.4
 !
-! Copyright (c) 2020 United States Government as represented by the
+! Copyright (c) 2022 United States Government as represented by the
 ! Administrator of the National Aeronautics and Space Administration.
 ! All Rights Reserved.
 !-------------------------END NOTICE -- DO NOT EDIT-----------------------
@@ -51,11 +51,13 @@
 ! !REVISION HISTORY: 
 !  01 Oct 2012: Sujay Kumar, Initial Specification
 !  22 Dec 2021: Zdenko Heyvaert, Updated for reading monthly CDF for the current month
+!  03 Nov 2022: Zdenko Heyvaert, Added option to assimilate at 00:00 UTC
 ! 
 module ESACCI_sm_Mod
 ! !USES: 
   use ESMF
   use map_utils
+  use LIS_constantsMod, only : LIS_CONST_PATH_LEN
 
   implicit none
 
@@ -73,6 +75,7 @@ module ESACCI_sm_Mod
   type, public:: ESACCI_sm_dec
      
      logical                :: startMode
+     character(len=8)       :: sensor
      real                   :: version
      integer                :: useSsdevScal
      integer                :: nc
@@ -104,6 +107,7 @@ module ESACCI_sm_Mod
                                             ! 1: read only the current month
      character*100          :: modelcdffile
      character*100          :: obscdffile
+     logical                :: midnight_assimilation
 
   end type ESACCI_sm_dec
   
@@ -154,7 +158,7 @@ contains
     type(ESMF_ArraySpec)   ::  intarrspec, realarrspec
     type(ESMF_Field)       ::  pertField(LIS_rc%nnest)
     type(ESMF_ArraySpec)   ::  pertArrSpec
-    character*100          ::  esaccismobsdir
+    character(len=LIS_CONST_PATH_LEN) ::  esaccismobsdir
     character*100          ::  temp
     real,  allocatable         ::  obsstd(:)
     character*1            ::  vid(2)
@@ -206,6 +210,16 @@ contains
 
     enddo
 
+    call ESMF_ConfigFindLabel(LIS_config,"ESA CCI soil moisture sensor type:",&
+         rc=status)
+    do n=1,LIS_rc%nnest
+       call ESMF_ConfigGetAttribute(LIS_config,ESACCI_sm_struc(n)%sensor,&
+            rc=status)
+       call LIS_verify(status, 'ESA CCI soil moisture sensor type: is missing')
+
+    enddo
+
+
     call ESMF_ConfigFindLabel(LIS_config,"ESA CCI use scaled standard deviation model:",&
          rc=status)
     do n=1,LIS_rc%nnest
@@ -247,6 +261,13 @@ contains
                                                                                   ! 1: read CDF for current month
      call ESMF_ConfigGetAttribute(LIS_config, ESACCI_sm_struc(n)%cdf_read_opt, rc=status)
      call LIS_verify(status, "ESA CCI CDF read option: not defined")
+   enddo
+
+   ! ZH: assimilate at 0 UTC (if .true.) or local noon (the LIS default, if .false.)
+   call ESMF_ConfigFindLabel(LIS_config,"ESA CCI soil moisture assimilate at 0UTC:", rc=status)
+   do n=1,LIS_rc%nnest
+     call ESMF_ConfigGetAttribute(LIS_config, ESACCI_sm_struc(n)%midnight_assimilation, rc=status)
+     call LIS_verify(status, 'ESA CCI soil moisture assimilate at 0UTC: is missing')
    enddo
 
    do n=1,LIS_rc%nnest
@@ -390,9 +411,9 @@ contains
     
     do n=1,LIS_rc%nnest
        allocate(ssdev(LIS_rc%obs_ngrid(k)))
-       ssdev = obs_pert%ssdev(1)
+       ssdev = obs_pert%ssdev(1)  
 
-       if(trim(LIS_rc%dascaloption(k)).eq."CDF matching") then 
+       if(trim(LIS_rc%dascaloption(k)).eq."CDF matching") then
 
           call LIS_getCDFattributes(k,ESACCI_sm_struc(n)%modelcdffile,&
                ESACCI_sm_struc(n)%ntimes, ngrid)
@@ -490,7 +511,6 @@ contains
                                    ssdev(t) = ssdev(t)*ESACCI_sm_struc(n)%model_sigma(t,jj)/&
                                    ESACCI_sm_struc(n)%obs_sigma(t,jj)
                               endif
-                      
                               if(ssdev(t).lt.minssdev) then 
                                    ssdev(t) = minssdev
                               endif
