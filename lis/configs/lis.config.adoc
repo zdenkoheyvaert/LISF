@@ -8165,7 +8165,7 @@ landcover classification.
 
 `Noah-MP.4.0.1 apply soil moisture observation QC:` specifies whether
 quality control should reject observations which are too close to the
-tails. Defaults to `.true.`.
+soil moisture boundaries. Defaults to `.true.`.
 
 `Noah-MP.4.0.1 apply soil moisture DA over forests:` specifies whether
 soil moisture data assimilaion may be performed over forests. Defaults
