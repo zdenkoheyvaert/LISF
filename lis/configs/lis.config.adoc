@@ -2853,7 +2853,7 @@ Acceptable values are:
 NOTE: Select 0 for yearly CDF data.
 
 `ESA CCI soil moisture assimilate at 0UTC:` specifies whether to assimilate at 00:00 UTC
-or at local noon.
+or at local noon (note that ESA CCI retrievals are centered around 00:00 UTC).
 
 Acceptable values are:
 
