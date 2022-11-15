@@ -165,6 +165,7 @@ subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
            if(ESACCI_sm_struc(n)%midnight_assimilation.eq..true.) then
               dt = (LIS_rc%gmt)*3600.0 ! assimilate at 0 UTC
            else
+              ! smtime: local noon (based on longitude) transformed to GMT time zone
               dt = (LIS_rc%gmt - ESACCI_sm_struc(n)%smtime(c,r))*3600.0 ! assimilate at local noon
            endif
 
