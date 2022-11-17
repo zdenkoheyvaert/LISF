@@ -261,7 +261,8 @@ subroutine NoahMP401_qc_soilmobs(n,k,OBS_State)
         elseif(sca_obs(t).gt.0.0001) then  ! Var name sca 
            smobs(t) = LIS_rc%udef
  ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to 0.7 
-        elseif(shdfac_obs(t).gt.0.9) then  ! var name Noah36 shdfac 12-month green veg. frac.  
+        elseif((shdfac_obs(t).gt.0.9).and.(NOAHMP401_struc(n)%forestDA_opt.eq..false.)) then  
+                                           ! var name Noah36 shdfac 12-month green veg. frac.  
                                            ! The threshold has been tuned for spatial coverage
                                            ! Higher than Noah.3.9 because max greenness is used for shdfac in Noah-MP.4.0.1
                                            ! while Noah3.9 uses monthly climatological greenness. 
