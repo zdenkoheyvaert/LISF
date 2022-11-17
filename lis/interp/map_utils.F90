@@ -681,7 +681,8 @@ CONTAINS
       slon360 = proj%lon1
     ENDIF
     deltalon = lon360 - slon360
-    IF (deltalon .LT. 0) deltalon = deltalon + 360.
+    ! MB: only + 360 when rounding of deltalon/proj%dlon + 1. does not give 1
+    IF (deltalon .LT. (-0.5*proj%dlon)) deltalon = deltalon + 360.
 
     ! Compute i/j
     i = deltalon/proj%dlon + 1.
@@ -1158,7 +1159,8 @@ CONTAINS
        slon360 = proj%lon1
     ENDIF
     deltalon = lon360 - slon360
-    IF (deltalon .LT. 0) deltalon = deltalon + 360.     
+    ! MB: only + 360 when rounding of deltalon/proj%dlon + 1. does not give 1
+    IF (deltalon .LT. (-0.5*proj%dlon)) deltalon = deltalon + 360.     
 
     ! Compute i/j
     i = deltalon/proj%dlon + 1.
