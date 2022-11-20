@@ -2838,6 +2838,33 @@ deviation.
 `ESA CCI soil moisture number of bins in the CDF:` specifies the number of
 bins in the CDF.
 
+`ESA CCI CDF read option:` specifies whether to read all months at once
+or to read month by month from a monthly CDF file.
+
+Acceptable values are:
+
+|====
+|Value    | Description
+
+|0 | Read all months
+|1 | Read month by month
+|====
+
+NOTE: Select 0 for yearly CDF data.
+
+`ESA CCI soil moisture assimilate at 0UTC:` specifies whether to assimilate at 00:00 UTC
+or at local noon (note that ESA CCI retrievals are centered around 00:00 UTC).
+
+Acceptable values are:
+
+|====
+|Value    | Description
+
+|.true. | Assimilate at 00:00 UTC
+|.false. | Assimilate at local noon
+|====
+
+
 .Example _lis.config_ entry
 ....
 ESA CCI soil moisture data directory:
@@ -2847,6 +2874,9 @@ ESA CCI use scaled standard deviation model:
 ESA CCI model CDF file:
 ESA CCI observation CDF file:
 ESA CCI soil moisture number of bins in the CDF:
+ESA CCI CDF read option:
+ESA CCI soil moisture assimilate at 0UTC:
+
 ....
 
 
@@ -8133,6 +8163,14 @@ the _lis.config_ file, the default value of 2000.0 mm is used.
 This maximum only applies to tiles identified as glacier in the
 landcover classification.
 
+`Noah-MP.4.0.1 apply soil moisture observation QC:` specifies whether
+quality control should reject observations which are too close to the
+soil moisture boundaries. Defaults to `.true.`.
+
+`Noah-MP.4.0.1 apply soil moisture DA over forests:` specifies whether
+soil moisture data assimilaion may be performed over forests. Defaults
+to `.false.`.
+
 .Example _lis.config_ entry
 ....
 Noah-MP.4.0.1 model timestep:                15mn
@@ -8174,6 +8212,8 @@ Noah-MP.4.0.1 initial water table depth:                    2.5
 Noah-MP.4.0.1 initial water in the aquifer:                 4900.0
 Noah-MP.4.0.1 initial water in aquifer and saturated soil:  4900.0
 Noah-MP.4.0.1 snow depth glacier model option:              2000
+Noah-MP.4.0.1 apply soil moisture observation QC:           .true.
+Noah-MP.4.0.1 apply soil moisture DA over forests:          .false.
 ....
 
 
