@@ -17,6 +17,7 @@
 !  13 Jul 2016: Sujay Kumar, Updated the code to support DA in observation space
 !  22 Dec 2021: Zdenko Heyvaert, Updated for reading monthly CDF for the current month
 !  03 Nov 2022: Zdenko Heyvaert, Added option to assimilate at 00:00 UTC
+!  22 Nov 2022: Zdenko Heyvaert, Added option to ignore barren-grounds advisory flag (v7.1 onwards)
 !
 ! !INTERFACE: 
 subroutine read_ESACCIsm(n,k,  OBS_State, OBS_Pert_State)
@@ -463,6 +464,8 @@ subroutine read_ESACCI_data(n, k, fname, version, smobs_ip)
 ! All data flagged for snow coverage or temperature below zero (flag=1), 
 ! dense vegetation (flag=2) and no convergence in the ESACCI algorithm 
 ! (flag =3) and undefined values are masked out. 
+! Since v7.1 barren ground is also flagged (flag=64). Option to include
+! such observations was added.
 !------------------------------------------------------------------------
         if(version .lt. 3) then
             if(flag(c,r).ne.0.or.sm(c,r).le.0) then 
@@ -472,7 +475,11 @@ subroutine read_ESACCI_data(n, k, fname, version, smobs_ip)
             endif
         else
             if(flag(c,r).ne.0.or.sm1(c,r).le.0) then ! NT: checking sm and sm1 separately
-               sm_combined(c,ESACCI_sm_struc(n)%ecvnr-r+1) = LIS_rc%udef
+               if(flag(c,r).eq.64.and.ESACCI_sm_struc(n)%barren_assimilation.eq..true..and.sm1(c,r).gt.0) then
+                  sm_combined(c,ESACCI_sm_struc(n)%ecvnr-r+1) = sm1(c,r)
+               else
+                  sm_combined(c,ESACCI_sm_struc(n)%ecvnr-r+1) = LIS_rc%udef
+               endif
             else
               sm_combined(c,ESACCI_sm_struc(n)%ecvnr-r+1) = sm1(c,r)
            endif
