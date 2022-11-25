@@ -52,6 +52,7 @@
 !  01 Oct 2012: Sujay Kumar, Initial Specification
 !  22 Dec 2021: Zdenko Heyvaert, Updated for reading monthly CDF for the current month
 !  03 Nov 2022: Zdenko Heyvaert, Added option to assimilate at 00:00 UTC
+!  22 Nov 2022: Zdenko Heyvaert, Added option to ignore barren-grounds advisory flag (v7.1 onwards)
 ! 
 module ESACCI_sm_Mod
 ! !USES: 
@@ -108,6 +109,7 @@ module ESACCI_sm_Mod
      character*100          :: modelcdffile
      character*100          :: obscdffile
      logical                :: midnight_assimilation
+     logical                :: barren_assimilation
 
   end type ESACCI_sm_dec
   
@@ -268,6 +270,13 @@ contains
    do n=1,LIS_rc%nnest
      call ESMF_ConfigGetAttribute(LIS_config, ESACCI_sm_struc(n)%midnight_assimilation, rc=status)
      call LIS_verify(status, 'ESA CCI soil moisture assimilate at 0UTC: is missing')
+   enddo
+
+   ! ZH: from v7.1 onwards barren grounds received an advisory flag, hence they are not assimilated by default
+   call ESMF_ConfigFindLabel(LIS_config,"ESA CCI soil moisture assimilate over barren grounds:", rc=status)
+   do n=1,LIS_rc%nnest
+     call ESMF_ConfigGetAttribute(LIS_config, ESACCI_sm_struc(n)%barren_assimilation, rc=status)
+     call LIS_verify(status, 'ESA CCI soil moisture assimilate over barren grounds: is missing')
    enddo
 
    do n=1,LIS_rc%nnest

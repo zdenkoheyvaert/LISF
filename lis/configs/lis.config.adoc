@@ -2826,6 +2826,18 @@ moisture data.
 |"`combined`" | combined sensor type
 |===
 
+`ESA CCI soil moisture assimilate over barren grounds:` specifies whether to ignore the advisory flag for barren grounds
+in the ESA CCI product from v7.1 onwards
+
+Acceptable values are:
+
+|====
+|Value   | Description
+
+|.true.  | Assimilate over barren grounds
+|.false. | Don't assimilate over barren grounds
+|====
+
 `ESA CCI use scaled standard deviation model:` specifies if the observation
 error standard deviation is to be scaled using model and observation standard
 deviation.
@@ -2858,9 +2870,9 @@ or at local noon (note that ESA CCI retrievals are centered around 00:00 UTC).
 Acceptable values are:
 
 |====
-|Value    | Description
+|Value   | Description
 
-|.true. | Assimilate at 00:00 UTC
+|.true.  | Assimilate at 00:00 UTC
 |.false. | Assimilate at local noon
 |====
 
@@ -2869,7 +2881,8 @@ Acceptable values are:
 ....
 ESA CCI soil moisture data directory:
 ESA CCI soil moisture data version:
-ESA CCI soil moisture sensor type:            combined
+ESA CCI soil moisture sensor type:                    combined
+ESA CCI soil moisture assimilate over barren grounds:
 ESA CCI use scaled standard deviation model:
 ESA CCI model CDF file:
 ESA CCI observation CDF file:
