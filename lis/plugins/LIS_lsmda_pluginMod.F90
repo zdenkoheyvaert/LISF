@@ -431,6 +431,7 @@ subroutine LIS_lsmda_plugin
    external noahmp36_scale_snow
    external noahmp36_descale_snow
    external noahmp36_updatesnowvars
+   external noahmp36_setsnowsimplevars
 
 #if ( defined DA_OBS_SNODEP )
 ! NoahMP-3.6 SNODEP
@@ -2231,7 +2232,7 @@ subroutine LIS_lsmda_plugin
    call registerlsmdagetstatevar(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_getsnowvars)
    call registerlsmdasetstatevar(trim(LIS_noahmp36Id)//"+"//&
-        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_setsnowvars)
+        trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_setsnowsimplevars)
    call registerlsmdagetobspred(trim(LIS_noahmp36Id)//"+"//&
         trim(LIS_S1_SNWD_obsId)//char(0),noahmp36_getsnwdpred)
    call registerlsmdaqcstate(trim(LIS_noahmp36Id)//"+"//&
