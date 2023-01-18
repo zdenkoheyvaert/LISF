@@ -101,9 +101,9 @@ subroutine noahmp36_snowsimple_update(n, t, dsneqv, dsnowh)
   stc(-nsnow+1:nsoil) = &
        NOAHMP36_struc(n)%noahmp36(t)%sstc(1:nsnow+&
        nsoil) 
+
 ! from snowfall routine
-  ! creating a new layer
- 
+  ! no snow layer - update adds snow
   IF(ISNOW == 0.and.(dsneqv.gt.0.and.dsnowh.gt.0))  THEN
      SNOWH = SNOWH + dsnowh
      SNEQV = SNEQV + dsneqv
@@ -111,7 +111,7 @@ subroutine noahmp36_snowsimple_update(n, t, dsneqv, dsnowh)
   
   NEWNODE = 0 
 
-
+  ! no snow layer - after update snowh is sufficient (>0.025) to create first layer
   IF(ISNOW == 0 .AND. SNOWH >= 0.025.and.&
        (dsneqv.gt.0.and.dsnowh.gt.0)) then 
      ISNOW    = -1
@@ -125,9 +125,10 @@ subroutine noahmp36_snowsimple_update(n, t, dsneqv, dsnowh)
   ! snow with layers
   if(isnow.eq.0.and.(dsneqv.lt.0.or.dsnowh.lt.0)) then !no snow, 
 
-  else
+  else 
      snowh1 = snowh + dsnowh
      sneqv1 = sneqv + dsneqv
+     ! snow layer(s) are present, update adds or removes snow 
      if(isnow.lt.0.and.snowh1.ge.0.and.sneqv1.ge.0.and.newnode==0) then          
         dzsnso(-nsnow+1:(isnow-1)) = 0 
         snice(-nsnow+1:(isnow-1))=0
@@ -138,6 +139,11 @@ subroutine noahmp36_snowsimple_update(n, t, dsneqv, dsnowh)
         enddo 
         SNOWH = SNOWH + dsnowh
         SNEQV = SNEQV + dsneqv
+     ! update decreases snow to negative values
+     elseif(snowh1.lt.0.or.sneqv1.lt.0) then 
+        isnow = 0
+        snowh = 0
+        sneqv = 0
      endif
     
      sice(:) = max(0.0, NOAHMP36_struc(n)%noahmp36(t)%smc(:)&
