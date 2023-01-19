@@ -1,4 +1,5 @@
-!-----------------------BEGIN NOTICE -- DO NOT EDIT-----------------------
+!-----------------------BEGIN NOTICE -- DO NOT
+!EDIT-----------------------
 ! NASA Goddard Space Flight Center
 ! Land Information System Framework (LISF)
 ! Version 7.4
@@ -6,7 +7,8 @@
 ! Copyright (c) 2022 United States Government as represented by the
 ! Administrator of the National Aeronautics and Space Administration.
 ! All Rights Reserved.
-!-------------------------END NOTICE -- DO NOT EDIT-----------------------
+!-------------------------END NOTICE -- DO NOT
+!EDIT-----------------------
 !BOP
 ! !ROUTINE: noahmp36_snow_update
 ! \label{noahmp36_snow_update}
@@ -90,7 +92,8 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
   sneqv = noahmp36_struc(n)%noahmp36(t)%sneqv
   snowh = noahmp36_struc(n)%noahmp36(t)%snowh
 
-  zsnso(-nsnow+1:nsoil) = noahmp36_struc(n)%noahmp36(t)%zss(1:nsnow+nsoil) 
+  zsnso(-nsnow+1:nsoil) = &
+       noahmp36_struc(n)%noahmp36(t)%zss(1:nsnow+nsoil) 
 
 ! snow/soil layer thickness (m)
 
@@ -138,7 +141,7 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
      NEWNODE  =  1
      DZSNSO(0)= SNOWH
      SNOWH    = 0.
-     STC(0)   = MIN(273.16, NOAHMP36_struc(n)%noahmp36(t)%sfctmp)   ! temporary setup
+     STC(0)   = MIN(273.16, NOAHMP36_struc(n)%noahmp36(t)%sfctmp)
      SNICE(0) = SNEQV
      SNLIQ(0) = 0.
   END IF
@@ -178,10 +181,12 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
         endif
      endif
 
-  ! ice fraction at the last timestep, add check for both snice and snliq are 0.0
+  ! ice fraction at the last timestep, add check for both snice and
+  ! snliq are 0.0
      do snl_idx=isnow+1,0
         if(snice(snl_idx)+snliq(snl_idx)>0.0) then
-           ficeold(snl_idx)  = snice(snl_idx) / (snice(snl_idx)+snliq(snl_idx))
+           ficeold(snl_idx)  = snice(snl_idx) / &
+                  (snice(snl_idx)+snliq(snl_idx))
         else 
            ficeold(snl_idx)  = 0.0
         endif
@@ -201,7 +206,8 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
      end do
      
      do j = 1, nsoil               ! soil
-        mliq(j) =  NOAHMP36_struc(n)%noahmp36(t)%sh2o(j) * dzsnso(j) * 1000.
+        mliq(j) =  NOAHMP36_struc(n)%noahmp36(t)%sh2o(j) * &
+             dzsnso(j) * 1000.
         mice(j) = (NOAHMP36_struc(n)%noahmp36(t)%smc(j) - &
              NOAHMP36_struc(n)%noahmp36(t)%sh2o(j))  * dzsnso(j) * 1000.
      end do
@@ -225,7 +231,8 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
         !             NOAHMP36_struc(n)%noahmp36(t)%sstc(j),&
         !             NOAHMP36_struc(n)%noahmp36(t)%smc(j),&
         !             NOAHMP36_struc(n)%noahmp36(t)%sh2o(j))
-        !        supercool(j) = supercool(j)*dzsnso(j)*1000.        !(mm)
+        !        supercool(j) = supercool(j)*dzsnso(j)*1000.
+        !        !(mm)
         !     end if
      enddo
      
@@ -324,7 +331,8 @@ subroutine noahmp36_snow_update(n, t, dsneqv, dsnowh)
       IF (ISNOW == 0 .AND. SNEQV > 0. .AND. SNOWH > 0.) THEN
            BDSNOW = SNEQV/SNOWH
            IF (BDSNOW >= DENH2O) THEN
-               SNOWH  = SNOWH*(BDSNOW/1000.) ! change unit, SNEQV=[mm] SNOWH=[m]
+               SNOWH  = SNOWH*(BDSNOW/1000.) 
+               ! change unit, SNEQV=[mm] SNOWH=[m]
            END IF
       END IF
 
