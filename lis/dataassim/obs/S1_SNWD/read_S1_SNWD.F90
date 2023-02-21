@@ -290,6 +290,7 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
 !
 !EOP
   real                        :: snd(S1_SNWD_struc(n)%nr,S1_SNWD_struc(n)%nc)
+  real                        :: wet(S1_SNWD_struc(n)%nr,S1_SNWD_struc(n)%nc)
   real                        :: lat_nc(S1_SNWD_struc(n)%nr)
   real                        :: lon_nc(S1_SNWD_struc(n)%nc)
   real                        :: snwd_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
@@ -300,7 +301,7 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
   integer                     :: stn_col,stn_row
   real                        :: col,row
   integer                     :: nid
-  integer                     :: sndId,latId,lonId
+  integer                     :: sndId,wetId,latId,lonId
   integer                     :: ios
 
 #if(defined USE_NETCDF3 || defined USE_NETCDF4)
@@ -320,6 +321,9 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
      ios = nf90_inq_varid(nid, 'snd',sndid)
      call LIS_verify(ios, 'Error nf90_inq_varid: snow depth data')
 
+     ios = nf90_inq_varid(nid, 'wet',wetid)
+     call LIS_verify(ios, 'Error nf90_inq_varid: snow wetness data')
+
      ios = nf90_inq_varid(nid, 'lat',latid)
      call LIS_verify(ios, 'Error nf90_inq_varid: latitude data')
 
@@ -329,6 +333,9 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
      !values
      ios = nf90_get_var(nid, sndid, snd)
      call LIS_verify(ios, 'Error nf90_get_var: snd')
+
+     ios = nf90_get_var(nid, wetid, wet)
+     call LIS_verify(ios, 'Error nf90_get_var: wet') ! 0/1 data
 
      ios = nf90_get_var(nid, latid, lat_nc)
      call LIS_verify(ios, 'Error nf90_get_var: lat')
@@ -361,7 +368,7 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
            stn_col = nint(col)
            stn_row = nint(row)
 
-           if(snd(i,j).ge.-999.and.&
+           if(snd(i,j).ge.-999.and.wet(i,j).ne.1.and.&
                 stn_col.gt.0.and.stn_col.le.LIS_rc%obs_lnc(k).and.&
                 stn_row.gt.0.and.stn_row.le.LIS_rc%obs_lnr(k)) then
               snwd_ip(stn_col,stn_row) = snwd_ip(stn_col,stn_row) + snd(i,j)
