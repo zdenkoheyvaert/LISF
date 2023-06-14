@@ -73,6 +73,7 @@ subroutine noahmp36_qc_Sig0VVobs(n,k,OBS_State)
   real                     :: vegt(LIS_rc%npatch(n,LIS_rc%lsm_index))
   real                     :: SMCMAX(LIS_rc%npatch(n,LIS_rc%lsm_index))
   real                     :: SMCWLT(LIS_rc%npatch(n,LIS_rc%lsm_index))
+  real                     :: slope(LIS_rc%npatch(n,LIS_rc%lsm_index))
 
   real                     :: rainf_obs(LIS_rc%obs_ngrid(k))
   real                     :: sneqv_obs(LIS_rc%obs_ngrid(k))
@@ -94,6 +95,7 @@ subroutine noahmp36_qc_Sig0VVobs(n,k,OBS_State)
   real                     :: stc3_obs(LIS_rc%obs_ngrid(k))
   real                     :: stc4_obs(LIS_rc%obs_ngrid(k))
   real                     :: vegt_obs(LIS_rc%obs_ngrid(k))
+  real                     :: slope_obs(LIS_rc%obs_ngrid(k))
 
 !-----this part is derived from ./lis/dataassim/obs/s1_sigma/read_S1_sigma.F90
   call ESMF_StateGet(OBS_State,"Observation01",sigmaField,&
@@ -132,6 +134,7 @@ subroutine noahmp36_qc_Sig0VVobs(n,k,OBS_State)
      SOILTYP = NOAHMP36_struc(n)%noahmp36(t)%soiltype        
      SMCMAX(t)  = MAXSMC (SOILTYP) 
      SMCWLT(t) = WLTSMC (SOILTYP)
+     slope(t) = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%slope
   enddo
 
   call LIS_convertPatchSpaceToObsSpace(n,k,&       
@@ -216,6 +219,11 @@ subroutine noahmp36_qc_Sig0VVobs(n,k,OBS_State)
        vegt,&
        vegt_obs)
 
+  call LIS_convertPatchSpaceToObsSpace(n,k,&
+       LIS_rc%lsm_index, &
+       slope,&
+       slope_obs)
+
   do t = 1,LIS_rc%obs_ngrid(k)
 !------------------start loop considering one obs--------------------------
      if(obsl(t).ne.LIS_rc%udef) then 
@@ -246,8 +254,8 @@ subroutine noahmp36_qc_Sig0VVobs(n,k,OBS_State)
            obsl(t) = LIS_rc%udef 
         elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
            obsl(t) = LIS_rc%udef
-!        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
-!           obsl(t) = LIS_rc%udef
+        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
+           obsl(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah36 --> vegt
            obsl(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.17) then !urban ! Var name Noah36 --> vegt
@@ -257,15 +265,9 @@ subroutine noahmp36_qc_Sig0VVobs(n,k,OBS_State)
            obsl(t) = LIS_rc%udef
         elseif(sca_obs(t).gt.0.0001) then  ! Var name sca 
            obsl(t) = LIS_rc%udef
- ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to 0.7 !commented out for now
- !      elseif(shdfac_obs(t).gt.0.7) then  ! var name Noah36 shdfac 12-month green veg. frac.  
- !          obsl(t) = LIS_rc%udef        
-!too close to the tails, could be due to scaling, so reject. !commented out for
-!now. It was written for soil moisture
-!        elseif(smcmax_obs(t)-obsl(t).lt.0.02) then 
-!           obsl(t) = LIS_rc%udef
-!        elseif(obsl(t) - smcwlt_obs(t).lt.0.02) then 
-!           obsl(t) = LIS_rc%udef
+ ! MB: check for slope, S1 backscatter and water cloud model not reliable for SM and LAI updating over mountains
+        elseif(slope_obs(t).gt.0.1) then
+           obsl(t) = LIS_rc%udef
         endif
      endif
   enddo

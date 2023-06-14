@@ -26,7 +26,6 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
   use noahmp36_lsmMod
   use module_sf_noahlsm_36  !, only: MAXSMC !MN
 
-
   implicit none
 ! !ARGUMENTS: 
   integer, intent(in)      :: n
@@ -72,6 +71,7 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
   real                     :: vegt(LIS_rc%npatch(n,LIS_rc%lsm_index))
   real                     :: SMCMAX(LIS_rc%npatch(n,LIS_rc%lsm_index))
   real                     :: SMCWLT(LIS_rc%npatch(n,LIS_rc%lsm_index))
+  real                     :: slope(LIS_rc%npatch(n,LIS_rc%lsm_index))
 
   real                     :: rainf_obs(LIS_rc%obs_ngrid(k))
   real                     :: sneqv_obs(LIS_rc%obs_ngrid(k))
@@ -93,6 +93,7 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
   real                     :: stc3_obs(LIS_rc%obs_ngrid(k))
   real                     :: stc4_obs(LIS_rc%obs_ngrid(k))
   real                     :: vegt_obs(LIS_rc%obs_ngrid(k))
+  real                     :: slope_obs(LIS_rc%obs_ngrid(k))
 
   integer                  :: VV_agri_mask_start_doy
   integer                  :: VV_agri_mask_end_doy
@@ -146,6 +147,7 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
      SOILTYP = NOAHMP36_struc(n)%noahmp36(t)%soiltype        
      SMCMAX(t)  = MAXSMC (SOILTYP) 
      SMCWLT(t) = WLTSMC (SOILTYP)
+     slope(t) = LIS_surface(n,LIS_rc%lsm_index)%tile(t)%slope
   enddo
 
   call LIS_convertPatchSpaceToObsSpace(n,k,&       
@@ -230,6 +232,11 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
        vegt,&
        vegt_obs)
 
+  call LIS_convertPatchSpaceToObsSpace(n,k,&
+       LIS_rc%lsm_index, &
+       slope,&
+       slope_obs)
+
   do t = 1,LIS_rc%obs_ngrid(k)
 !------------------start loop considering s_vv--------------------------
      if(s_vv(t).ne.LIS_rc%udef) then 
@@ -260,8 +267,8 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
            s_vv(t) = LIS_rc%udef 
         elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
            s_vv(t) = LIS_rc%udef
-!        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
-!           s_vv(t) = LIS_rc%udef
+        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
+           s_vv(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah36 --> vegt
            s_vv(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.17) then !water ! Var name Noah36 --> vegt
@@ -271,15 +278,9 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
            s_vv(t) = LIS_rc%udef
         elseif(sca_obs(t).gt.0.0001) then  ! Var name sca 
            s_vv(t) = LIS_rc%udef
- ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to 0.7 !commented out for now
- !      elseif(shdfac_obs(t).gt.0.7) then  ! var name Noah36 shdfac 12-month green veg. frac.  
- !          s_vv(t) = LIS_rc%udef        
-!too close to the tails, could be due to scaling, so reject. !commented out for
-!now. It was written for soil moisture
-!        elseif(smcmax_obs(t)-s_vv(t).lt.0.02) then 
-!           s_vv(t) = LIS_rc%udef
-!        elseif(s_vv(t) - smcwlt_obs(t).lt.0.02) then 
-!           s_vv(t) = LIS_rc%udef
+ ! MB: check for slope, S1 backscatter and water cloud model not reliable for SM and LAI updating over mountains
+        elseif(slope_obs(t).gt.0.1) then
+           s_vv(t) = LIS_rc%udef
         endif
      endif
 !------------------start loop considering s_vh--------------------------
@@ -311,8 +312,8 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
            s_vh(t) = LIS_rc%udef
         elseif(t1_obs(t).le.LIS_CONST_TKFRZ) then ! Var name Noah36 --> t1
            s_vh(t) = LIS_rc%udef
-!        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
-!           s_vh(t) = LIS_rc%udef
+        elseif(vegt_obs(t).le.4) then !forest types ! Var name Noah36 --> vegt
+           s_vh(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.13) then !urban ! Var name Noah36 --> vegt
            s_vh(t) = LIS_rc%udef
         elseif(vegt_obs(t).eq.17) then !water ! Var name Noah36 --> vegt
@@ -322,17 +323,9 @@ subroutine noahmp36_qc_Sig0VVVHobs(n,k,OBS_State)
            s_vh(t) = LIS_rc%udef
         elseif(sca_obs(t).gt.0.0001) then  ! Var name sca 
            s_vh(t) = LIS_rc%udef
- ! MN: check for green vegetation fraction NOTE: threshold incerased from 0.5 to
- ! 0.7 !commented out for now
- !      elseif(shdfac_obs(t).gt.0.7) then  ! var name Noah36 shdfac 12-month
- !      green veg. frac.  
- !          s_vh(t) = LIS_rc%udef        
-!too close to the tails, could be due to scaling, so reject. !commented out for
-!now. It was written for soil moisture
-!        elseif(smcmax_obs(t)-s_vh(t).lt.0.02) then 
-!           s_vh(t) = LIS_rc%udef
-!        elseif(s_vh(t) - smcwlt_obs(t).lt.0.02) then 
-!           s_vh(t) = LIS_rc%udef
+ ! MB: check for slope, S1 backscatter and water cloud model not reliable for SM and LAI updating over mountains
+        elseif(slope_obs(t).gt.0.1) then
+           s_vh(t) = LIS_rc%udef
         endif
      endif
   enddo
