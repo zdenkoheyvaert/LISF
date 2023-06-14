@@ -294,7 +294,6 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
   real                        :: lat_nc(S1_SNWD_struc(n)%nr)
   real                        :: lon_nc(S1_SNWD_struc(n)%nc)
   real                        :: snwd_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
-  real                        :: snwd_fill(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
   integer                     :: nsnwd_ip(LIS_rc%obs_lnc(k),LIS_rc%obs_lnr(k))
   logical                     :: file_exists
   integer                     :: c,r,i,j
@@ -349,17 +348,10 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
 
 
 
-!     ! Initialize 
-!     do r=1,LIS_rc%obs_lnr(k)
-!        do c=1,LIS_rc%obs_lnc(k)
-!           nsnwd_ip(c,r) = 0
-!           snwd_ip(c,r) = 0.0
-!        enddo
-!     enddo
      snwd_ip = 0
      nsnwd_ip = 0
 
-     ! Interpolate the data by averaging 
+     ! Map the data by averaging 
      do i=1,S1_SNWD_struc(n)%nr
         do j=1,S1_SNWD_struc(n)%nc
               
@@ -387,41 +379,6 @@ subroutine read_S1_SNWD_data(n, k, fname, snwd_ip)
         enddo
      enddo
 
-
-     ! Fix stripes in obs caused by regridding (missing obs for LIS grid cell)
-     snwd_fill = 0
-     nsnwd_ip = 0
-     do r=2,LIS_rc%obs_lnr(k)-1
-        do c=2,LIS_rc%obs_lnc(k)-1
-           if (snwd_ip(c,r).ne.LIS_rc%udef) then
-              snwd_fill(c-1,r-1)= snwd_fill(c-1,r-1) + snwd_ip(c,r)
-              snwd_fill(c-1,r)= snwd_fill(c-1,r) + snwd_ip(c,r)
-              snwd_fill(c-1,r+1)= snwd_fill(c-1,r+1) + snwd_ip(c,r)
-              snwd_fill(c,r-1)= snwd_fill(c,r-1) + snwd_ip(c,r)
-              snwd_fill(c,r+1)= snwd_fill(c,r+1) + snwd_ip(c,r)
-              snwd_fill(c+1,r-1)= snwd_fill(c+1,r-1) + snwd_ip(c,r)
-              snwd_fill(c+1,r)= snwd_fill(c+1,r) + snwd_ip(c,r)
-              snwd_fill(c+1,r+1)= snwd_fill(c+1,r+1) + snwd_ip(c,r)
-              
-              nsnwd_ip(c-1,r-1)= nsnwd_ip(c-1,r-1) + 1
-              nsnwd_ip(c-1,r)= nsnwd_ip(c-1,r) + 1
-              nsnwd_ip(c-1,r+1)= nsnwd_ip(c-1,r+1) + 1
-              nsnwd_ip(c,r-1)= nsnwd_ip(c,r-1) + 1
-              nsnwd_ip(c,r+1)= nsnwd_ip(c,r+1) + 1
-              nsnwd_ip(c+1,r-1)= nsnwd_ip(c+1,r-1) + 1
-              nsnwd_ip(c+1,r)= nsnwd_ip(c+1,r) + 1
-              nsnwd_ip(c+1,r+1)= nsnwd_ip(c+1,r+1) + 1
-           endif
-        enddo
-     enddo
-
-     do r=1,LIS_rc%obs_lnr(k)
-        do c=1,LIS_rc%obs_lnc(k)
-           if(snwd_ip(c,r).eq.LIS_rc%udef.and.nsnwd_ip(c,r).gt.0) then
-              snwd_ip(c,r) = snwd_fill(c,r)/nsnwd_ip(c,r) 
-           endif
-        enddo
-     enddo
 
   endif
 
