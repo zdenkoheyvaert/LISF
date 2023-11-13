@@ -681,6 +681,7 @@ subroutine LIS_readConfig()
   allocate(LIS_rc%biasrstFile(LIS_rc%ndas))  
   allocate(LIS_rc%pertrestartFile(LIS_rc%nnest))
 
+  allocate(LIS_rc%ensemstype(LIS_rc%ndas))
   allocate(LIS_rc%wensems(LIS_rc%ndas))
   allocate(LIS_rc%wobs(LIS_rc%ndas))
   allocate(LIS_rc%winnov(LIS_rc%ndas))
@@ -879,6 +880,14 @@ subroutine LIS_readConfig()
      call ESMF_ConfigGetAttribute(LIS_config,LIS_rc%wensems(i),rc=rc)
      if(LIS_rc%daalg(i).ne."none") then 
         call LIS_verify(rc,'Data assimilation output ensemble spread: not defined')
+     endif
+  enddo
+
+  call ESMF_ConfigFindLabel(LIS_config,"Data assimilation ensemble spread type:",rc=rc)
+  do i=1,LIS_rc%ndas
+     call ESMF_ConfigGetAttribute(LIS_config,LIS_rc%ensemstype(i),rc=rc)
+     if(LIS_rc%daalg(i).ne."none") then 
+        call LIS_verify(rc,'Data assimilation ensemble spread type: not defined (either "max-min" or "std")')
      endif
   enddo
 

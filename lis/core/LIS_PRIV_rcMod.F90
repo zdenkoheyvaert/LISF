@@ -572,6 +572,8 @@ module LIS_PRIV_rcMod
 !  name of bias specification attributes file
 !  \item[nforcepert]
 !  Number of perturbation
+!  \item[ensemstype]
+!  flag to specify whether to output max-min or std ensemble spread
 !  \item[wensems]
 !  flag to specify if ensemble members are to be output
 !  \item[wobs]
@@ -911,6 +913,7 @@ module LIS_PRIV_rcMod
      character*50, allocatable  :: dascaloption(:)
 
      integer                :: nforcepert
+     character*50, allocatable :: ensemstype(:)
      integer, allocatable   :: wensems(:)
      integer, allocatable   :: wobs(:)
      integer, allocatable   :: winnov(:)

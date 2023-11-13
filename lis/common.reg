@@ -1,0 +1,32 @@
+# HPC (KU Leuven) specific shared settings used by specific preprocessor scripts
+
+########################################################
+# FOR ldt_prelis AND ldt_postlis: USE common_110.reg!  #
+########################################################
+
+umask 022
+module purge
+unset LD_LIBRARY_PATH
+source /dodrio/scratch/projects/2022_200/project_input/rsda/src_code/nu-wrf-ekman_11.3/scripts/other/set_module_env.bash
+#module load ncview
+
+# *** Please make sure these settings are correct ***
+
+# NUWRFDIR specifies the location of the NU-WRF source code
+export NUWRFDIR=/dodrio/scratch/projects/2022_200/project_input/rsda/src_code/nu-wrf-ekman_11.3
+export EXEDIR=/dodrio/scratch/projects/2022_200/project_input/rsda/src_code/nu-wrf-ekman_11.3
+
+# RUNDIR specifies the location of the temporary run directory
+export RUNDIR=/dodrio/scratch/projects/2022_200/project_output/rsda/vsc34049/nu-wrf/OL_113_401
+
+# change this to specify the number of processors to use
+export MPIRUN=mpirun
+
+# folder with parameters and tables to be used by the model
+export LISDIR=/dodrio/scratch/projects/2022_200/project_input/rsda/l_data/model_param/nuwrf_param
+
+# path to a Python environment that is compatible with merra2wrf.py and sst2wrf.py
+export PYTHONPATH=/dodrio/scratch/projects/2022_200/project_output/rsda/vsc34049/nu-wrf/python_4_nu-wrf
+
+# needed for writing log files on Hortense
+export PYTHONBUFFERED=1
