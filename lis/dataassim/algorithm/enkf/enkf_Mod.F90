@@ -993,7 +993,7 @@ contains
        ! call LIS_writevar_spread(ftn,n,k,ensspread_id(v), &
        !     stvar(v,:),v)
           call LIS_writevar_spread(ftn,n,LIS_rc%lsm_index,ensspread_id(v), &
-               stvar(v,:),v)
+               stvar(v,:),v,LIS_rc%ensemstype(k))
        enddo
        
        deallocate(stvar)
