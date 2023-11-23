@@ -32,7 +32,8 @@ module LIS_lsmda_pluginMod
 !                            enabled the compilation of JULES 5.3 DA
 !  13 Dec 2019: Eric Kemp, replaced LDTSI with USAFSI
 !  17 Feb 2020: Yeosang Yoon, added SNODEP & USAFSI Assimilation for Jules 5.x
-!  16 December 2021: Zdenko Heyvaert, added ESA CCI SM Assimilation for Noah-MP.4.0.1
+!  16 Dec 2021: Zdenko Heyvaert, added ESA CCI SM Assimilation for Noah-MP.4.0.1
+!  20 Nov 2023: Zdenko Heyvaert, added dummy SM+LAI "Assimilation" for Noah-MP.4.0.1
 !
 !EOP
   implicit none
@@ -204,6 +205,7 @@ subroutine LIS_lsmda_plugin
    use noahmp401_tws_DAlogMod, only : noahmp401_tws_DAlog
    use noahmp401_datws_Mod
    use noahmp401_daveg_Mod
+   use noahmp401_dalaisoilm_Mod
 #endif
 
 
@@ -519,6 +521,16 @@ subroutine LIS_lsmda_plugin
    external noahmp401_scale_tws
    external noahmp401_descale_tws
    external noahmp401_updatetws
+
+   ! NOAHMP4.0.1 LAI+SM update
+   external NoahMP401_getlaisoilm
+   external NoahMP401_setlaisoilm
+   external NoahMP401_getlaipred_laism
+   external NoahMP401_qclaisoilm
+   external NoahMP401_qc_laiobs_laism
+   external NoahMP401_scale_laisoilm
+   external NoahMP401_descale_laisoilm
+   external NoahMP401_updatelaisoilm
 
 #if ( defined DA_OBS_SNODEP )
 ! NoahMP-4.0.1 SNODEP
@@ -2750,6 +2762,27 @@ subroutine LIS_lsmda_plugin
         trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_descale_soilm)
    call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
         trim(LIS_ESACCIsmobsId)//char(0),NoahMP401_updatesoilm)
+
+!ZH
+! Noah-MP.4.0.1 dummy lai + soil moisture
+   call registerlsmdainit(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_dalaisoilm_init)
+   call registerlsmdagetstatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_getlaisoilm)
+   call registerlsmdasetstatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_setlaisoilm)
+   call registerlsmdagetobspred(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_getsmpred)
+   call registerlsmdaqcstate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_qclaisoilm)
+   call registerlsmdaqcobsstate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_qc_soilmobs)
+   call registerlsmdascalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_scale_laisoilm)
+   call registerlsmdadescalestatevar(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_descale_laisoilm)
+   call registerlsmdaupdatestate(trim(LIS_noahmp401Id)//"+"//&
+        trim(LIS_DUMMYsmlaiobsID )//char(0),NoahMP401_updatelaisoilm)
 
 !YK
 ! Noah-MP.4.0.1 SMOS NRT NN soil moisture

@@ -291,6 +291,8 @@ module LIS_pluginIndices
         "GLASS Albedo"
    character*50, public,  parameter :: LIS_SMAPNRTsmobsId        = &
         "SMAP(NRT) soil moisture"
+   character*50, public,  parameter :: LIS_dummysmlaiobsID       = &
+        "Dummy joint soil moisture and lai"
    character*50, public,  parameter :: LIS_ASOsweobsId           = &
         "ASO SWE"
    character*50, public,  parameter :: LIS_synwlId             = &
