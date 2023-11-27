@@ -1346,6 +1346,10 @@ subroutine NoahMP401_main(n)
             call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_QA, value = tmp_pah, &
                   vlevel=1, unit="W m-2",direction="DN",surface_type=LIS_rc%lsm_index)
 
+            call LIS_diagnoseSurfaceOutputVar(n, t, LIS_MOC_TEMPBOT,   &
+                  value=tmp_tbot, vlevel=1, unit="K",                  &
+                  direction="-", surface_type=LIS_rc%lsm_index)
+
 ! Added water balance change terms - David Mocko
             endsm = 0.0
             do i = 1,tmp_nsoil
