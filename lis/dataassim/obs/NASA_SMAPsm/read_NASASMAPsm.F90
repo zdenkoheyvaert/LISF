@@ -927,7 +927,7 @@ subroutine read_SMAPL2sm_data(n, k,fname, smobs_inp, time)
 
 
   deallocate(sm_field)
-!  deallocate(sm_qa)
+  deallocate(sm_qa)
   deallocate(sm_surface)
   deallocate(ease_row)
   deallocate(ease_col)
