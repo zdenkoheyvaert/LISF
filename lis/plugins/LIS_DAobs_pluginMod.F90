@@ -276,6 +276,10 @@ subroutine LIS_DAobs_plugin
     use NASASMAPsm_Mod,          only : NASASMAPsm_setup
 #endif
 
+#if ( defined DA_OBS_DUMMY_SMLAI)
+     use DUMMYsmlai_Mod,         only : DUMMYsmlai_setup
+#endif
+
 !YK
 #if ( defined DA_OBS_SMOS_NRT_NN )
     use SMOSNRTNNL2sm_Mod,       only : SMOSNRTNNL2sm_setup
@@ -487,6 +491,10 @@ subroutine LIS_DAobs_plugin
 
 #if ( defined DA_OBS_NASA_SMAPSM )
     external read_NASASMAPsm, write_NASASMAPsmobs
+#endif
+
+#if ( defined DA_OBS_DUMMY_SMLAI )
+    external read_DUMMYsmlai, write_DUMMYsmlaiobs
 #endif
 
 !YK
@@ -931,6 +939,16 @@ subroutine LIS_DAobs_plugin
         read_NASASMAPsm)
    call registerwritedaobs(trim(LIS_NASASMAPsmobsId)//char(0),&
         write_NASASMAPsmobs)
+#endif
+
+#if ( defined DA_OBS_DUMMY_SMLAI )
+   call registerdaobsclass(trim(LIS_dummysmlaiobsID),"LSM")
+   call registerdaobssetup(trim(LIS_dummysmlaiobsID)//char(0),&
+        DUMMYsmlai_setup)
+   call registerreaddaobs(trim(LIS_dummysmlaiobsID)//char(0),&
+        read_DUMMYsmlai)
+   call registerwritedaobs(trim(LIS_dummysmlaiobsID)//char(0),&
+        write_DUMMYsmlaiobs)
 #endif
 
 !YK
